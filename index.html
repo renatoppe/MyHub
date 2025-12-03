@@ -1,697 +1,915 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>My Personal Hub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#007bff">
-  <link rel="icon" href="icon-192.png">
-
-
+  <meta charset="UTF-8" />
+  <title>MyHub v0.2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#121212" />
+  <link rel="icon" href="icon-192.png" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0e1116;
+      --bg-elevated: #161b22;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --text: #e5e7eb;
+      --text-soft: #9ca3af;
+      --danger: #ef4444;
+      --border: #1f2933;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --shadow-soft: 0 10px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f4f4f4;
-      color: #222;
-      padding: 0.5rem;
-      transition: background 0.2s ease, color 0.2s ease;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      color: var(--text);
+      overscroll-behavior-y: none;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app-root {
+      height: 100vh;
+      width: 100%;
+      max-width: 720px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      padding: 12px 10px 18px;
     }
 
     header {
-      margin-bottom: 0.5rem;
-    }
-
-    .header-top {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
     }
 
-    h1 {
-      font-size: 1.4rem;
-      margin-bottom: 0.2rem;
+    .app-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f9fafb;
     }
 
-    .subtitle {
-      font-size: 0.8rem;
-      color: #777;
-      margin-top: 0.1rem;
-    }
-
-    .btn-small {
-      padding: 0.2rem 0.5rem;
-      border-radius: 6px;
-      border: none;
+    .app-badge {
       font-size: 0.75rem;
-      background: #e0e0e0;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+    }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .nav-btn {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 4px;
+      font-size: 0.7rem;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
       cursor: pointer;
+      transition: 0.16s ease;
     }
 
-    .btn-delete {
-      background: #ffdddd;
-      color: #b30000;
+    .nav-btn span {
+      font-size: 0.9rem;
     }
 
-    /* Screens */
-    .screen {
+    .nav-btn.active {
+      background: radial-gradient(circle at top left, #1e3a8a, #111827);
+      color: #eff6ff;
+      border-color: rgba(37, 99, 235, 0.7);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+      transform: translateY(-1px);
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    section {
       display: none;
     }
-    .screen.active {
+
+    section.active {
       display: block;
     }
 
-    .back-home-row {
-      margin-bottom: 0.4rem;
+    .card {
+      background: radial-gradient(circle at top, #111827, #020617);
+      border-radius: var(--radius-lg);
+      padding: 12px 12px 10px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
     }
 
-    .back-home-btn {
-      font-size: 0.8rem;
-    }
-
-    /* Home screen */
-    .home-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.6rem;
-      margin-top: 0.3rem;
-    }
-
-    @media (min-width: 768px) {
-      .home-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
-
-    .home-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 0.8rem;
+    .card-header {
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.2rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
-      min-height: 80px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
-    .home-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-    }
-
-    .home-card-icon {
-      font-size: 1.4rem;
-    }
-
-    .home-card-title {
+    .card-title {
       font-size: 0.95rem;
       font-weight: 600;
-    }
-
-    .home-card-desc {
-      font-size: 0.75rem;
-      color: #666;
-    }
-
-    .home-card-disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    /* Add row */
-    .add-row {
-      display: flex;
-      gap: 0.4rem;
-      margin-bottom: 0.3rem;
-    }
-
-    .add-row input[type="text"],
-    .add-row input[type="number"] {
-      flex: 1;
-      padding: 0.4rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 0.9rem;
-    }
-
-    .add-row button {
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      border: none;
-      font-size: 0.9rem;
-      background: #007bff;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .task-extra-row {
-      display: flex;
-      gap: 0.4rem;
-      margin-bottom: 0.5rem;
-      align-items: center;
-      font-size: 0.8rem;
-    }
-
-    .task-extra-row select,
-    .task-extra-row input[type="date"] {
-      flex: 1;
-      padding: 0.3rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 0.8rem;
-    }
-
-    /* Filters */
-    .filters-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.8rem;
-    }
-
-    .filter-group {
       display: flex;
       align-items: center;
-      gap: 0.3rem;
-      flex-wrap: wrap;
+      gap: 6px;
     }
 
-    .filter-label {
-      font-weight: 600;
-      color: #555;
-    }
-
-    .filter-btn {
-      padding: 0.2rem 0.5rem;
-      border-radius: 999px;
-      border: 1px solid #ccc;
-      background: #fff;
-      cursor: pointer;
-      font-size: 0.75rem;
-    }
-
-    .filter-btn.active {
-      background: #007bff;
-      color: #fff;
-      border-color: #007bff;
-      font-weight: 600;
-    }
-
-    /* Lists */
-    .list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .item {
-      display: flex;
-      flex-direction: column;
-      background: #fff;
-      padding: 0.5rem;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-
-    .item-main {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .status-dot {
+    .card-title span.icon {
+      display: inline-flex;
       width: 20px;
       height: 20px;
       border-radius: 999px;
-      border: 2px solid #ccc;
-      flex-shrink: 0;
-      cursor: pointer;
-      display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 0.75rem;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .card-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin-bottom: 6px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.68rem;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pill.accent {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(15, 23, 42, 0.96);
+      color: #dbeafe;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .btn,
+    button {
+      font-family: inherit;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 10px;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: 0.16s ease;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+      border: 1px solid var(--border);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #eff6ff;
+      border-color: rgba(59, 130, 246, 0.7);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn.small {
+      padding: 4px 8px;
       font-size: 0.7rem;
     }
 
-    .status-not-done {
-      border-color: #ccc;
-      background: #fff;
+    .btn.icon-only {
+      padding: 5px 6px;
+      width: 28px;
+      height: 28px;
+      justify-content: center;
     }
 
-    .status-half {
-      border-color: #f0ad4e;
-      background: #ffe9b8;
+    .btn:hover {
+      transform: translateY(-0.5px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.8);
     }
 
-    .status-done {
-      border-color: #28a745;
-      background: #c9f7d3;
+    .btn.primary:hover {
+      box-shadow: 0 5px 14px rgba(37, 99, 235, 0.55);
     }
 
-    .item-text {
-      flex: 1;
-      font-size: 0.95rem;
-      word-break: break-word;
-    }
-
-    .item-text.done {
-      text-decoration: line-through;
-      color: #999;
-    }
-
-    .item-meta-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0.3rem;
-      font-size: 0.75rem;
-      gap: 0.3rem;
-      flex-wrap: wrap;
-    }
-
-    /* Priority pill */
-    .priority-pill {
-      padding: 0.1rem 0.4rem;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      border: 1px solid transparent;
-      min-width: 55px;
-      text-align: center;
-    }
-    .priority-low {
-      border-color: #28a745;
-      background: #e6f8ea;
-      color: #1d7a32;
-    }
-    .priority-med {
-      border-color: #f0ad4e;
-      background: #fff3cd;
-      color: #8a6d3b;
-    }
-    .priority-high {
-      border-color: #d9534f;
-      background: #fbe3e3;
-      color: #a94442;
-    }
-
-    .due-label {
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-    .due-today {
-      color: #d9534f;
-      font-weight: 600;
-    }
-    .due-overdue {
-      color: #b30000;
-      font-weight: 600;
-    }
-    .due-future {
-      color: #555;
-    }
-
-    .item-controls {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.35rem;
-      font-size: 0.8rem;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-
-    /* Shopping */
-    .shopping-check {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-
-    .note {
-      margin-top: 0.35rem;
-      font-size: 0.8rem;
-      color: #555;
-    }
-
-    .note textarea {
+    input,
+    select,
+    textarea {
       width: 100%;
-      min-height: 40px;
-      padding: 0.3rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      outline: none;
+      transition: 0.16s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(59, 130, 246, 0.7);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+    }
+
+    textarea {
       resize: vertical;
-      font-size: 0.8rem;
-    }
-
-    .shopping-header-row {
-      display: flex;
-      gap: 0.3rem;
-      margin-bottom: 0.4rem;
-      align-items: center;
-      font-size: 0.8rem;
-    }
-
-    .shopping-header-row select {
-      flex: 1;
-      padding: 0.3rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 0.8rem;
-    }
-
-    /* Dragging */
-    .dragging {
-      opacity: 0.5;
-    }
-
-    /* Workouts & Finance forms */
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.3rem;
-    }
-
-    .section-subtitle {
-      font-size: 0.8rem;
-      color: #666;
-      margin-bottom: 0.4rem;
+      min-height: 60px;
     }
 
     .row {
       display: flex;
-      gap: 0.4rem;
-      margin-bottom: 0.3rem;
+      gap: 6px;
     }
 
-    .row select,
-    .row input[type="date"],
-    .row input[type="number"],
-    .row input[type="text"],
-    .row textarea {
+    .row > * {
       flex: 1;
-      padding: 0.35rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 0.8rem;
     }
 
-    .row textarea {
-      min-height: 60px;
-      resize: vertical;
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .badge {
-      display: inline-block;
-      padding: 0.1rem 0.4rem;
-      border-radius: 999px;
+    .list-item {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.96);
+      padding: 6px 7px;
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 0.78rem;
+    }
+
+    .list-item-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-item-title {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .list-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
       font-size: 0.7rem;
-      background: #eee;
-      color: #333;
+      color: var(--text-soft);
     }
 
-    /* Dark mode overrides */
-    body.dark {
-      background: #121212;
-      color: #f1f1f1;
+    .chip {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      font-size: 0.68rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    body.dark .subtitle {
-      color: #aaa;
+    .chip.high {
+      border-color: rgba(239, 68, 68, 0.6);
+      color: #fecaca;
     }
 
-    body.dark .home-card {
-      background: #1f1f1f;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    .chip.done {
+      border-color: rgba(34, 197, 94, 0.6);
+      color: #bbf7d0;
     }
 
-    body.dark .home-card-desc {
-      color: #aaa;
+    .chip.half {
+      border-color: rgba(234, 179, 8, 0.6);
+      color: #fef3c7;
     }
 
-    body.dark input[type="text"],
-    body.dark input[type="number"],
-    body.dark input[type="date"],
-    body.dark select,
-    body.dark textarea {
-      background: #1b1b1b;
-      color: #eee;
-      border-color: #555;
+    .chip.overdue {
+      border-color: rgba(248, 113, 113, 0.7);
+      color: #fecaca;
     }
 
-    body.dark .filter-btn {
-      background: #1b1b1b;
-      border-color: #555;
-      color: #ddd;
+    .item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    body.dark .filter-btn.active {
-      background: #2196f3;
-      border-color: #2196f3;
-      color: #fff;
+    .btn-ghost {
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      cursor: pointer;
+      padding: 2px 4px;
     }
 
-    body.dark .item {
-      background: #1f1f1f;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    .btn-ghost.danger {
+      color: var(--danger);
     }
 
-    body.dark .btn-small {
-      background: #444;
-      color: #eee;
+    .hidden {
+      display: none !important;
     }
 
-    body.dark .btn-delete {
-      background: #5c1f1f;
-      color: #ffb3b3;
+    .filter-toggle-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 4px;
     }
 
-    body.dark .note {
-      color: #ccc;
+    .filter-panel {
+      margin-bottom: 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.98);
+      padding: 6px;
+      font-size: 0.76rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .filter-panel-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .filter-panel-row > * {
+      flex: 1;
+    }
+
+    .filter-panel-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .home-module {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, #111827, #020617);
+      padding: 8px 8px 6px;
+      cursor: pointer;
+      transition: 0.16s ease;
+    }
+
+    .home-module:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.9);
+    }
+
+    .home-module-title {
+      font-size: 0.8rem;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .home-module-count {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+    }
+
+    .today-tasks-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.76rem;
+    }
+
+    .today-tasks-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border);
+    }
+
+    .today-tasks-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .today-tasks-meta {
+      font-size: 0.7rem;
+      color: var(--text-soft);
     }
   </style>
 </head>
-
 <body>
-  <header>
-    <div class="header-top">
+  <div class="app-root" id="app-root">
+    <header>
       <div>
-        <h1>My Personal Hub</h1>
-        <div class="subtitle">Tasks • Shopping • Workouts • Finances (all in one)</div>
+        <div class="app-title">MyHub</div>
+        <div class="card-subtitle">Your personal life hub · v0.2</div>
       </div>
-      <button id="theme-toggle" class="btn-small">🌙</button>
-    </div>
-  </header>
+      <div class="app-badge">PWA · Local only</div>
+    </header>
 
-  <!-- HOME SCREEN -->
-  <section id="home-screen" class="screen active">
-    <div class="home-grid">
-      <div class="home-card" data-target="tasks-screen">
-        <div class="home-card-icon">✅</div>
-        <div class="home-card-title">To-do list</div>
-        <div class="home-card-desc">Priority, due dates, filters & calendar export.</div>
-      </div>
+    <nav>
+      <button class="nav-btn active" data-view="home">
+        <span>🏠</span>
+        Home
+      </button>
+      <button class="nav-btn" data-view="todo">
+        <span>✅</span>
+        To-Do
+      </button>
+      <button class="nav-btn" data-view="shopping">
+        <span>🛒</span>
+        Shop
+      </button>
+      <button class="nav-btn" data-view="workouts">
+        <span>🏋️</span>
+        Gym
+      </button>
+      <button class="nav-btn" data-view="finance">
+        <span>💰</span>
+        Money
+      </button>
+    </nav>
 
-      <div class="home-card" data-target="shopping-screen">
-        <div class="home-card-icon">🛒</div>
-        <div class="home-card-title">Shopping lists</div>
-        <div class="home-card-desc">Multiple lists with notes and drag & drop.</div>
-      </div>
+    <main>
+      <!-- HOME / DASHBOARD -->
+      <section id="home-section" class="active">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">📅</span>
+              Today overview
+            </div>
+          </div>
+          <div class="card-subtitle">
+            Quick glance at your most important things today.
+          </div>
 
-      <div class="home-card" data-target="workouts-screen">
-        <div class="home-card-icon">🏋️</div>
-        <div class="home-card-title">Workouts</div>
-        <div class="home-card-desc">Log or plan your different workout days.</div>
-      </div>
+          <div class="home-grid">
+            <div
+              class="home-module"
+              data-jump="todo"
+              id="home-module-todo"
+            >
+              <div class="home-module-title">
+                <span>To-dos</span>
+                <span class="home-module-count" id="home-todo-count">
+                  –
+                </span>
+              </div>
+              <div class="card-subtitle">
+                Due or overdue tasks for today.
+              </div>
+            </div>
 
-      <div class="home-card" data-target="finance-screen">
-        <div class="home-card-icon">💰</div>
-        <div class="home-card-title">Finances</div>
-        <div class="home-card-desc">Quick expense log with method & category.</div>
-      </div>
+            <div
+              class="home-module"
+              data-jump="finance"
+              id="home-module-finance"
+            >
+              <div class="home-module-title">
+                <span>Money</span>
+                <span class="home-module-count" id="home-finance-count">
+                  –
+                </span>
+              </div>
+              <div class="card-subtitle">
+                Expenses logged this month.
+              </div>
+            </div>
 
-      <div class="home-card home-card-disabled">
-        <div class="home-card-icon">🍽</div>
-        <div class="home-card-title">Meal tracker</div>
-        <div class="home-card-desc">Coming soon: quick meal & macro logs.</div>
-      </div>
-    </div>
-  </section>
+            <div
+              class="home-module"
+              data-jump="workouts"
+              id="home-module-workouts"
+            >
+              <div class="home-module-title">
+                <span>Workout</span>
+                <span class="home-module-count" id="home-workout-count">
+                  –
+                </span>
+              </div>
+              <div class="card-subtitle">
+                Last workout & quick jump to logs.
+              </div>
+            </div>
 
-  <!-- TASKS SCREEN -->
-  <section id="tasks-screen" class="screen">
-    <div class="back-home-row">
-      <button class="btn-small back-home-btn" onclick="showScreen('home-screen')">← Home</button>
-    </div>
+            <div
+              class="home-module"
+              data-jump="shopping"
+              id="home-module-shopping"
+            >
+              <div class="home-module-title">
+                <span>Shopping</span>
+                <span class="home-module-count" id="home-shopping-count">
+                  –
+                </span>
+              </div>
+              <div class="card-subtitle">
+                Items left in your active list.
+              </div>
+            </div>
+          </div>
 
-    <!-- Add task -->
-    <div class="add-row">
-      <input id="new-task-input" type="text" placeholder="New task...">
-      <button id="add-task-btn">Add</button>
-    </div>
+          <div class="card-subtitle" style="margin-top: 4px;">
+            Quick task for today:
+          </div>
+          <form id="quick-task-form" class="row" style="margin-bottom: 6px;">
+            <input
+              type="text"
+              id="quick-task-text"
+              placeholder="Quick task (auto due today)"
+            />
+            <button type="submit" class="btn primary small">
+              Add
+            </button>
+          </form>
 
-    <!-- Priority + due date for new task -->
-    <div class="task-extra-row">
-      <select id="task-priority-select">
-        <option value="med">Priority: Medium</option>
-        <option value="low">Priority: Low</option>
-        <option value="high">Priority: High</option>
-      </select>
-      <input id="task-due-date" type="date">
-    </div>
+          <ul class="today-tasks-list" id="today-tasks-list"></ul>
+        </div>
+      </section>
 
-    <!-- Filters -->
-    <div class="filters-row">
-      <div class="filter-group">
-        <span class="filter-label">Status:</span>
-        <button class="filter-btn status-filter-btn active" data-status="all">All</button>
-        <button class="filter-btn status-filter-btn" data-status="0">Not done</button>
-        <button class="filter-btn status-filter-btn" data-status="1">Half</button>
-        <button class="filter-btn status-filter-btn" data-status="2">Done</button>
-      </div>
+      <!-- TO-DO SECTION -->
+      <section id="todo-section">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">✅</span>
+              To-Do Lists (v0.2)
+            </div>
+            <button
+              type="button"
+              id="todo-filter-toggle"
+              class="btn icon-only"
+              title="Filters"
+            >
+              🔍
+            </button>
+          </div>
 
-      <div class="filter-group">
-        <span class="filter-label">Priority:</span>
-        <button class="filter-btn priority-filter-btn active" data-priority="all">All</button>
-        <button class="filter-btn priority-filter-btn" data-priority="high">High</button>
-        <button class="filter-btn priority-filter-btn" data-priority="med">Med</button>
-        <button class="filter-btn priority-filter-btn" data-priority="low">Low</button>
-      </div>
+          <div class="filter-panel hidden" id="todo-filter-panel">
+            <div class="filter-panel-row">
+              <select id="todo-filter-status">
+                <option value="all">Status: All</option>
+                <option value="todo">Not done</option>
+                <option value="half">Half done</option>
+                <option value="done">Done</option>
+              </select>
+              <select id="todo-filter-priority">
+                <option value="all">Priority: All</option>
+                <option value="high">High only</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="filter-panel-row">
+              <select id="todo-filter-sort">
+                <option value="smart">Sort: Smart (priority + due)</option>
+                <option value="dueAsc">Sort: Due date ↑</option>
+                <option value="dueDesc">Sort: Due date ↓</option>
+              </select>
+              <input
+                type="text"
+                id="todo-filter-text"
+                placeholder="Search text"
+              />
+            </div>
+            <div class="filter-panel-actions">
+              <button
+                type="button"
+                id="todo-filter-clear"
+                class="btn small"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                id="todo-filter-apply"
+                class="btn primary small"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
 
-      <div class="filter-group">
-        <span class="filter-label">When:</span>
-        <button class="filter-btn when-filter-btn active" data-when="all">All</button>
-        <button class="filter-btn when-filter-btn" data-when="today">Today</button>
-        <button class="filter-btn when-filter-btn" data-when="overdue">Overdue</button>
-        <button class="filter-btn when-filter-btn" data-when="future">Future</button>
-      </div>
-    </div>
+          <div class="card-subtitle">
+            Simple single to-do list for now. v0.3 will add multiple lists & more.
+          </div>
 
-    <!-- Tasks list -->
-    <div id="tasks-list" class="list"></div>
-  </section>
+          <form id="todo-form" style="margin-bottom: 8px;">
+            <input
+              type="text"
+              id="todo-text"
+              placeholder="New task..."
+              required
+              style="margin-bottom: 4px;"
+            />
+            <div class="row">
+              <select id="todo-priority">
+                <option value="medium">Medium priority</option>
+                <option value="high">High priority</option>
+                <option value="low">Low priority</option>
+              </select>
+              <input type="date" id="todo-due" />
+            </div>
+          </form>
 
-  <!-- SHOPPING SCREEN -->
-  <section id="shopping-screen" class="screen">
-    <div class="back-home-row">
-      <button class="btn-small back-home-btn" onclick="showScreen('home-screen')">← Home</button>
-    </div>
+          <ul class="list" id="todo-list"></ul>
+        </div>
+      </section>
 
-    <!-- Shopping lists selector -->
-    <div class="shopping-header-row">
-      <select id="shopping-list-select"></select>
-      <button id="add-shopping-list-btn" class="btn-small">+ List</button>
-      <button id="rename-shopping-list-btn" class="btn-small">Rename</button>
-      <button id="delete-shopping-list-btn" class="btn-small btn-delete">Delete</button>
-    </div>
+      <!-- SHOPPING SECTION -->
+      <section id="shopping-section">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">🛒</span>
+              Shopping List
+            </div>
+          </div>
+          <div class="card-subtitle">
+            v0.2 keeps a single list with drag & drop. v0.3 will add multiple lists.
+          </div>
 
-    <div class="add-row">
-      <input id="new-item-input" type="text" placeholder="New item...">
-      <button id="add-item-btn">Add</button>
-    </div>
-    <div id="shopping-list" class="list"></div>
-  </section>
+          <form id="shopping-form" style="margin-bottom: 8px;">
+            <input
+              type="text"
+              id="shopping-text"
+              placeholder="New item..."
+              required
+            />
+          </form>
 
-  <!-- WORKOUTS SCREEN -->
-  <section id="workouts-screen" class="screen">
-    <div class="back-home-row">
-      <button class="btn-small back-home-btn" onclick="showScreen('home-screen')">← Home</button>
-    </div>
+          <ul class="list" id="shopping-list"></ul>
+        </div>
+      </section>
 
-    <div class="section-title">Workouts</div>
-    <div class="section-subtitle">
-      Use this however you want: plan your next workout, or log what you actually did.
-    </div>
+      <!-- WORKOUTS SECTION -->
+      <section id="workouts-section">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">🏋️</span>
+              Workouts (basic logs)
+            </div>
+          </div>
+          <div class="card-subtitle">
+            Simple notes for now. v0.6 will add templates & detailed tracking.
+          </div>
 
-    <div class="row">
-      <input id="workout-date" type="date">
-      <input id="workout-type" type="text" placeholder="Workout name (A, B, C...)">
-    </div>
-    <div class="row">
-      <textarea id="workout-notes" placeholder="Notes: exercises, sets, reps, weight, feelings..."></textarea>
-    </div>
-    <div class="row">
-      <button id="add-workout-btn" class="btn-small">Save workout</button>
-    </div>
+          <form id="workout-form" style="margin-bottom: 8px;">
+            <input
+              type="text"
+              id="workout-text"
+              placeholder="Workout note (e.g., Workout B - legs, 60min)"
+              required
+            />
+          </form>
 
-    <div id="workouts-list" class="list"></div>
-  </section>
+          <ul class="list" id="workout-list"></ul>
+        </div>
+      </section>
 
-  <!-- FINANCE SCREEN -->
-  <section id="finance-screen" class="screen">
-    <div class="back-home-row">
-      <button class="btn-small back-home-btn" onclick="showScreen('home-screen')">← Home</button>
-    </div>
+      <!-- FINANCE SECTION -->
+      <section id="finance-section">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">💰</span>
+              Finance (basic logs)
+            </div>
+          </div>
+          <div class="card-subtitle">
+            v0.2: simple entries. v0.5 will add accounts, categories & analysis.
+          </div>
 
-    <div class="section-title">Finances</div>
-    <div class="section-subtitle">
-      Quickly log how much you spent, how you paid, and what it was. Later we can add stats & filters.
-    </div>
+          <form id="finance-form" style="margin-bottom: 8px;">
+            <div class="row" style="margin-bottom: 4px;">
+              <input
+                type="number"
+                step="0.01"
+                id="finance-amount"
+                placeholder="Amount"
+                required
+              />
+              <select id="finance-type">
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+            <div class="row" style="margin-bottom: 4px;">
+              <input
+                type="text"
+                id="finance-category"
+                placeholder="Category (e.g., Food, Rent)"
+              />
+              <input type="date" id="finance-date" />
+            </div>
+            <input
+              type="text"
+              id="finance-note"
+              placeholder="Note (optional)"
+            />
+          </form>
 
-    <div class="row">
-      <input id="expense-amount" type="number" step="0.01" placeholder="Amount">
-      <select id="expense-method">
-        <option value="cash">Cash</option>
-        <option value="card">Card</option>
-        <option value="scan">Scan / QR</option>
-        <option value="transfer">Transfer</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
-    <div class="row">
-      <input id="expense-category" type="text" placeholder="Category (food, transport, rent, etc.)">
-      <input id="expense-date" type="date">
-    </div>
-    <div class="row">
-      <textarea id="expense-note" placeholder="Short note (optional)"></textarea>
-    </div>
-    <div class="row">
-      <button id="add-expense-btn" class="btn-small">Save expense</button>
-    </div>
-
-    <div id="finance-list" class="list"></div>
-  </section>
+          <ul class="list" id="finance-list"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
-    // --- GLOBAL NAV ---
-    function showScreen(screenId) {
-      const screens = document.querySelectorAll(".screen");
-      screens.forEach(s => s.classList.remove("active"));
-      const target = document.getElementById(screenId);
-      if (target) target.classList.add("active");
-    }
+    // =============================
+    // Storage & State
+    // =============================
+    const STORAGE_KEY = "myhub-data-v0.2";
 
-    // --- STORAGE KEYS ---
-    const STORAGE_KEY = "simple_task_shopping_app_v3_dragshopping"; // keep same, just expanding
-    const THEME_KEY = "simple_task_shopping_theme";
-
-    // --- APP STATE ---
-    let state = {
+    const defaultState = {
       tasks: [],
-      shoppingLists: [],
-      activeShoppingListId: null,
+      shoppingItems: [],
       workouts: [],
-      finances: []
+      finances: [],
     };
 
-    // Filters
-    let currentStatusFilter = "all";   // "all", "0", "1", "2"
-    let currentPriorityFilter = "all"; // "all", "low", "med", "high"
-    let currentWhenFilter = "all";     // "all", "today", "overdue", "future"
-
-    // Theme
-    let currentTheme = "light";
-
-    function createId() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultState);
+        const parsed = JSON.parse(raw);
+        return {
+          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+          shoppingItems: Array.isArray(parsed.shoppingItems)
+            ? parsed.shoppingItems
+            : [],
+          workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+          finances: Array.isArray(parsed.finances) ? parsed.finances : [],
+        };
+      } catch (e) {
+        console.error("Failed to parse state:", e);
+        return structuredClone(defaultState);
+      }
     }
 
-    function todayStr() {
+    let state = loadState();
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      refreshHomeDashboard();
+    }
+
+    // =============================
+    // Navigation & Back Button
+    // =============================
+
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const sections = {
+      home: document.getElementById("home-section"),
+      todo: document.getElementById("todo-section"),
+      shopping: document.getElementById("shopping-section"),
+      workouts: document.getElementById("workouts-section"),
+      finance: document.getElementById("finance-section"),
+    };
+
+    let currentView = "home";
+
+    function setActiveNav(view) {
+      navButtons.forEach((btn) => {
+        btn.classList.toggle(
+          "active",
+          btn.getAttribute("data-view") === view
+        );
+      });
+    }
+
+    function showView(view, push = true) {
+      if (!sections[view]) view = "home";
+      currentView = view;
+      Object.entries(sections).forEach(([k, el]) => {
+        el.classList.toggle("active", k === view);
+      });
+      setActiveNav(view);
+      if (push) {
+        history.pushState({ view }, "", "#" + view);
+      }
+    }
+
+    navButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const view = btn.getAttribute("data-view");
+        if (view !== currentView) {
+          showView(view, true);
+        }
+      });
+    });
+
+    // Home module quick jumps
+    document.querySelectorAll(".home-module").forEach((mod) => {
+      mod.addEventListener("click", () => {
+        const view = mod.getAttribute("data-jump");
+        showView(view, true);
+      });
+    });
+
+    window.addEventListener("popstate", (event) => {
+      const view = event.state && event.state.view ? event.state.view : "home";
+      showView(view, false);
+    });
+
+    // On load: respect hash if exists
+    window.addEventListener("DOMContentLoaded", () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash && sections[hash]) {
+        showView(hash, true);
+      } else {
+        showView("home", true);
+      }
+      renderAll();
+    });
+
+    // =============================
+    // Helpers
+    // =============================
+    function todayISO() {
       const d = new Date();
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -699,992 +917,703 @@
       return `${y}-${m}-${day}`;
     }
 
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-
-          if (Array.isArray(parsed.tasks)) {
-            state.tasks = parsed.tasks;
-          }
-
-          if (Array.isArray(parsed.shoppingLists)) {
-            state.shoppingLists = parsed.shoppingLists;
-            state.activeShoppingListId =
-              parsed.activeShoppingListId ||
-              (parsed.shoppingLists[0] && parsed.shoppingLists[0].id);
-          } else if (Array.isArray(parsed.shopping)) {
-            // old single shopping migration
-            const oldItems = parsed.shopping;
-            if (oldItems.length) {
-              const id = createId();
-              state.shoppingLists = [{
-                id,
-                name: "General",
-                items: oldItems
-              }];
-              state.activeShoppingListId = id;
-            }
-          }
-
-          if (Array.isArray(parsed.workouts)) {
-            state.workouts = parsed.workouts;
-          }
-
-          if (Array.isArray(parsed.finances)) {
-            state.finances = parsed.finances;
-          }
-        }
-      } catch (e) {
-        console.error("Error loading state", e);
-      }
-
-      ensureShoppingLists();
+    function isOverdue(task) {
+      if (!task.dueDate) return false;
+      if (task.status === "done") return false;
+      const today = todayISO();
+      return task.dueDate < today;
     }
 
-    function ensureShoppingLists() {
-      if (!Array.isArray(state.shoppingLists) || state.shoppingLists.length === 0) {
-        const id = createId();
-        state.shoppingLists = [{
-          id,
-          name: "General",
-          items: []
-        }];
-        state.activeShoppingListId = id;
-      } else if (
-        !state.activeShoppingListId ||
-        !state.shoppingLists.some(l => l.id === state.activeShoppingListId)
-      ) {
-        state.activeShoppingListId = state.shoppingLists[0].id;
-      }
-    }
+    // =============================
+    // To-Do Logic
+    // =============================
 
-    function saveState() {
-      const toSave = {
-        tasks: state.tasks,
-        shoppingLists: state.shoppingLists,
-        activeShoppingListId: state.activeShoppingListId,
-        workouts: state.workouts,
-        finances: state.finances
+    // Task shape: { id, text, priority, dueDate, status }
+    const todoListEl = document.getElementById("todo-list");
+    const todoForm = document.getElementById("todo-form");
+    const todoTextInput = document.getElementById("todo-text");
+    const todoPriorityInput = document.getElementById("todo-priority");
+    const todoDueInput = document.getElementById("todo-due");
+
+    let todoFilters = {
+      status: "all",
+      priority: "all",
+      sort: "smart",
+      text: "",
+    };
+
+    const filterToggleBtn = document.getElementById("todo-filter-toggle");
+    const filterPanel = document.getElementById("todo-filter-panel");
+    const filterStatusEl = document.getElementById("todo-filter-status");
+    const filterPriorityEl = document.getElementById("todo-filter-priority");
+    const filterSortEl = document.getElementById("todo-filter-sort");
+    const filterTextEl = document.getElementById("todo-filter-text");
+    const filterClearBtn = document.getElementById("todo-filter-clear");
+    const filterApplyBtn = document.getElementById("todo-filter-apply");
+
+    filterToggleBtn.addEventListener("click", () => {
+      filterPanel.classList.toggle("hidden");
+    });
+
+    filterClearBtn.addEventListener("click", () => {
+      todoFilters = {
+        status: "all",
+        priority: "all",
+        sort: "smart",
+        text: "",
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-    }
-
-    function loadTheme() {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark") {
-        applyTheme("dark");
-      } else {
-        applyTheme("light");
-      }
-    }
-
-    function applyTheme(theme) {
-      currentTheme = theme;
-      if (theme === "dark") {
-        document.body.classList.add("dark");
-      } else {
-        document.body.classList.remove("dark");
-      }
-      const btn = document.getElementById("theme-toggle");
-      if (btn) {
-        btn.textContent = theme === "dark" ? "☀️" : "🌙";
-      }
-      localStorage.setItem(THEME_KEY, theme);
-    }
-
-    // --- DUE DATE HELPERS ---
-    function classifyDue(dueDateStr) {
-      if (!dueDateStr) return "none";
-      try {
-        const due = new Date(dueDateStr + "T00:00:00");
-        const today = new Date();
-        due.setHours(0,0,0,0);
-        today.setHours(0,0,0,0);
-        const diffDays = Math.round((due - today) / 86400000);
-
-        if (diffDays === 0) return "today";
-        if (diffDays < 0) return "overdue";
-        if (diffDays > 0) return "future";
-        return "none";
-      } catch (e) {
-        return "none";
-      }
-    }
-
-    function getDueInfo(dueDateStr) {
-      if (!dueDateStr) {
-        return { text: "", className: "", category: "none" };
-      }
-      const category = classifyDue(dueDateStr);
-      if (category === "today") {
-        return {
-          text: "Due today (" + dueDateStr + ")",
-          className: "due-today",
-          category
-        };
-      } else if (category === "overdue") {
-        return {
-          text: "Overdue (" + dueDateStr + ")",
-          className: "due-overdue",
-          category
-        };
-      } else if (category === "future") {
-        return {
-          text: "Due " + dueDateStr,
-          className: "due-future",
-          category
-        };
-      }
-      return { text: "Due " + dueDateStr, className: "due-future", category };
-    }
-
-    // --- TASKS LOGIC ---
-    function addTask(text) {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-
-      const prioritySelect = document.getElementById("task-priority-select");
-      const dueInput = document.getElementById("task-due-date");
-
-      const priority = prioritySelect.value || "med";
-      const dueDate = dueInput.value || "";
-
-      state.tasks.push({
-        id: createId(),
-        text: trimmed,
-        status: 0,        // 0 = not done, 1 = half, 2 = done
-        priority,
-        dueDate
-      });
-
-      saveState();
+      filterStatusEl.value = "all";
+      filterPriorityEl.value = "all";
+      filterSortEl.value = "smart";
+      filterTextEl.value = "";
       renderTasks();
-    }
+    });
 
-    function cycleTaskStatus(id) {
-      const t = state.tasks.find(t => t.id === id);
+    filterApplyBtn.addEventListener("click", () => {
+      todoFilters = {
+        status: filterStatusEl.value,
+        priority: filterPriorityEl.value,
+        sort: filterSortEl.value,
+        text: filterTextEl.value.trim().toLowerCase(),
+      };
+      renderTasks();
+    });
+
+    todoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = todoTextInput.value.trim();
+      if (!text) return;
+      const task = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        text,
+        priority: todoPriorityInput.value,
+        dueDate: todoDueInput.value || "",
+        status: "todo", // todo | half | done
+      };
+      state.tasks.push(task);
+      saveState();
+      todoForm.reset();
+      renderTasks();
+    });
+
+    function updateTaskStatus(id, status) {
+      const t = state.tasks.find((t) => t.id === id);
       if (!t) return;
-      t.status = (t.status + 1) % 3;
+      t.status = status;
       saveState();
       renderTasks();
     }
 
     function deleteTask(id) {
-      state.tasks = state.tasks.filter(t => t.id !== id);
+      const t = state.tasks.find((x) => x.id === id);
+      if (!t) return;
+      const ok = confirm(`Delete this task?\n\n${t.text}`);
+      if (!ok) return;
+      state.tasks = state.tasks.filter((t) => t.id !== id);
       saveState();
       renderTasks();
     }
 
-    function statusClass(status) {
-      if (status === 0) return "status-not-done";
-      if (status === 1) return "status-half";
-      return "status-done";
-    }
-
-    function statusLabel(status) {
-      if (status === 0) return "";
-      if (status === 1) return "½";
-      return "✓";
-    }
-
-    // Calendar helpers
-    function addToCalendar(taskId) {
-      const task = state.tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      const dueStr = (task.dueDate || "").trim();
-      if (!dueStr) {
-        alert("Set a due date first (tap the due text to edit it).");
-        return;
-      }
-
-      let startDate;
-      try {
-        startDate = new Date(dueStr + "T00:00:00");
-      } catch (e) {
-        alert("Invalid due date.");
-        return;
-      }
-
-      function formatYMD(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, "0");
-        const d = String(date.getDate()).padStart(2, "0");
-        return `${y}${m}${d}`;
-      }
-
-      const startYMD = formatYMD(startDate);
-      const endDate = new Date(startDate.getTime());
-      endDate.setDate(endDate.getDate() + 1);
-      const endYMD = formatYMD(endDate);
-
-      const title = encodeURIComponent(task.text);
-      const details = encodeURIComponent("Created from my Personal Hub app");
-
-      const googleUrl =
-        `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-        `&text=${title}` +
-        `&details=${details}` +
-        `&dates=${startYMD}/${endYMD}`;
-
-      const useGoogle = window.confirm(
-        "OK = Open in Google Calendar\nCancel = Download .ics file for other calendars."
-      );
-
-      if (useGoogle) {
-        window.open(googleUrl, "_blank");
-        return;
-      }
-
-      // Generate ICS file
-      const icsContent =
-        "BEGIN:VCALENDAR\r\n" +
-        "VERSION:2.0\r\n" +
-        "PRODID:-//MyPersonalHub//EN\r\n" +
-        "BEGIN:VEVENT\r\n" +
-        "SUMMARY:" + task.text.replace(/\r?\n/g, " ") + "\r\n" +
-        "DTSTART;VALUE=DATE:" + startYMD + "\r\n" +
-        "DTEND;VALUE=DATE:" + endYMD + "\r\n" +
-        "DESCRIPTION:Created from my Personal Hub app\r\n" +
-        "END:VEVENT\r\n" +
-        "END:VCALENDAR\r\n";
-
-      const blob = new Blob([icsContent], { type: "text/calendar" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = (task.text || "task").replace(/[^\w\-]+/g, "_") + ".ics";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 0);
-    }
-
-    function applyTaskOrderFromDOM() {
-      const container = document.getElementById("tasks-list");
-      const orderIds = Array.from(container.children)
-        .map(el => el.dataset.id)
-        .filter(Boolean);
-      if (!orderIds.length) return;
-
-      state.tasks.sort((a, b) => {
-        const ia = orderIds.indexOf(a.id);
-        const ib = orderIds.indexOf(b.id);
-        if (ia === -1 && ib === -1) return 0;
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
-        return ia - ib;
-      });
+    function editTask(id) {
+      const t = state.tasks.find((x) => x.id === id);
+      if (!t) return;
+      const newText = prompt("Edit task text:", t.text);
+      if (newText === null) return;
+      const trimmed = newText.trim();
+      if (!trimmed) return;
+      t.text = trimmed;
       saveState();
+      renderTasks();
+    }
+
+    function sortedAndFilteredTasks() {
+      let tasks = [...state.tasks];
+
+      // Filter
+      if (todoFilters.status !== "all") {
+        tasks = tasks.filter((t) => t.status === todoFilters.status);
+      }
+      if (todoFilters.priority !== "all") {
+        tasks = tasks.filter((t) => t.priority === todoFilters.priority);
+      }
+      if (todoFilters.text) {
+        tasks = tasks.filter((t) =>
+          t.text.toLowerCase().includes(todoFilters.text)
+        );
+      }
+
+      // Sort
+      const today = todayISO();
+      tasks.sort((a, b) => {
+        if (todoFilters.sort === "dueAsc" || todoFilters.sort === "dueDesc") {
+          const ad = a.dueDate || "9999-12-31";
+          const bd = b.dueDate || "9999-12-31";
+          if (ad < bd) return todoFilters.sort === "dueAsc" ? -1 : 1;
+          if (ad > bd) return todoFilters.sort === "dueAsc" ? 1 : -1;
+          return 0;
+        }
+
+        // smart: priority first, then dueDate, then status
+        const prioRank = { high: 0, medium: 1, low: 2 };
+        const aPr = prioRank[a.priority] ?? 3;
+        const bPr = prioRank[b.priority] ?? 3;
+        if (aPr !== bPr) return aPr - bPr;
+
+        const ad = a.dueDate || "9999-12-31";
+        const bd = b.dueDate || "9999-12-31";
+        if (ad < bd) return -1;
+        if (ad > bd) return 1;
+
+        const statusRank = { todo: 0, half: 1, done: 2 };
+        const aSt = statusRank[a.status] ?? 3;
+        const bSt = statusRank[b.status] ?? 3;
+        return aSt - bSt;
+      });
+
+      return tasks;
     }
 
     function renderTasks() {
-      const container = document.getElementById("tasks-list");
-      container.innerHTML = "";
-
-      let tasksToShow = state.tasks.slice();
-
-      // Status filter
-      if (currentStatusFilter !== "all") {
-        tasksToShow = tasksToShow.filter(
-          t => t.status.toString() === currentStatusFilter
-        );
-      }
-
-      // Priority filter
-      if (currentPriorityFilter !== "all") {
-        tasksToShow = tasksToShow.filter(
-          t => (t.priority || "med") === currentPriorityFilter
-        );
-      }
-
-      // When filter (today / overdue / future)
-      if (currentWhenFilter !== "all") {
-        tasksToShow = tasksToShow.filter(t => {
-          const cat = classifyDue(t.dueDate || "");
-          return cat === currentWhenFilter;
-        });
-      }
-
-      const canDrag =
-        currentStatusFilter === "all" &&
-        currentPriorityFilter === "all" &&
-        currentWhenFilter === "all";
-
-      tasksToShow.forEach(task => {
-        const item = document.createElement("div");
-        item.className = "item";
-        if (canDrag) {
-          item.setAttribute("draggable", "true");
-          item.dataset.id = task.id;
-          item.addEventListener("dragstart", () => {
-            item.classList.add("dragging");
-          });
-          item.addEventListener("dragend", () => {
-            item.classList.remove("dragging");
-            applyTaskOrderFromDOM();
-          });
-        }
-
-        // Main row: status dot + text
-        const main = document.createElement("div");
-        main.className = "item-main";
-
-        const dot = document.createElement("div");
-        dot.className = "status-dot " + statusClass(task.status);
-        dot.textContent = statusLabel(task.status);
-        dot.title = "Tap to change status";
-        dot.addEventListener("click", () => cycleTaskStatus(task.id));
-
-        const textDiv = document.createElement("div");
-        textDiv.className = "item-text" + (task.status === 2 ? " done" : "");
-        textDiv.textContent = task.text;
-
-        main.appendChild(dot);
-        main.appendChild(textDiv);
-        item.appendChild(main);
-
-        // Meta row: priority + due date
-        const metaRow = document.createElement("div");
-        metaRow.className = "item-meta-row";
-
-        // Priority pill
-        const priorityPill = document.createElement("span");
-        const priority = task.priority || "med";
-        priorityPill.className = "priority-pill priority-" + priority;
-        if (priority === "low") priorityPill.textContent = "Low priority";
-        else if (priority === "high") priorityPill.textContent = "High priority";
-        else priorityPill.textContent = "Medium priority";
-
-        metaRow.appendChild(priorityPill);
-
-        // Due label (clickable to edit)
-        const dueInfo = getDueInfo(task.dueDate || "");
-        const dueSpan = document.createElement("span");
-        dueSpan.className = "due-label " + (dueInfo.className || "");
-        dueSpan.textContent = dueInfo.text || "No due date";
-        dueSpan.title = "Tap to edit due date";
-        dueSpan.addEventListener("click", () => {
-          const current = task.dueDate || "";
-          const newDate = window.prompt(
-            "Set due date (YYYY-MM-DD). Leave empty to clear.",
-            current
-          );
-          if (newDate === null) return;
-          const trimmed = newDate.trim();
-          task.dueDate = trimmed;
-          saveState();
-          renderTasks();
-        });
-        metaRow.appendChild(dueSpan);
-
-        item.appendChild(metaRow);
-
-        // Controls: Calendar + Delete
-        const controls = document.createElement("div");
-        controls.className = "item-controls";
-
-        const calBtn = document.createElement("button");
-        calBtn.className = "btn-small";
-        calBtn.textContent = "Calendar";
-        calBtn.addEventListener("click", () => addToCalendar(task.id));
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "btn-small btn-delete";
-        deleteBtn.textContent = "Delete";
-        deleteBtn.addEventListener("click", () => deleteTask(task.id));
-
-        controls.appendChild(calBtn);
-        controls.appendChild(deleteBtn);
-        item.appendChild(controls);
-
-        container.appendChild(item);
-      });
-    }
-
-    // --- TASK DRAG-AND-DROP CONTAINER ---
-    function setupTaskDragAndDrop() {
-      const container = document.getElementById("tasks-list");
-      container.addEventListener("dragover", (e) => {
-        if (
-          !(currentStatusFilter === "all" &&
-            currentPriorityFilter === "all" &&
-            currentWhenFilter === "all")
-        ) {
-          return;
-        }
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        const dragging = container.querySelector(".dragging");
-        if (!dragging) return;
-        if (afterElement == null) {
-          container.appendChild(dragging);
-        } else {
-          container.insertBefore(dragging, afterElement);
-        }
-      });
-    }
-
-    function getDragAfterElement(container, y) {
-      const elements = [...container.querySelectorAll(".item:not(.dragging)")];
-      let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
-
-      elements.forEach(child => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-          closest = { offset, element: child };
-        }
-      });
-
-      return closest.element;
-    }
-
-    // --- SHOPPING LISTS HELPERS ---
-    function getActiveShoppingList() {
-      return state.shoppingLists.find(l => l.id === state.activeShoppingListId) || null;
-    }
-
-    function renderShoppingListSelector() {
-      const select = document.getElementById("shopping-list-select");
-      if (!select) return;
-      select.innerHTML = "";
-      state.shoppingLists.forEach(list => {
-        const opt = document.createElement("option");
-        opt.value = list.id;
-        opt.textContent = list.name;
-        if (list.id === state.activeShoppingListId) opt.selected = true;
-        select.appendChild(opt);
-      });
-    }
-
-    function addShoppingList() {
-      const name = window.prompt("Name of the new list:", "New list");
-      if (!name || !name.trim()) return;
-      const id = createId();
-      state.shoppingLists.push({
-        id,
-        name: name.trim(),
-        items: []
-      });
-      state.activeShoppingListId = id;
-      saveState();
-      renderShoppingListSelector();
-      renderShopping();
-    }
-
-    function renameShoppingList() {
-      const list = getActiveShoppingList();
-      if (!list) return;
-      const name = window.prompt("Rename list:", list.name);
-      if (name === null) return;
-      if (!name.trim()) return;
-      list.name = name.trim();
-      saveState();
-      renderShoppingListSelector();
-    }
-
-    function deleteShoppingList() {
-      if (state.shoppingLists.length === 1) {
-        const confirmClear = window.confirm(
-          "This is your only list. Delete all items in this list?"
-        );
-        if (!confirmClear) return;
-        const list = state.shoppingLists[0];
-        list.items = [];
-        saveState();
-        renderShopping();
+      todoListEl.innerHTML = "";
+      const tasks = sortedAndFilteredTasks();
+      if (!tasks.length) {
+        const li = document.createElement("li");
+        li.className = "card-subtitle";
+        li.textContent = "No tasks yet. Add your first one above.";
+        todoListEl.appendChild(li);
         return;
       }
 
-      const list = getActiveShoppingList();
-      if (!list) return;
-      const confirmDel = window.confirm(
-        `Delete list "${list.name}" and all its items?`
-      );
-      if (!confirmDel) return;
+      tasks.forEach((task) => {
+        const li = document.createElement("li");
+        li.className = "list-item";
 
-      state.shoppingLists = state.shoppingLists.filter(l => l.id !== list.id);
-      if (!state.shoppingLists.length) {
-        ensureShoppingLists();
-      } else {
-        state.activeShoppingListId = state.shoppingLists[0].id;
-      }
-      saveState();
-      renderShoppingListSelector();
-      renderShopping();
-    }
+        const main = document.createElement("div");
+        main.className = "list-item-main";
 
-    // --- SHOPPING DRAG ORDER ---
-    function applyShoppingOrderFromDOM() {
-      const list = getActiveShoppingList();
-      if (!list) return;
-      const container = document.getElementById("shopping-list");
-      const orderIds = Array.from(container.children)
-        .map(el => el.dataset.id)
-        .filter(Boolean);
-      if (!orderIds.length) return;
+        const title = document.createElement("div");
+        title.className = "list-item-title";
+        title.textContent = task.text;
+        main.appendChild(title);
 
-      list.items.sort((a, b) => {
-        const ia = orderIds.indexOf(a.id);
-        const ib = orderIds.indexOf(b.id);
-        if (ia === -1 && ib === -1) return 0;
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
-        return ia - ib;
-      });
-      saveState();
-    }
+        const meta = document.createElement("div");
+        meta.className = "list-item-meta";
 
-    function setupShoppingDragAndDrop() {
-      const container = document.getElementById("shopping-list");
-      container.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        const dragging = container.querySelector(".dragging");
-        if (!dragging) return;
-        if (afterElement == null) {
-          container.appendChild(dragging);
-        } else {
-          container.insertBefore(dragging, afterElement);
+        const prChip = document.createElement("span");
+        prChip.className = "chip " + (task.priority === "high" ? "high" : "");
+        prChip.textContent =
+          "Priority: " + task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
+        meta.appendChild(prChip);
+
+        if (task.dueDate) {
+          const dueChip = document.createElement("span");
+          dueChip.className =
+            "chip" + (isOverdue(task) ? " overdue" : "");
+          dueChip.textContent =
+            "Due: " + task.dueDate + (isOverdue(task) ? " (overdue)" : "");
+          meta.appendChild(dueChip);
         }
+
+        const stChip = document.createElement("span");
+        stChip.className =
+          "chip " +
+          (task.status === "done"
+            ? "done"
+            : task.status === "half"
+            ? "half"
+            : "");
+        stChip.textContent =
+          task.status === "done"
+            ? "Done"
+            : task.status === "half"
+            ? "Half done"
+            : "Not done";
+        meta.appendChild(stChip);
+
+        main.appendChild(meta);
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const btnTodo = document.createElement("button");
+        btnTodo.className = "btn-ghost";
+        btnTodo.textContent = "Not done";
+        btnTodo.onclick = () => updateTaskStatus(task.id, "todo");
+
+        const btnHalf = document.createElement("button");
+        btnHalf.className = "btn-ghost";
+        btnHalf.textContent = "Half";
+        btnHalf.onclick = () => updateTaskStatus(task.id, "half");
+
+        const btnDone = document.createElement("button");
+        btnDone.className = "btn-ghost";
+        btnDone.textContent = "Done";
+        btnDone.onclick = () => updateTaskStatus(task.id, "done");
+
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn-ghost";
+        btnEdit.textContent = "Edit";
+        btnEdit.onclick = () => editTask(task.id);
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-ghost danger";
+        btnDel.textContent = "Delete";
+        btnDel.onclick = () => deleteTask(task.id);
+
+        actions.appendChild(btnTodo);
+        actions.appendChild(btnHalf);
+        actions.appendChild(btnDone);
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnDel);
+
+        li.appendChild(main);
+        li.appendChild(actions);
+        todoListEl.appendChild(li);
       });
+
+      refreshHomeDashboard();
     }
 
-    // --- SHOPPING LOGIC ---
-    function addItem(text) {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      const list = getActiveShoppingList();
-      if (!list) return;
-      list.items.push({
-        id: createId(),
-        text: trimmed,
+    // =============================
+    // Shopping Logic (with delete confirm)
+    // =============================
+
+    const shoppingForm = document.getElementById("shopping-form");
+    const shoppingInput = document.getElementById("shopping-text");
+    const shoppingListEl = document.getElementById("shopping-list");
+
+    // item: { id, text, checked }
+    shoppingForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = shoppingInput.value.trim();
+      if (!text) return;
+      state.shoppingItems.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        text,
         checked: false,
-        note: ""
       });
       saveState();
+      shoppingForm.reset();
       renderShopping();
-    }
+    });
 
-    function toggleItemChecked(id) {
-      const list = getActiveShoppingList();
-      if (!list) return;
-      const it = list.items.find(i => i.id === id);
-      if (!it) return;
-      it.checked = !it.checked;
+    function toggleShoppingItem(id) {
+      const item = state.shoppingItems.find((i) => i.id === id);
+      if (!item) return;
+      item.checked = !item.checked;
       saveState();
       renderShopping();
     }
 
-    function updateItemNote(id, noteText) {
-      const list = getActiveShoppingList();
-      if (!list) return;
-      const it = list.items.find(i => i.id === id);
-      if (!it) return;
-      it.note = noteText;
-      saveState();
-    }
-
-    function deleteItem(id) {
-      const list = getActiveShoppingList();
-      if (!list) return;
-      list.items = list.items.filter(i => i.id !== id);
+    function deleteShoppingItem(id) {
+      const item = state.shoppingItems.find((i) => i.id === id);
+      if (!item) return;
+      const ok = confirm(`Delete this item?\n\n${item.text}`);
+      if (!ok) return;
+      state.shoppingItems = state.shoppingItems.filter((i) => i.id !== id);
       saveState();
       renderShopping();
     }
 
     function renderShopping() {
-      const container = document.getElementById("shopping-list");
-      container.innerHTML = "";
+      shoppingListEl.innerHTML = "";
+      if (!state.shoppingItems.length) {
+        const li = document.createElement("li");
+        li.className = "card-subtitle";
+        li.textContent = "Empty list. Add items above.";
+        shoppingListEl.appendChild(li);
+        refreshHomeDashboard();
+        return;
+      }
 
-      const list = getActiveShoppingList();
-      if (!list) return;
+      state.shoppingItems.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "list-item";
+        li.draggable = true;
 
-      // Keep unchecked on top, checked at bottom, but preserve order inside each group
-      const annotated = list.items.map((it, index) => ({ it, index }));
-      const sorted = annotated.sort((a, b) => {
-        if (a.it.checked === b.it.checked) {
-          return a.index - b.index;
-        }
-        return a.it.checked ? 1 : -1;
-      });
-
-      sorted.forEach(({ it }) => {
-        const itemData = it;
-        const item = document.createElement("div");
-        item.className = "item";
-        item.setAttribute("draggable", "true");
-        item.dataset.id = itemData.id;
-
-        item.addEventListener("dragstart", () => {
-          item.classList.add("dragging");
+        li.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", item.id);
         });
-        item.addEventListener("dragend", () => {
-          item.classList.remove("dragging");
-          applyShoppingOrderFromDOM();
-          renderShopping();
+
+        li.addEventListener("dragover", (e) => {
+          e.preventDefault();
+        });
+
+        li.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const draggedId = e.dataTransfer.getData("text/plain");
+          reorderShoppingItems(draggedId, item.id);
         });
 
         const main = document.createElement("div");
-        main.className = "item-main";
+        main.className = "list-item-main";
 
-        const check = document.createElement("input");
-        check.type = "checkbox";
-        check.className = "shopping-check";
-        check.checked = itemData.checked;
-        check.addEventListener("change", () => toggleItemChecked(itemData.id));
+        const title = document.createElement("div");
+        title.className = "list-item-title";
+        title.textContent = item.text;
+        main.appendChild(title);
 
-        const textDiv = document.createElement("div");
-        textDiv.className = "item-text" + (itemData.checked ? " done" : "");
-        textDiv.textContent = itemData.text;
+        const meta = document.createElement("div");
+        meta.className = "list-item-meta";
+        const status = document.createElement("span");
+        status.className = "chip " + (item.checked ? "done" : "");
+        status.textContent = item.checked ? "Got it" : "Pending";
+        meta.appendChild(status);
+        main.appendChild(meta);
 
-        main.appendChild(check);
-        main.appendChild(textDiv);
-        item.appendChild(main);
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
 
-        // Note
-        const noteDiv = document.createElement("div");
-        noteDiv.className = "note";
-        const noteArea = document.createElement("textarea");
-        noteArea.placeholder = "Note...";
-        noteArea.value = itemData.note || "";
-        noteArea.addEventListener("input", (e) => {
-          updateItemNote(itemData.id, e.target.value);
-        });
-        noteDiv.appendChild(noteArea);
-        item.appendChild(noteDiv);
+        const btnToggle = document.createElement("button");
+        btnToggle.className = "btn-ghost";
+        btnToggle.textContent = item.checked ? "Uncheck" : "Check";
+        btnToggle.onclick = () => toggleShoppingItem(item.id);
 
-        // Controls
-        const controls = document.createElement("div");
-        controls.className = "item-controls";
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-ghost danger";
+        btnDel.textContent = "Delete";
+        btnDel.onclick = () => deleteShoppingItem(item.id);
 
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "btn-small btn-delete";
-        deleteBtn.textContent = "Delete";
-        deleteBtn.addEventListener("click", () => deleteItem(itemData.id));
+        actions.appendChild(btnToggle);
+        actions.appendChild(btnDel);
 
-        controls.appendChild(deleteBtn);
-        item.appendChild(controls);
-
-        container.appendChild(item);
+        li.appendChild(main);
+        li.appendChild(actions);
+        shoppingListEl.appendChild(li);
       });
+
+      refreshHomeDashboard();
     }
 
-    // --- WORKOUTS LOGIC ---
-    function addWorkout() {
-      const dateInput = document.getElementById("workout-date");
-      const typeInput = document.getElementById("workout-type");
-      const notesInput = document.getElementById("workout-notes");
-
-      const date = (dateInput.value || todayStr()).trim();
-      const type = (typeInput.value || "").trim();
-      const notes = (notesInput.value || "").trim();
-
-      if (!type && !notes) return;
-
-      state.workouts.unshift({
-        id: createId(),
-        date,
-        type,
-        notes
-      });
-
+    function reorderShoppingItems(draggedId, targetId) {
+      if (draggedId === targetId) return;
+      const items = state.shoppingItems;
+      const fromIndex = items.findIndex((i) => i.id === draggedId);
+      const toIndex = items.findIndex((i) => i.id === targetId);
+      if (fromIndex === -1 || toIndex === -1) return;
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
       saveState();
-      renderWorkouts();
-
-      // clear notes only, keep type/date for similar workouts
-      notesInput.value = "";
+      renderShopping();
     }
+
+    // =============================
+    // Workouts (basic)
+    // =============================
+
+    const workoutForm = document.getElementById("workout-form");
+    const workoutInput = document.getElementById("workout-text");
+    const workoutListEl = document.getElementById("workout-list");
+
+    workoutForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = workoutInput.value.trim();
+      if (!text) return;
+      state.workouts.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        text,
+        date: todayISO(),
+      });
+      saveState();
+      workoutForm.reset();
+      renderWorkouts();
+    });
 
     function deleteWorkout(id) {
-      state.workouts = state.workouts.filter(w => w.id !== id);
+      const w = state.workouts.find((x) => x.id === id);
+      if (!w) return;
+      const ok = confirm(`Delete this workout log?\n\n${w.text}`);
+      if (!ok) return;
+      state.workouts = state.workouts.filter((w) => w.id !== id);
       saveState();
       renderWorkouts();
     }
 
     function renderWorkouts() {
-      const container = document.getElementById("workouts-list");
-      container.innerHTML = "";
+      workoutListEl.innerHTML = "";
+      if (!state.workouts.length) {
+        const li = document.createElement("li");
+        li.className = "card-subtitle";
+        li.textContent = "No workouts logged yet.";
+        workoutListEl.appendChild(li);
+        refreshHomeDashboard();
+        return;
+      }
 
-      // Show newest first
-      const workouts = state.workouts.slice();
+      const sorted = [...state.workouts].sort((a, b) =>
+        a.date < b.date ? 1 : -1
+      );
+      sorted.forEach((w) => {
+        const li = document.createElement("li");
+        li.className = "list-item";
 
-      workouts.forEach(w => {
-        const item = document.createElement("div");
-        item.className = "item";
-
-        const top = document.createElement("div");
-        top.className = "item-main";
+        const main = document.createElement("div");
+        main.className = "list-item-main";
 
         const title = document.createElement("div");
-        title.className = "item-text";
-        const name = w.type || "(no name)";
-        title.textContent = name;
+        title.className = "list-item-title";
+        title.textContent = w.text;
+        main.appendChild(title);
 
-        const badge = document.createElement("span");
-        badge.className = "badge";
-        badge.textContent = w.date || "";
+        const meta = document.createElement("div");
+        meta.className = "list-item-meta";
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = "Date: " + (w.date || "?");
+        meta.appendChild(chip);
+        main.appendChild(meta);
 
-        top.appendChild(title);
-        top.appendChild(badge);
-        item.appendChild(top);
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
 
-        if (w.notes) {
-          const notesDiv = document.createElement("div");
-          notesDiv.className = "note";
-          notesDiv.textContent = w.notes;
-          item.appendChild(notesDiv);
-        }
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-ghost danger";
+        btnDel.textContent = "Delete";
+        btnDel.onclick = () => deleteWorkout(w.id);
 
-        const controls = document.createElement("div");
-        controls.className = "item-controls";
+        actions.appendChild(btnDel);
 
-        const delBtn = document.createElement("button");
-        delBtn.className = "btn-small btn-delete";
-        delBtn.textContent = "Delete";
-        delBtn.addEventListener("click", () => deleteWorkout(w.id));
-
-        controls.appendChild(delBtn);
-        item.appendChild(controls);
-
-        container.appendChild(item);
+        li.appendChild(main);
+        li.appendChild(actions);
+        workoutListEl.appendChild(li);
       });
+
+      refreshHomeDashboard();
     }
 
-    // --- FINANCE LOGIC ---
-    function addExpense() {
-      const amountInput = document.getElementById("expense-amount");
-      const methodSelect = document.getElementById("expense-method");
-      const categoryInput = document.getElementById("expense-category");
-      const dateInput = document.getElementById("expense-date");
-      const noteInput = document.getElementById("expense-note");
+    // =============================
+    // Finance (basic)
+    // =============================
 
-      const amount = parseFloat(amountInput.value);
-      if (isNaN(amount) || amount === 0) return;
+    const financeForm = document.getElementById("finance-form");
+    const financeAmount = document.getElementById("finance-amount");
+    const financeType = document.getElementById("finance-type");
+    const financeCategory = document.getElementById("finance-category");
+    const financeDate = document.getElementById("finance-date");
+    const financeNote = document.getElementById("finance-note");
+    const financeListEl = document.getElementById("finance-list");
 
-      const method = methodSelect.value || "other";
-      const category = (categoryInput.value || "").trim();
-      const date = (dateInput.value || todayStr()).trim();
-      const note = (noteInput.value || "").trim();
+    financeForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const amount = parseFloat(financeAmount.value);
+      if (isNaN(amount) || amount <= 0) return;
+      const type = financeType.value;
+      const cat = financeCategory.value.trim() || "Other";
+      const date = financeDate.value || todayISO();
+      const note = financeNote.value.trim();
 
-      state.finances.unshift({
-        id: createId(),
+      state.finances.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         amount,
-        method,
-        category,
+        type,
+        category: cat,
         date,
-        note
+        note,
       });
 
       saveState();
+      financeForm.reset();
       renderFinances();
+    });
 
-      amountInput.value = "";
-      noteInput.value = "";
-    }
-
-    function deleteExpense(id) {
-      state.finances = state.finances.filter(f => f.id !== id);
+    function deleteFinance(id) {
+      const f = state.finances.find((x) => x.id === id);
+      if (!f) return;
+      const sign = f.type === "expense" ? "-" : "+";
+      const ok = confirm(
+        `Delete this entry?\n\n${sign}${f.amount.toFixed(2)} · ${
+          f.category
+        } · ${f.date}`
+      );
+      if (!ok) return;
+      state.finances = state.finances.filter((f) => f.id !== id);
       saveState();
       renderFinances();
     }
 
     function renderFinances() {
-      const container = document.getElementById("finance-list");
-      container.innerHTML = "";
+      financeListEl.innerHTML = "";
+      if (!state.finances.length) {
+        const li = document.createElement("li");
+        li.className = "card-subtitle";
+        li.textContent = "No entries yet.";
+        financeListEl.appendChild(li);
+        refreshHomeDashboard();
+        return;
+      }
 
-      const finances = state.finances.slice();
-
-      finances.forEach(f => {
-        const item = document.createElement("div");
-        item.className = "item";
+      const sorted = [...state.finances].sort((a, b) =>
+        a.date < b.date ? 1 : -1
+      );
+      sorted.forEach((f) => {
+        const li = document.createElement("li");
+        li.className = "list-item";
 
         const main = document.createElement("div");
-        main.className = "item-main";
+        main.className = "list-item-main";
 
-        const text = document.createElement("div");
-        text.className = "item-text";
-        const category = f.category || "Uncategorized";
-        text.textContent = `${category} – ${f.amount.toFixed(2)}`;
+        const title = document.createElement("div");
+        title.className = "list-item-title";
+        const sign = f.type === "expense" ? "-" : "+";
+        title.textContent = `${sign}${f.amount.toFixed(2)} · ${f.category}`;
+        main.appendChild(title);
 
-        const right = document.createElement("div");
-        right.style.display = "flex";
-        right.style.flexDirection = "column";
-        right.style.alignItems = "flex-end";
-        right.style.fontSize = "0.75rem";
+        const meta = document.createElement("div");
+        meta.className = "list-item-meta";
+        const dateChip = document.createElement("span");
+        dateChip.className = "chip";
+        dateChip.textContent = "Date: " + f.date;
+        meta.appendChild(dateChip);
 
-        const methodSpan = document.createElement("span");
-        methodSpan.className = "badge";
-        methodSpan.textContent = f.method;
-
-        const dateSpan = document.createElement("span");
-        dateSpan.textContent = f.date;
-
-        right.appendChild(methodSpan);
-        right.appendChild(dateSpan);
-
-        main.appendChild(text);
-        main.appendChild(right);
-        item.appendChild(main);
+        const typeChip = document.createElement("span");
+        typeChip.className =
+          "chip " + (f.type === "expense" ? "overdue" : "done");
+        typeChip.textContent =
+          f.type === "expense" ? "Expense" : "Income";
+        meta.appendChild(typeChip);
 
         if (f.note) {
-          const noteDiv = document.createElement("div");
-          noteDiv.className = "note";
-          noteDiv.textContent = f.note;
-          item.appendChild(noteDiv);
+          const noteChip = document.createElement("span");
+          noteChip.className = "chip";
+          noteChip.textContent = f.note;
+          meta.appendChild(noteChip);
         }
 
-        const controls = document.createElement("div");
-        controls.className = "item-controls";
+        main.appendChild(meta);
 
-        const delBtn = document.createElement("button");
-        delBtn.className = "btn-small btn-delete";
-        delBtn.textContent = "Delete";
-        delBtn.addEventListener("click", () => deleteExpense(f.id));
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
 
-        controls.appendChild(delBtn);
-        item.appendChild(controls);
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-ghost danger";
+        btnDel.textContent = "Delete";
+        btnDel.onclick = () => deleteFinance(f.id);
 
-        container.appendChild(item);
+        actions.appendChild(btnDel);
+
+        li.appendChild(main);
+        li.appendChild(actions);
+        financeListEl.appendChild(li);
       });
+
+      refreshHomeDashboard();
     }
 
-    // --- FILTER SETUP ---
-    function setupFilters() {
-      const statusButtons = document.querySelectorAll(".status-filter-btn");
-      statusButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          statusButtons.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentStatusFilter = btn.dataset.status;
-          renderTasks();
-        });
-      });
+    // =============================
+    // Home Dashboard
+    // =============================
 
-      const priorityButtons = document.querySelectorAll(".priority-filter-btn");
-      priorityButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          priorityButtons.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentPriorityFilter = btn.dataset.priority;
-          renderTasks();
-        });
-      });
+    const todayTasksListEl = document.getElementById("today-tasks-list");
+    const homeTodoCountEl = document.getElementById("home-todo-count");
+    const homeFinanceCountEl = document.getElementById("home-finance-count");
+    const homeWorkoutCountEl = document.getElementById("home-workout-count");
+    const homeShoppingCountEl = document.getElementById("home-shopping-count");
 
-      const whenButtons = document.querySelectorAll(".when-filter-btn");
-      whenButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          whenButtons.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentWhenFilter = btn.dataset.when;
-          renderTasks();
-        });
-      });
-    }
+    const quickTaskForm = document.getElementById("quick-task-form");
+    const quickTaskInput = document.getElementById("quick-task-text");
 
-    // --- INIT ---
-    document.addEventListener("DOMContentLoaded", () => {
-      // Home cards navigation
-      document.querySelectorAll(".home-card").forEach(card => {
-        if (card.classList.contains("home-card-disabled")) return;
-        const target = card.dataset.target;
-        if (!target) return;
-        card.addEventListener("click", () => showScreen(target));
-      });
-
-      loadState();
-      loadTheme();
-      setupTaskDragAndDrop();
-      setupShoppingDragAndDrop();
-      setupFilters();
+    quickTaskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = quickTaskInput.value.trim();
+      if (!text) return;
+      const task = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        text,
+        priority: "medium",
+        dueDate: todayISO(),
+        status: "todo",
+      };
+      state.tasks.push(task);
+      saveState();
+      quickTaskForm.reset();
       renderTasks();
-      renderShoppingListSelector();
+      showView("home", true);
+    });
+
+    function refreshHomeDashboard() {
+      // Today/overdue tasks
+      const today = todayISO();
+      const todayTasks = state.tasks.filter((t) => {
+        if (!t.dueDate) return false;
+        if (t.status === "done") return false;
+        return t.dueDate <= today;
+      });
+
+      homeTodoCountEl.textContent = todayTasks.length + " today";
+      todayTasksListEl.innerHTML = "";
+
+      if (!todayTasks.length) {
+        const li = document.createElement("li");
+        li.className = "card-subtitle";
+        li.textContent = "No tasks due today. 🎉";
+        todayTasksListEl.appendChild(li);
+      } else {
+        todayTasks
+          .slice(0, 5)
+          .sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
+          .forEach((t) => {
+            const li = document.createElement("li");
+            li.className = "today-tasks-item";
+            const left = document.createElement("div");
+            left.className = "today-tasks-title";
+            left.textContent = t.text;
+            const right = document.createElement("div");
+            right.className = "today-tasks-meta";
+            right.textContent =
+              (t.dueDate === today ? "Today" : t.dueDate) +
+              " · " +
+              (t.priority === "high"
+                ? "High"
+                : t.priority === "low"
+                ? "Low"
+                : "Medium");
+            li.appendChild(left);
+            li.appendChild(right);
+            todayTasksListEl.appendChild(li);
+          });
+      }
+
+      // Shopping count: pending items
+      const pendingShopping = state.shoppingItems.filter(
+        (i) => !i.checked
+      ).length;
+      homeShoppingCountEl.textContent =
+        pendingShopping + " pending";
+
+      // Finance: entries this month
+      const now = new Date();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const y = now.getFullYear();
+      const prefix = `${y}-${m}-`;
+      const thisMonthFinances = state.finances.filter((f) =>
+        f.date && f.date.startsWith(prefix)
+      );
+      homeFinanceCountEl.textContent =
+        thisMonthFinances.length + " entries";
+
+      // Workouts: last workout date
+      if (!state.workouts.length) {
+        homeWorkoutCountEl.textContent = "None yet";
+      } else {
+        const last = [...state.workouts].sort((a, b) =>
+          a.date < b.date ? 1 : -1
+        )[0];
+        homeWorkoutCountEl.textContent = last.date || "Recent";
+      }
+    }
+
+    // =============================
+    // Initial render
+    // =============================
+
+    function renderAll() {
+      renderTasks();
       renderShopping();
       renderWorkouts();
       renderFinances();
-
-      // Theme toggle
-      const themeBtn = document.getElementById("theme-toggle");
-      if (themeBtn) {
-        themeBtn.addEventListener("click", () => {
-          applyTheme(currentTheme === "dark" ? "light" : "dark");
-        });
-      }
-
-      // Prefill dates for workout & finance
-      const workoutDate = document.getElementById("workout-date");
-      if (workoutDate && !workoutDate.value) workoutDate.value = todayStr();
-      const expenseDate = document.getElementById("expense-date");
-      if (expenseDate && !expenseDate.value) expenseDate.value = todayStr();
-
-      // Add task events
-      const newTaskInput = document.getElementById("new-task-input");
-      const addTaskBtn = document.getElementById("add-task-btn");
-
-      addTaskBtn.addEventListener("click", () => {
-        addTask(newTaskInput.value);
-        newTaskInput.value = "";
-        newTaskInput.focus();
-      });
-
-      newTaskInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          addTask(newTaskInput.value);
-          newTaskInput.value = "";
-        }
-      });
-
-      // Add shopping item events
-      const newItemInput = document.getElementById("new-item-input");
-      const addItemBtn = document.getElementById("add-item-btn");
-
-      addItemBtn.addEventListener("click", () => {
-        addItem(newItemInput.value);
-        newItemInput.value = "";
-        newItemInput.focus();
-      });
-
-      newItemInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          addItem(newItemInput.value);
-          newItemInput.value = "";
-        }
-      });
-
-      // Shopping list selector + buttons
-      const listSelect = document.getElementById("shopping-list-select");
-      if (listSelect) {
-        listSelect.addEventListener("change", (e) => {
-          state.activeShoppingListId = e.target.value;
-          saveState();
-          renderShopping();
-        });
-      }
-
-      const addListBtn = document.getElementById("add-shopping-list-btn");
-      if (addListBtn) addListBtn.addEventListener("click", addShoppingList);
-
-      const renameListBtn = document.getElementById("rename-shopping-list-btn");
-      if (renameListBtn) renameListBtn.addEventListener("click", renameShoppingList);
-
-      const deleteListBtn = document.getElementById("delete-shopping-list-btn");
-      if (deleteListBtn) deleteListBtn.addEventListener("click", deleteShoppingList);
-
-      // Workouts events
-      const addWorkoutBtn = document.getElementById("add-workout-btn");
-      if (addWorkoutBtn) addWorkoutBtn.addEventListener("click", addWorkout);
-
-      // Finances events
-      const addExpenseBtn = document.getElementById("add-expense-btn");
-      if (addExpenseBtn) addExpenseBtn.addEventListener("click", addExpense);
-    });
+      refreshHomeDashboard();
+    }
   </script>
-
 
   <script>
     if ("serviceWorker" in navigator) {
