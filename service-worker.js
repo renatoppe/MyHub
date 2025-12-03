@@ -1,10 +1,5 @@
-const CACHE_NAME = "personal-hub-v1";
-const URLS_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest"
-  // you can add "./icon-192.png", "./icon-512.png" here too if you want
-];
+const CACHE_NAME = "myhub-v0.2";
+const URLS_TO_CACHE = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
