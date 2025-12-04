@@ -2,388 +2,275 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MyHub v0.3</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#020617" />
-  <link rel="icon" href="icon-192.png" />
+  <title>MyHub v0.4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      --bg: #020617;
-      --bg-elevated: #0f172a;
-      --bg-elevated-softer: #111827;
-      --accent: #3b82f6;
-      --accent-soft: rgba(59, 130, 246, 0.18);
-      --text: #e5e7eb;
-      --text-soft: #9ca3af;
-      --danger: #ef4444;
-      --border: #1f2937;
-      --radius-lg: 16px;
-      --radius-md: 10px;
-      --radius-sm: 6px;
-      --shadow-soft: 0 14px 35px rgba(15, 23, 42, 0.85);
+      --bg: #0b1020;
+      --bg-alt: #141a2a;
+      --card: #1a2135;
+      --accent: #4f9cff;
+      --accent-soft: rgba(79, 156, 255, 0.15);
+      --text: #f5f7ff;
+      --text-soft: #b5bddb;
+      --danger: #ff4f6a;
+      --success: #4fe39c;
+      --border: #252c42;
     }
 
     * {
       box-sizing: border-box;
-    }
-
-    html,
-    body {
       margin: 0;
       padding: 0;
-      height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
-      background: radial-gradient(circle at top, #020617 0, #000 55%);
-      color: var(--text);
-      overscroll-behavior-y: none;
     }
 
     body {
+      background: radial-gradient(circle at top left, #20284a 0, #050713 45%, #02030a 100%);
+      color: var(--text);
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: stretch;
     }
 
-    .app-root {
-      height: 100vh;
+    /* Layout */
+
+    .app {
+      display: flex;
       width: 100%;
-      max-width: 820px;
-      display: flex;
-      padding: 10px;
+      min-height: 100vh;
     }
-
-    .app-shell {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-      border-radius: 18px;
-      background: radial-gradient(circle at top left, #020617, #020617);
-      box-shadow: var(--shadow-soft);
-      overflow: hidden;
-      border: 1px solid rgba(15, 23, 42, 0.9);
-    }
-
-    /* SIDEBAR */
 
     .sidebar {
-      width: 220px;
-      background: radial-gradient(circle at top, #020617, #020617 60%, #020617);
+      background: rgba(6, 10, 30, 0.96);
       border-right: 1px solid var(--border);
-      padding: 10px 10px 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      padding: 0.75rem 0.4rem;
+      transition: width 0.2s ease;
+      width: 60px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 10;
+    }
+
+    .sidebar.expanded {
+      width: 190px;
     }
 
     .sidebar-header {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 4px;
+      justify-content: center;
+      margin-bottom: 0.5rem;
     }
 
-    .sidebar-title {
+    #sidebarToggle {
+      background: transparent;
+      border: none;
+      color: var(--text-soft);
       font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #f9fafb;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 999px;
+      transition: background 0.15s;
     }
 
-    .sidebar-badge {
-      font-size: 0.7rem;
-      padding: 3px 7px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-soft);
+    #sidebarToggle:hover {
+      background: rgba(255,255,255,0.06);
     }
 
-    .sidebar-version {
-      font-size: 0.72rem;
-      color: var(--text-soft);
-      padding: 2px 4px;
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.7);
-      background: rgba(15, 23, 42, 0.9);
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .sidebar-version-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #22c55e;
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-top: 0.25rem;
     }
 
     .nav-section-label {
       font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #6b7280;
-      margin-bottom: 4px;
-      margin-top: 4px;
-    }
-
-    .nav-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .nav-item {
-      border-radius: 999px;
-      border: 1px solid transparent;
-      padding: 6px 8px;
-      font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
+      letter-spacing: 0.06em;
       color: var(--text-soft);
-      background: transparent;
-      transition: 0.16s ease;
-    }
-
-    .nav-item-icon {
-      width: 24px;
-      height: 24px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
-      font-size: 0.9rem;
-    }
-
-    .nav-item-label {
-      flex: 1;
-      text-align: left;
-    }
-
-    .nav-item.active {
-      border-color: rgba(59, 130, 246, 0.7);
-      background: radial-gradient(circle at left, #1e3a8a, #020617);
-      color: #e5edff;
-      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.6);
-      transform: translateY(-1px);
-    }
-
-    .nav-footer {
-      margin-top: auto;
-      font-size: 0.7rem;
-      color: var(--text-soft);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .nav-footer span {
+      margin: 0.4rem 0.2rem 0.15rem;
       opacity: 0.8;
     }
 
-    /* COLLAPSED SIDEBAR FOR MOBILE */
-
-    .sidebar-collapsed {
-      width: 56px;
-      padding-inline: 6px;
-    }
-
-    .sidebar-collapsed .nav-item-label,
-    .sidebar-collapsed .nav-section-label,
-    .sidebar-collapsed .sidebar-badge,
-    .sidebar-collapsed .sidebar-version {
-      display: none;
-    }
-
-    .sidebar-collapsed .sidebar-title {
-      font-size: 0.9rem;
-    }
-
-    /* MAIN AREA */
-
-    .app-main {
-      flex: 1;
-      background: radial-gradient(circle at top, #020617, #000 80%);
-      padding: 8px 10px 10px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .topbar {
+    .nav-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .topbar-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .topbar-title {
-      font-size: 0.9rem;
-      color: var(--text-soft);
-    }
-
-    .topbar-view-label {
-      font-size: 0.92rem;
-      font-weight: 500;
-      color: #e5e7eb;
-    }
-
-    .btn,
-    button {
-      font-family: inherit;
-    }
-
-    .btn {
+      gap: 0.5rem;
+      padding: 0.4rem 0.5rem;
       border-radius: 999px;
-      border: 1px solid var(--border);
-      padding: 6px 9px;
-      font-size: 0.78rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(15, 23, 42, 0.95);
+      border: none;
+      width: 100%;
+      background: transparent;
       color: var(--text-soft);
       cursor: pointer;
-      transition: 0.16s ease;
+      font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s, transform 0.05s;
+      position: relative;
     }
 
-    .btn.icon {
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      justify-content: center;
+    .nav-item span.label {
+      opacity: 0;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+      font-size: 0.8rem;
     }
 
-    .btn.primary {
-      background: linear-gradient(135deg, #2563eb, #4f46e5);
-      color: #eef2ff;
-      border-color: rgba(59, 130, 246, 0.8);
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.7);
+    .sidebar.expanded .nav-item span.label {
+      opacity: 1;
     }
 
-    .btn.small {
-      padding: 4px 8px;
-      font-size: 0.72rem;
+    .nav-item .icon {
+      font-size: 1.1rem;
+      width: 1.6rem;
+      text-align: center;
     }
 
-    .btn:hover {
-      transform: translateY(-0.5px);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.9);
+    .nav-item.active {
+      background: linear-gradient(90deg, #4f9cff33, #4fe39c33);
+      color: var(--text);
     }
 
-    .btn.primary:hover {
-      box-shadow: 0 5px 16px rgba(37, 99, 235, 0.85);
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #ffffff;
     }
 
-    .app-content {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 6px;
+    .nav-item:active {
+      transform: scale(0.97);
     }
 
     main {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      flex: 1;
+      padding: 0.75rem;
+      min-height: 100vh;
     }
 
-    section {
+    .page {
       display: none;
+      max-width: 980px;
+      margin: 0 auto;
     }
 
-    section.active {
+    .page.active {
       display: block;
     }
 
-    .card {
-      background: radial-gradient(circle at top, #020617, #020617 70%, #020617);
-      border-radius: var(--radius-lg);
-      padding: 10px 11px 9px;
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .page-header small {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.5rem 0 0.75rem;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 0.2rem 0.7rem;
       border: 1px solid var(--border);
-      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.9);
+      background: rgba(10, 14, 35, 0.92);
+      color: var(--text-soft);
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .chip.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--text);
+    }
+
+    .chip .small-btn {
+      font-size: 0.7rem;
+      border: none;
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+    }
+
+    /* Cards / containers */
+
+    .card {
+      background: rgba(9, 13, 32, 0.96);
+      border-radius: 1rem;
+      padding: 0.75rem 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.6);
+      margin-bottom: 0.8rem;
     }
 
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 6px;
+      margin-bottom: 0.4rem;
     }
 
-    .card-title {
-      font-size: 0.96rem;
+    .card-header h2 {
+      font-size: 0.95rem;
       font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
-    .card-title span.icon {
-      display: inline-flex;
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-
-    .card-subtitle {
-      font-size: 0.78rem;
+    .card-header small {
       color: var(--text-soft);
-      margin-bottom: 6px;
+      font-size: 0.75rem;
     }
 
     .row {
       display: flex;
-      gap: 6px;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
     }
 
     .row > * {
       flex: 1;
+      min-width: 0;
     }
 
-    input,
+    label {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
     select,
     textarea {
       width: 100%;
-      border-radius: var(--radius-md);
+      padding: 0.35rem 0.45rem;
+      border-radius: 0.6rem;
       border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.98);
+      background: #050713;
       color: var(--text);
-      padding: 6px 8px;
       font-size: 0.8rem;
       outline: none;
-      transition: 0.16s ease;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-      border-color: rgba(59, 130, 246, 0.7);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
     }
 
     textarea {
@@ -391,1773 +278,1565 @@
       min-height: 60px;
     }
 
-    .list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    input::placeholder,
+    textarea::placeholder {
+      color: #6d7591;
     }
 
-    .list-item {
-      border-radius: var(--radius-md);
+    button.primary {
+      background: linear-gradient(135deg, #4f9cff, #4fe39c);
+      border: none;
+      color: #050713;
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    button.primary:active {
+      transform: scale(0.97);
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.97);
-      padding: 6px 7px;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
+      color: var(--text-soft);
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+    }
+
+    button.secondary:active {
+      transform: scale(0.97);
+    }
+
+    .muted {
+      color: var(--text-soft);
       font-size: 0.78rem;
     }
 
-    .list-item-main {
+    /* Lists */
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.4rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.7rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 0.8rem;
+    }
+
+    .item-main {
+      display: flex;
+      gap: 0.4rem;
+      align-items: flex-start;
       flex: 1;
       min-width: 0;
     }
 
-    .list-item-title {
-      font-weight: 500;
-      margin-bottom: 2px;
+    .item-main input[type="checkbox"] {
+      margin-top: 0.2rem;
     }
 
-    .list-item-meta {
+    .item-text {
       display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
+      flex-direction: column;
+      gap: 0.15rem;
+      word-break: break-word;
+    }
+
+    .item-title.done {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    .item-meta {
       font-size: 0.7rem;
       color: var(--text-soft);
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
     }
 
-    .chip {
+    .pill {
       border-radius: 999px;
-      border: 1px solid var(--border);
-      padding: 1px 6px;
+      padding: 0.05rem 0.5rem;
       font-size: 0.68rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
     }
 
-    .chip.high {
-      border-color: rgba(239, 68, 68, 0.7);
-      color: #fecaca;
+    .pill-high {
+      border-color: #ff9b5f;
+      color: #ffcfaa;
     }
 
-    .chip.done {
-      border-color: rgba(34, 197, 94, 0.7);
-      color: #bbf7d0;
+    .pill-medium {
+      border-color: #4f9cff;
+      color: #b6d4ff;
     }
 
-    .chip.half {
-      border-color: rgba(234, 179, 8, 0.7);
-      color: #fef3c7;
-    }
-
-    .chip.overdue {
-      border-color: rgba(248, 113, 113, 0.85);
-      color: #fecaca;
+    .pill-low {
+      border-color: #4fe39c;
+      color: #b6f4d2;
     }
 
     .item-actions {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 0.25rem;
     }
 
-    .btn-ghost {
-      border-radius: 999px;
+    .icon-btn {
       border: none;
-      background: transparent;
-      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.04);
       color: var(--text-soft);
-      cursor: pointer;
-      padding: 2px 4px;
-    }
-
-    .btn-ghost.danger {
-      color: var(--danger);
-    }
-
-    .filter-panel {
-      margin-bottom: 6px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.99);
-      padding: 6px;
-      font-size: 0.76rem;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .filter-panel-row {
-      display: flex;
-      gap: 6px;
-    }
-
-    .filter-panel-row > * {
-      flex: 1;
-    }
-
-    .filter-panel-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 6px;
-      margin-top: 2px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* Home dashboard */
-
-    .home-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .home-module {
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: radial-gradient(circle at top left, #0b1120, #020617);
-      padding: 8px 8px 6px;
-      cursor: pointer;
-      transition: 0.16s ease;
-    }
-
-    .home-module:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.9);
-    }
-
-    .home-module-title {
-      font-size: 0.8rem;
-      margin-bottom: 2px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .home-module-count {
-      font-size: 0.7rem;
-      color: var(--text-soft);
-    }
-
-    .today-tasks-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.76rem;
-    }
-
-    .today-tasks-item {
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-      padding: 4px 6px;
-      border-radius: var(--radius-md);
-      background: rgba(15, 23, 42, 0.96);
-      border: 1px solid var(--border);
-    }
-
-    .today-tasks-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .today-tasks-meta {
-      font-size: 0.7rem;
-      color: var(--text-soft);
-      white-space: nowrap;
-      padding-left: 4px;
-    }
-
-    /* To-do lists header */
-
-    .todo-lists-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-
-    .todo-lists-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .todo-list-chip {
       border-radius: 999px;
-      padding: 2px 7px;
-      font-size: 0.7rem;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.95);
-      color: var(--text-soft);
-      cursor: pointer;
+      width: 1.6rem;
+      height: 1.6rem;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
+      font-size: 0.8rem;
+      cursor: pointer;
     }
 
-    .todo-list-chip.active {
-      border-color: rgba(59, 130, 246, 0.7);
-      color: #dbeafe;
-      background: rgba(15, 23, 42, 1);
+    .icon-btn.danger {
+      background: rgba(255, 79, 106, 0.08);
+      color: #ff9fb0;
     }
 
-    .todo-list-chip span.dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      background: var(--accent);
+    .icon-btn:active {
+      transform: scale(0.95);
     }
 
-    /* Sidebar overlay for mobile */
+    /* Simple two-column layout for some pages */
 
-    .sidebar-overlay {
-      display: none;
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 800px) {
+      .grid-2 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+      }
+      main {
+        margin-left: 60px;
+      }
+      .sidebar.expanded + main {
+        margin-left: 190px;
+      }
+    }
+
+    /* Modal */
+
+    .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.7);
-      z-index: 8;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
     }
 
-    .sidebar-mobile {
-      position: fixed;
-      top: 10px;
-      bottom: 10px;
-      left: 10px;
-      z-index: 9;
-      max-width: 260px;
+    .modal-backdrop.active {
+      display: flex;
     }
 
-    .app-root.sidebar-open .sidebar-overlay {
-      display: block;
+    .modal {
+      background: #070a16;
+      border-radius: 0.9rem;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      max-width: 380px;
+      width: 100%;
     }
 
-    /* Responsive */
-
-    @media (max-width: 768px) {
-      .app-root {
-        padding: 6px;
-      }
-
-      .app-shell {
-        border-radius: 16px;
-      }
-
-      .sidebar {
-        display: none;
-      }
-
-      .sidebar.desktop-only {
-        display: none;
-      }
-
-      .sidebar.mobile-sheet {
-        display: flex;
-      }
-
-      .topbar-title {
-        font-size: 0.85rem;
-      }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
     }
 
-    @media (min-width: 769px) {
-      .sidebar-overlay,
-      .sidebar.mobile-sheet {
-        display: none !important;
-      }
+    .modal-header h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+
+    /* Small tags */
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.05rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text-soft);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .tag-income {
+      border-color: var(--success);
+      color: #a7f5cf;
+    }
+
+    .tag-expense {
+      border-color: var(--danger);
+      color: #ffc6d1;
     }
   </style>
 </head>
 <body>
-  <div class="app-root" id="app-root">
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-    <div class="app-shell">
-      <!-- DESKTOP SIDEBAR -->
-      <aside class="sidebar desktop-only sidebar-collapsed" id="sidebar-desktop">
-        <div class="sidebar-header">
-          <div class="sidebar-title">MyHub</div>
-        </div>
-        <div class="sidebar-version">
-          <span class="sidebar-version-dot"></span>
-          v0.3 · local only
-        </div>
-
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button id="sidebarToggle" title="Toggle sidebar">☰</button>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-page="home">
+          <span class="icon">🏠</span>
+          <span class="label">Home</span>
+        </button>
         <div class="nav-section-label">Core</div>
-        <ul class="nav-list">
-          <li class="nav-item active" data-view="home">
-            <div class="nav-item-icon">🏠</div>
-            <div class="nav-item-label">Home</div>
-          </li>
-          <li class="nav-item" data-view="todo">
-            <div class="nav-item-icon">✅</div>
-            <div class="nav-item-label">To-Do</div>
-          </li>
-          <li class="nav-item" data-view="shopping">
-            <div class="nav-item-icon">🛒</div>
-            <div class="nav-item-label">Shopping</div>
-          </li>
-          <li class="nav-item" data-view="workouts">
-            <div class="nav-item-icon">🏋️</div>
-            <div class="nav-item-label">Workouts</div>
-          </li>
-          <li class="nav-item" data-view="finance">
-            <div class="nav-item-icon">💰</div>
-            <div class="nav-item-label">Finance</div>
-          </li>
-        </ul>
+        <button class="nav-item" data-page="todo">
+          <span class="icon">📝</span>
+          <span class="label">To-do</span>
+        </button>
+        <button class="nav-item" data-page="shopping">
+          <span class="icon">🛒</span>
+          <span class="label">Shopping</span>
+        </button>
+        <button class="nav-item" data-page="workouts">
+          <span class="icon">🏋️</span>
+          <span class="label">Workouts</span>
+        </button>
+        <button class="nav-item" data-page="finance">
+          <span class="icon">💰</span>
+          <span class="label">Finance</span>
+        </button>
 
-        <div class="nav-footer">
-          <span>MyHub</span>
-          <span>v0.3</span>
-        </div>
-      </aside>
+        <div class="nav-section-label">Next</div>
+        <button class="nav-item" data-page="notes">
+          <span class="icon">🗒</span>
+          <span class="label">Notes</span>
+        </button>
+        <button class="nav-item" data-page="meals">
+          <span class="icon">🍽</span>
+          <span class="label">Meal Tracker</span>
+        </button>
+        <button class="nav-item" data-page="calendar">
+          <span class="icon">📅</span>
+          <span class="label">Calendar</span>
+        </button>
+        <button class="nav-item" data-page="analytics">
+          <span class="icon">📊</span>
+          <span class="label">Analytics</span>
+        </button>
+        <button class="nav-item" data-page="settings">
+          <span class="icon">⚙️</span>
+          <span class="label">Settings</span>
+        </button>
+      </nav>
+    </aside>
 
-      <!-- MOBILE SIDEBAR SHEET -->
-      <aside class="sidebar mobile-sheet sidebar-collapsed" id="sidebar-mobile">
-        <div class="sidebar-header">
-          <div class="sidebar-title">MyHub</div>
+    <main>
+      <!-- HOME -->
+      <section class="page active" id="page-home">
+        <div class="page-header">
+          <h1>MyHub Overview</h1>
+          <small>v0.4 – prototype build</small>
         </div>
-        <div class="sidebar-version">
-          <span class="sidebar-version-dot"></span>
-          v0.3 · local only
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h2>Today</h2>
+              <small>Quick glance</small>
+            </div>
+            <p class="muted">
+              This dashboard will later show your key info: today's tasks, today's
+              expenses, and last workout. For now, use the sidebar to navigate.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2>Sections</h2>
+            </div>
+            <p class="muted" style="margin-bottom:0.4rem;">
+              Available now:
+            </p>
+            <ul class="muted" style="font-size:0.8rem; margin-left:1rem;">
+              <li>To-do lists with priorities and due dates</li>
+              <li>Shopping lists with notes</li>
+              <li>Simple workouts log</li>
+              <li>Finance tracking with accounts</li>
+            </ul>
+            <p class="muted" style="margin-top:0.4rem;">
+              Coming soon: Notes, Meal tracker, Calendar, and Analytics pages.
+            </p>
+          </div>
         </div>
-        <div class="nav-section-label">Core</div>
-        <ul class="nav-list">
-          <li class="nav-item active" data-view="home">
-            <div class="nav-item-icon">🏠</div>
-            <div class="nav-item-label">Home</div>
-          </li>
-          <li class="nav-item" data-view="todo">
-            <div class="nav-item-icon">✅</div>
-            <div class="nav-item-label">To-Do</div>
-          </li>
-          <li class="nav-item" data-view="shopping">
-            <div class="nav-item-icon">🛒</div>
-            <div class="nav-item-label">Shopping</div>
-          </li>
-          <li class="nav-item" data-view="workouts">
-            <div class="nav-item-icon">🏋️</div>
-            <div class="nav-item-label">Workouts</div>
-          </li>
-          <li class="nav-item" data-view="finance">
-            <div class="nav-item-icon">💰</div>
-            <div class="nav-item-label">Finance</div>
-          </li>
-        </ul>
-        <div class="nav-footer">
-          <span>MyHub</span>
-          <span>v0.3</span>
-        </div>
-      </aside>
+      </section>
 
-      <!-- MAIN AREA -->
-      <div class="app-main">
-        <div class="topbar">
-          <div class="topbar-left">
-            <button class="btn icon" id="btn-hamburger" title="Menu">
-              ☰
-            </button>
+      <!-- TODO -->
+      <section class="page" id="page-todo">
+        <div class="page-header">
+          <h1>To-do</h1>
+          <small>Lists, priorities, due dates</small>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Lists</h2>
             <div>
-              <div class="topbar-title">MyHub • Personal OS</div>
-              <div class="topbar-view-label" id="current-view-label">
-                Home
-              </div>
+              <button class="secondary" id="addTodoListBtn">+ New list</button>
             </div>
           </div>
-          <button class="btn small" id="btn-quick-add">
-            + Quick task
-          </button>
+          <div class="chips" id="todoListsContainer">
+            <!-- todo lists chips -->
+          </div>
         </div>
 
-        <div class="app-content">
-          <main>
-            <!-- HOME -->
-            <section id="home-section" class="active">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-title">
-                    <span class="icon">📅</span>
-                    Today overview
-                  </div>
-                </div>
-                <div class="card-subtitle">
-                  A quick snapshot of your tasks, spending and routines for
-                  today.
-                </div>
-
-                <div class="home-grid">
-                  <div class="home-module" data-jump="todo">
-                    <div class="home-module-title">
-                      <span>To-Dos</span>
-                      <span class="home-module-count" id="home-todo-count">
-                        –
-                      </span>
-                    </div>
-                    <div class="card-subtitle">
-                      Due or overdue tasks across all lists.
-                    </div>
-                  </div>
-
-                  <div class="home-module" data-jump="finance">
-                    <div class="home-module-title">
-                      <span>Finance</span>
-                      <span
-                        class="home-module-count"
-                        id="home-finance-count"
-                      >
-                        –
-                      </span>
-                    </div>
-                    <div class="card-subtitle">
-                      Entries logged this month.
-                    </div>
-                  </div>
-
-                  <div class="home-module" data-jump="workouts">
-                    <div class="home-module-title">
-                      <span>Workout</span>
-                      <span
-                        class="home-module-count"
-                        id="home-workout-count"
-                      >
-                        –
-                      </span>
-                    </div>
-                    <div class="card-subtitle">
-                      Last recorded workout day.
-                    </div>
-                  </div>
-
-                  <div class="home-module" data-jump="shopping">
-                    <div class="home-module-title">
-                      <span>Shopping</span>
-                      <span
-                        class="home-module-count"
-                        id="home-shopping-count"
-                      >
-                        –
-                      </span>
-                    </div>
-                    <div class="card-subtitle">
-                      Items still pending in your active list.
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-subtitle" style="margin-top: 4px;">
-                  Quick task for today (default list):
-                </div>
-                <form
-                  id="quick-task-form"
-                  class="row"
-                  style="margin-bottom: 6px;"
-                >
-                  <input
-                    type="text"
-                    id="quick-task-text"
-                    placeholder="Quick task (auto due today)"
-                  />
-                  <button type="submit" class="btn primary small">
-                    Add
-                  </button>
-                </form>
-
-                <ul class="today-tasks-list" id="today-tasks-list"></ul>
-              </div>
-            </section>
-
-            <!-- TO-DO -->
-            <section id="todo-section">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-title">
-                    <span class="icon">✅</span>
-                    To-Do Lists
-                  </div>
-                  <button
-                    type="button"
-                    id="todo-filter-toggle"
-                    class="btn icon"
-                    title="Filters"
-                  >
-                    🔍
-                  </button>
-                </div>
-
-                <div class="todo-lists-header">
-                  <div
-                    class="todo-lists-chips"
-                    id="todo-lists-container"
-                  ></div>
-                  <button
-                    type="button"
-                    id="todo-add-list"
-                    class="btn small"
-                  >
-                    + List
-                  </button>
-                </div>
-
-                <div
-                  class="filter-panel hidden"
-                  id="todo-filter-panel"
-                >
-                  <div class="filter-panel-row">
-                    <select id="todo-filter-status">
-                      <option value="all">Status: All</option>
-                      <option value="todo">Not done</option>
-                      <option value="half">Half done</option>
-                      <option value="done">Done</option>
-                    </select>
-                    <select id="todo-filter-priority">
-                      <option value="all">Priority: All</option>
-                      <option value="high">High only</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                  <div class="filter-panel-row">
-                    <select id="todo-filter-sort">
-                      <option value="smart">
-                        Sort: Smart (priority + due)
-                      </option>
-                      <option value="dueAsc">
-                        Sort: Due date ↑
-                      </option>
-                      <option value="dueDesc">
-                        Sort: Due date ↓
-                      </option>
-                    </select>
-                    <input
-                      type="text"
-                      id="todo-filter-text"
-                      placeholder="Search text"
-                    />
-                  </div>
-                  <div class="filter-panel-actions">
-                    <button
-                      type="button"
-                      id="todo-filter-clear"
-                      class="btn small"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      type="button"
-                      id="todo-filter-apply"
-                      class="btn primary small"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-
-                <div class="card-subtitle">
-                  v0.3: multiple lists + inline editing. Future versions will add
-                  calendar links and deeper stats.
-                </div>
-
-                <form id="todo-form" style="margin-bottom: 8px;">
-                  <input
-                    type="text"
-                    id="todo-text"
-                    placeholder="New task..."
-                    required
-                    style="margin-bottom: 4px;"
-                  />
-                  <div class="row">
-                    <select id="todo-priority">
-                      <option value="medium">Medium priority</option>
-                      <option value="high">High priority</option>
-                      <option value="low">Low priority</option>
-                    </select>
-                    <input type="date" id="todo-due" />
-                  </div>
-                </form>
-
-                <ul class="list" id="todo-list"></ul>
-              </div>
-            </section>
-
-            <!-- SHOPPING -->
-            <section id="shopping-section">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-title">
-                    <span class="icon">🛒</span>
-                    Shopping List
-                  </div>
-                </div>
-                <div class="card-subtitle">
-                  Single list with drag & drop. v0.4 will add multiple lists and
-                  price tracking.
-                </div>
-
-                <form id="shopping-form" style="margin-bottom: 8px;">
-                  <input
-                    type="text"
-                    id="shopping-text"
-                    placeholder="New item..."
-                    required
-                  />
-                </form>
-
-                <ul class="list" id="shopping-list"></ul>
-              </div>
-            </section>
-
-            <!-- WORKOUTS -->
-            <section id="workouts-section">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-title">
-                    <span class="icon">🏋️</span>
-                    Workouts (basic logs)
-                  </div>
-                </div>
-                <div class="card-subtitle">
-                  Simple per-day notes for now. Later this will become full
-                  workout templates and graphs.
-                </div>
-
-                <form id="workout-form" style="margin-bottom: 8px;">
-                  <input
-                    type="text"
-                    id="workout-text"
-                    placeholder="Workout note (e.g., Workout B – legs, 60min)"
-                    required
-                  />
-                </form>
-
-                <ul class="list" id="workout-list"></ul>
-              </div>
-            </section>
-
-            <!-- FINANCE -->
-            <section id="finance-section">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-title">
-                    <span class="icon">💰</span>
-                    Finance (basic logs)
-                  </div>
-                </div>
-                <div class="card-subtitle">
-                  v0.3 keeps simple logging. v0.5 will add accounts, recurring
-                  bills and better analysis.
-                </div>
-
-                <form id="finance-form" style="margin-bottom: 8px;">
-                  <div class="row" style="margin-bottom: 4px;">
-                    <input
-                      type="number"
-                      step="0.01"
-                      id="finance-amount"
-                      placeholder="Amount"
-                      required
-                    />
-                    <select id="finance-type">
-                      <option value="expense">Expense</option>
-                      <option value="income">Income</option>
-                    </select>
-                  </div>
-                  <div class="row" style="margin-bottom: 4px;">
-                    <input
-                      type="text"
-                      id="finance-category"
-                      placeholder="Category (e.g., Food, Rent)"
-                    />
-                    <input type="date" id="finance-date" />
-                  </div>
-                  <input
-                    type="text"
-                    id="finance-note"
-                    placeholder="Note (optional)"
-                  />
-                </form>
-
-                <ul class="list" id="finance-list"></ul>
-              </div>
-            </section>
-          </main>
+        <div class="card">
+          <div class="card-header">
+            <h2>Add task</h2>
+          </div>
+          <div class="row">
+            <div>
+              <label for="todoText">Task</label>
+              <input type="text" id="todoText" placeholder="Example: Buy chicken, plan lesson, call mom..." />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="todoPriority">Priority</label>
+              <select id="todoPriority">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label for="todoDueDate">Due date</label>
+              <input type="date" id="todoDueDate" />
+            </div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
+            <button class="primary" id="addTodoBtn">+ Add task</button>
+          </div>
         </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Tasks</h2>
+          </div>
+          <div class="list" id="todoList">
+            <!-- todo items -->
+          </div>
+          <p class="muted" id="noTodoMsg" style="margin-top:0.3rem; display:none;">
+            No tasks yet. Add one above.
+          </p>
+        </div>
+      </section>
+
+      <!-- SHOPPING -->
+      <section class="page" id="page-shopping">
+        <div class="page-header">
+          <h1>Shopping</h1>
+          <small>Multiple lists + notes per item</small>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Lists</h2>
+            <button class="secondary" id="addShoppingListBtn">+ New list</button>
+          </div>
+          <div class="chips" id="shoppingListsContainer"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Add item</h2>
+          </div>
+          <div class="row">
+            <div>
+              <label for="shoppingText">Item</label>
+              <input type="text" id="shoppingText" placeholder="Example: chicken breast, yogurt, creatine..." />
+            </div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
+            <button class="primary" id="addShoppingBtn">+ Add item</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Items</h2>
+          </div>
+          <div class="list" id="shoppingList"></div>
+          <p class="muted" id="noShoppingMsg" style="margin-top:0.3rem; display:none;">
+            No items yet. Add one above.
+          </p>
+        </div>
+      </section>
+
+      <!-- WORKOUTS (simple for now) -->
+      <section class="page" id="page-workouts">
+        <div class="page-header">
+          <h1>Workouts</h1>
+          <small>Simple log (big revamp coming next)</small>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Add workout</h2>
+          </div>
+          <div class="row">
+            <div>
+              <label for="workoutName">Workout name</label>
+              <input type="text" id="workoutName" placeholder="Example: Train A – Chest & Triceps" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="workoutNotes">Notes (optional)</label>
+              <textarea id="workoutNotes" placeholder="Short notes about this session..."></textarea>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
+            <button class="primary" id="addWorkoutBtn">+ Add workout</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>History</h2>
+          </div>
+          <div class="list" id="workoutList"></div>
+          <p class="muted" id="noWorkoutMsg" style="margin-top:0.3rem; display:none;">
+            No workouts logged yet.
+          </p>
+        </div>
+      </section>
+
+      <!-- FINANCE -->
+      <section class="page" id="page-finance">
+        <div class="page-header">
+          <h1>Finance</h1>
+          <small>Transactions + accounts</small>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h2>Add transaction</h2>
+            </div>
+            <div class="row">
+              <div>
+                <label for="financeType">Type</label>
+                <select id="financeType">
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </div>
+              <div>
+                <label for="financeAmount">Amount</label>
+                <input type="number" step="0.01" id="financeAmount" placeholder="0.00" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="financeAccount">Account</label>
+                <select id="financeAccount"></select>
+              </div>
+              <div>
+                <label for="financeCategory">Category</label>
+                <input type="text" id="financeCategory" placeholder="Food, Transport, Gym..." />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="financeMethod">Method</label>
+                <input type="text" id="financeMethod" placeholder="Cash, card, scan..." />
+              </div>
+              <div>
+                <label for="financeDate">Date</label>
+                <input type="date" id="financeDate" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="financeNote">Note (optional)</label>
+                <input type="text" id="financeNote" placeholder="Short note..." />
+              </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
+              <button class="primary" id="addFinanceBtn">+ Add</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Accounts</h2>
+              <button class="secondary" id="addAccountBtn">+ Account</button>
+            </div>
+            <div class="list" id="accountsList"></div>
+            <p class="muted" id="noAccountsMsg" style="margin-top:0.3rem; display:none;">
+              No accounts yet. Add one above (e.g. "Main THB", "BRL savings", "USD card").
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Transactions</h2>
+          </div>
+          <div class="list" id="financeList"></div>
+          <p class="muted" id="noFinanceMsg" style="margin-top:0.3rem; display:none;">
+            No transactions yet.
+          </p>
+        </div>
+      </section>
+
+      <!-- NOTES placeholder -->
+      <section class="page" id="page-notes">
+        <div class="page-header">
+          <h1>Notes</h1>
+          <small>Quick notes & freehand ideas (coming soon)</small>
+        </div>
+        <div class="card">
+          <p class="muted">
+            This page will become your quick notepad: fast text notes and later a
+            freehand/drawing mode. For now it's a placeholder so the structure is ready.
+          </p>
+        </div>
+      </section>
+
+      <!-- MEALS placeholder -->
+      <section class="page" id="page-meals">
+        <div class="page-header">
+          <h1>Meal Tracker</h1>
+          <small>Macros and food logs (future)</small>
+        </div>
+        <div class="card">
+          <p class="muted">
+            In future versions, this page will let you log your meals and calculate macros.
+            It might even support reading from images. For now, it's just a stub.
+          </p>
+        </div>
+      </section>
+
+      <!-- CALENDAR placeholder -->
+      <section class="page" id="page-calendar">
+        <div class="page-header">
+          <h1>Calendar</h1>
+          <small>Important days & recurring bills (future)</small>
+        </div>
+        <div class="card">
+          <p class="muted">
+            The idea: show only what's important for you – tasks, recurring bills, and key
+            reminders – instead of every small birthday. We'll connect this to To-do and Finance later.
+          </p>
+        </div>
+      </section>
+
+      <!-- ANALYTICS placeholder -->
+      <section class="page" id="page-analytics">
+        <div class="page-header">
+          <h1>Analytics</h1>
+          <small>Crossing all your data (future)</small>
+        </div>
+        <div class="card">
+          <p class="muted">
+            Here you'll eventually see things like: expenses vs weight, shopping vs workout
+            frequency, and other KPIs. For now this is a placeholder so the navigation feels complete.
+          </p>
+        </div>
+      </section>
+
+      <!-- SETTINGS placeholder -->
+      <section class="page" id="page-settings">
+        <div class="page-header">
+          <h1>Settings</h1>
+          <small>Theme, backup & more (future)</small>
+        </div>
+        <div class="card">
+          <p class="muted">
+            In the future this page will hold dark mode toggle, data export/import,
+            and backup options. For now, it's a simple stub.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal for editing todo and shopping notes -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Edit</h3>
+        <button class="icon-btn" id="modalCloseBtn">✕</button>
+      </div>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="secondary" id="modalCancelBtn">Cancel</button>
+        <button class="primary" id="modalSaveBtn">Save</button>
       </div>
     </div>
   </div>
 
   <script>
-    // =============================
-    // Storage & State (v0.3)
-    // =============================
-    const STORAGE_KEY = "myhub-data-v0.3";
+    // Simple state
+    const STORAGE_KEY = "myhub_v0_4";
 
-    const defaultState = {
-      tasksLists: [],
-      activeTaskListId: null,
-      shoppingItems: [],
-      workouts: [],
-      finances: [],
-    };
-
-    function migrateLegacyState(parsed) {
-      // v0.2 had: tasks (array), shoppingItems, workouts, finances
-      const tasksLists = [];
-      let activeTaskListId = null;
-
-      if (Array.isArray(parsed.tasksLists) && parsed.tasksLists.length) {
-        parsed.tasksLists.forEach((lst) => {
-          tasksLists.push({
-            id: lst.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
-            name: lst.name || "List",
-            tasks: Array.isArray(lst.tasks) ? lst.tasks : [],
-          });
-        });
-        activeTaskListId = parsed.activeTaskListId || (tasksLists[0] && tasksLists[0].id) || null;
-      } else {
-        const legacyTasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
-        const defaultId = crypto.randomUUID ? crypto.randomUUID() : "list-main";
-        tasksLists.push({
-          id: defaultId,
-          name: "Main",
-          tasks: legacyTasks,
-        });
-        activeTaskListId = defaultId;
-      }
-
+    function defaultState() {
       return {
-        tasksLists,
-        activeTaskListId,
-        shoppingItems: Array.isArray(parsed.shoppingItems)
-          ? parsed.shoppingItems
-          : [],
-        workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
-        finances: Array.isArray(parsed.finances) ? parsed.finances : [],
+        currentPage: "home",
+        todoLists: ["General"],
+        currentTodoList: "General",
+        todos: [],
+        shoppingLists: [
+          { id: "default-shopping", name: "Regular shopping", items: [] }
+        ],
+        currentShoppingListId: "default-shopping",
+        workouts: [],
+        accounts: [
+          { id: "acc-main", name: "Main THB" }
+        ],
+        finance: []
       };
-    }
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          // Try older version key
-          const legacyRaw = localStorage.getItem("myhub-data-v0.2");
-          if (legacyRaw) {
-            const parsedLegacy = JSON.parse(legacyRaw);
-            return migrateLegacyState(parsedLegacy);
-          }
-          return structuredClone(defaultState);
-        }
-        const parsed = JSON.parse(raw);
-        return migrateLegacyState(parsed);
-      } catch (e) {
-        console.error("Failed to parse state:", e);
-        return structuredClone(defaultState);
-      }
     }
 
     let state = loadState();
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      refreshHomeDashboard();
     }
 
-    function ensureAtLeastOneList() {
-      if (!state.tasksLists.length) {
-        const id = crypto.randomUUID ? crypto.randomUUID() : "list-main";
-        state.tasksLists.push({
-          id,
-          name: "Personal",
-          tasks: [],
-        });
-        state.activeTaskListId = id;
-      } else if (!state.activeTaskListId) {
-        state.activeTaskListId = state.tasksLists[0].id;
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      try {
+        const parsed = JSON.parse(raw);
+        const base = defaultState();
+        return {
+          ...base,
+          ...parsed
+        };
+      } catch (e) {
+        console.error("Error loading state", e);
+        return defaultState();
       }
     }
 
-    function getActiveTaskList() {
-      ensureAtLeastOneList();
-      let list = state.tasksLists.find((l) => l.id === state.activeTaskListId);
-      if (!list) {
-        list = state.tasksLists[0];
-        state.activeTaskListId = list.id;
-      }
-      return list;
-    }
-
-    function getActiveTasksArray() {
-      return getActiveTaskList().tasks;
-    }
-
-    function getAllTasksAcrossLists() {
-      return state.tasksLists.flatMap((l) =>
-        (l.tasks || []).map((t) => ({ ...t, _listId: l.id }))
-      );
-    }
-
-    // =============================
-    // Navigation + Sidebar
-    // =============================
-    const appRoot = document.getElementById("app-root");
-    const sidebarDesktop = document.getElementById("sidebar-desktop");
-    const sidebarMobile = document.getElementById("sidebar-mobile");
-    const sidebarOverlay = document.getElementById("sidebar-overlay");
-    const hamburgerBtn = document.getElementById("btn-hamburger");
-    const currentViewLabel = document.getElementById("current-view-label");
-    const quickAddBtn = document.getElementById("btn-quick-add");
-
-    const sections = {
-      home: document.getElementById("home-section"),
-      todo: document.getElementById("todo-section"),
-      shopping: document.getElementById("shopping-section"),
-      workouts: document.getElementById("workouts-section"),
-      finance: document.getElementById("finance-section"),
-    };
-
-    let currentView = "home";
-
-    function setActiveNav(view) {
-      document
-        .querySelectorAll(".nav-item")
-        .forEach((el) =>
-          el.classList.toggle(
-            "active",
-            el.getAttribute("data-view") === view
-          )
-        );
-      const labelMap = {
-        home: "Home",
-        todo: "To-Do",
-        shopping: "Shopping",
-        workouts: "Workouts",
-        finance: "Finance",
-      };
-      currentViewLabel.textContent = labelMap[view] || "MyHub";
-    }
-
-    function showView(view, push = true) {
-      if (!sections[view]) view = "home";
-      currentView = view;
-      Object.entries(sections).forEach(([k, el]) => {
-        el.classList.toggle("active", k === view);
-      });
-      setActiveNav(view);
-      if (push) {
-        history.pushState({ view }, "", "#" + view);
-      }
-      // Close mobile sidebar if open
-      closeSidebar();
-    }
-
-    document.querySelectorAll(".nav-item").forEach((el) => {
-      el.addEventListener("click", () => {
-        const view = el.getAttribute("data-view");
-        if (view !== currentView) {
-          showView(view, true);
-        }
-      });
-    });
-
-    document.querySelectorAll(".home-module").forEach((mod) => {
-      mod.addEventListener("click", () => {
-        const view = mod.getAttribute("data-jump");
-        showView(view, true);
-      });
-    });
-
-    hamburgerBtn.addEventListener("click", () => {
-      toggleSidebar();
-    });
-
-    sidebarOverlay.addEventListener("click", () => {
-      closeSidebar();
-    });
-
-    function openSidebar() {
-      appRoot.classList.add("sidebar-open");
-    }
-
-    function closeSidebar() {
-      appRoot.classList.remove("sidebar-open");
-    }
-
-    function toggleSidebar() {
-      if (appRoot.classList.contains("sidebar-open")) {
-        closeSidebar();
-      } else {
-        openSidebar();
-      }
-    }
-
-    // Simple edge swipe (mobile)
-    let touchStartX = null;
-    appRoot.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1) return;
-      touchStartX = e.touches[0].clientX;
-    });
-
-    appRoot.addEventListener("touchend", (e) => {
-      if (touchStartX == null) return;
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      // open with swipe right from left edge
-      if (!appRoot.classList.contains("sidebar-open")) {
-        if (touchStartX < 24 && dx > 40) {
-          openSidebar();
-        }
-      } else {
-        // close with swipe left
-        if (dx < -40) {
-          closeSidebar();
-        }
-      }
-      touchStartX = null;
-    });
-
-    window.addEventListener("popstate", (event) => {
-      const view = event.state && event.state.view ? event.state.view : "home";
-      showView(view, false);
-    });
-
-    // Initial view from hash
-    window.addEventListener("DOMContentLoaded", () => {
-      ensureAtLeastOneList();
-      const hash = window.location.hash.replace("#", "");
-      if (hash && sections[hash]) {
-        showView(hash, true);
-      } else {
-        showView("home", true);
-      }
-      renderAll();
-    });
-
-    // Quick add button = open todo view & focus
-    quickAddBtn.addEventListener("click", () => {
-      showView("todo", true);
-      setTimeout(() => {
-        document.getElementById("todo-text").focus();
-      }, 150);
-    });
-
-    // =============================
     // Helpers
-    // =============================
-    function todayISO() {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
+    function $(id) {
+      return document.getElementById(id);
     }
 
-    function isOverdue(task) {
-      if (!task.dueDate) return false;
-      if (task.status === "done") return false;
-      const today = todayISO();
-      return task.dueDate < today;
+    function formatDate(d) {
+      if (!d) return "";
+      try {
+        const dt = new Date(d);
+        if (Number.isNaN(dt.getTime())) return d;
+        return dt.toLocaleDateString();
+      } catch {
+        return d;
+      }
     }
 
-    // =============================
-    // To-Do Lists & Tasks
-    // =============================
-    const todoListEl = document.getElementById("todo-list");
-    const todoForm = document.getElementById("todo-form");
-    const todoTextInput = document.getElementById("todo-text");
-    const todoPriorityInput = document.getElementById("todo-priority");
-    const todoDueInput = document.getElementById("todo-due");
+    function confirmDelete() {
+      return window.confirm("Delete this item?");
+    }
 
-    const todoListsContainer = document.getElementById("todo-lists-container");
-    const todoAddListBtn = document.getElementById("todo-add-list");
+    // Navigation
+    const navItems = document.querySelectorAll(".nav-item");
+    const pages = document.querySelectorAll(".page");
 
-    let todoFilters = {
-      status: "all",
-      priority: "all",
-      sort: "smart",
-      text: "",
-    };
-
-    const filterToggleBtn = document.getElementById("todo-filter-toggle");
-    const filterPanel = document.getElementById("todo-filter-panel");
-    const filterStatusEl = document.getElementById("todo-filter-status");
-    const filterPriorityEl = document.getElementById("todo-filter-priority");
-    const filterSortEl = document.getElementById("todo-filter-sort");
-    const filterTextEl = document.getElementById("todo-filter-text");
-    const filterClearBtn = document.getElementById("todo-filter-clear");
-    const filterApplyBtn = document.getElementById("todo-filter-apply");
-
-    filterToggleBtn.addEventListener("click", () => {
-      filterPanel.classList.toggle("hidden");
-    });
-
-    filterClearBtn.addEventListener("click", () => {
-      todoFilters = {
-        status: "all",
-        priority: "all",
-        sort: "smart",
-        text: "",
-      };
-      filterStatusEl.value = "all";
-      filterPriorityEl.value = "all";
-      filterSortEl.value = "smart";
-      filterTextEl.value = "";
-      renderTasks();
-    });
-
-    filterApplyBtn.addEventListener("click", () => {
-      todoFilters = {
-        status: filterStatusEl.value,
-        priority: filterPriorityEl.value,
-        sort: filterSortEl.value,
-        text: filterTextEl.value.trim().toLowerCase(),
-      };
-      renderTasks();
-    });
-
-    todoForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const text = todoTextInput.value.trim();
-      if (!text) return;
-      const list = getActiveTaskList();
-      const task = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        text,
-        priority: todoPriorityInput.value,
-        dueDate: todoDueInput.value || "",
-        status: "todo", // todo | half | done
-      };
-      list.tasks.push(task);
+    function setPage(pageId) {
+      state.currentPage = pageId;
       saveState();
-      todoForm.reset();
-      renderTasks();
-    });
-
-    todoAddListBtn.addEventListener("click", () => {
-      const name = prompt("New list name:", "New list");
-      if (!name) return;
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
-      state.tasksLists.push({
-        id,
-        name: trimmed,
-        tasks: [],
+      pages.forEach((p) =>
+        p.id === "page-" + pageId
+          ? p.classList.add("active")
+          : p.classList.remove("active")
+      );
+      navItems.forEach((btn) => {
+        btn.dataset.page === pageId
+          ? btn.classList.add("active")
+          : btn.classList.remove("active");
       });
-      state.activeTaskListId = id;
-      saveState();
-      renderTodoListsUI();
-      renderTasks();
+    }
+
+    navItems.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const page = btn.dataset.page;
+        setPage(page);
+      });
     });
 
-    function renderTodoListsUI() {
-      ensureAtLeastOneList();
+    // Sidebar toggle
+    const sidebar = $("sidebar");
+    $("sidebarToggle").addEventListener("click", () => {
+      sidebar.classList.toggle("expanded");
+    });
+
+    // =========== TODO ===========
+
+    const todoListsContainer = $("todoListsContainer");
+    const todoListEl = $("todoList");
+    const noTodoMsg = $("noTodoMsg");
+
+    function renderTodoLists() {
       todoListsContainer.innerHTML = "";
-      state.tasksLists.forEach((lst) => {
-        const span = document.createElement("button");
-        span.type = "button";
-        span.className =
-          "todo-list-chip" +
-          (lst.id === state.activeTaskListId ? " active" : "");
-        const dot = document.createElement("span");
-        dot.className = "dot";
-        span.appendChild(dot);
-        const name = document.createElement("span");
-        name.textContent = lst.name;
-        span.appendChild(name);
-        span.addEventListener("click", () => {
-          state.activeTaskListId = lst.id;
+      state.todoLists.forEach((name) => {
+        const chip = document.createElement("button");
+        chip.className =
+          "chip" + (name === state.currentTodoList ? " active" : "");
+        chip.textContent = name;
+        chip.addEventListener("click", () => {
+          state.currentTodoList = name;
           saveState();
-          renderTodoListsUI();
-          renderTasks();
+          renderTodoLists();
+          renderTodos();
         });
-        span.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          const action = prompt(
-            `Edit list:\n\n${lst.name}\n\nType a new name, or leave empty to delete this list (tasks will be lost).`,
-            lst.name
-          );
-          if (action === null) return;
-          const trimmed = action.trim();
-          if (!trimmed) {
-            if (
-              state.tasksLists.length === 1 ||
-              !confirm(
-                "Delete this list and all its tasks? This cannot be undone."
-              )
-            ) {
-              return;
-            }
-            state.tasksLists = state.tasksLists.filter(
-              (l) => l.id !== lst.id
-            );
-            if (state.tasksLists.length) {
-              state.activeTaskListId = state.tasksLists[0].id;
-            } else {
-              state.activeTaskListId = null;
-            }
-          } else {
-            lst.name = trimmed;
-          }
-          saveState();
-          renderTodoListsUI();
-          renderTasks();
-        });
-        todoListsContainer.appendChild(span);
+        todoListsContainer.appendChild(chip);
       });
     }
 
-    function updateTaskStatus(id, status) {
-      const list = getActiveTaskList();
-      const t = list.tasks.find((t) => t.id === id);
+    function addTodoList() {
+      const name = prompt("New list name:");
+      if (!name) return;
+      if (!state.todoLists.includes(name)) state.todoLists.push(name);
+      state.currentTodoList = name;
+      saveState();
+      renderTodoLists();
+      renderTodos();
+    }
+
+    $("addTodoListBtn").addEventListener("click", addTodoList);
+
+    function addTodo() {
+      const text = $("todoText").value.trim();
+      const priority = $("todoPriority").value;
+      const dueDate = $("todoDueDate").value;
+      if (!text) return;
+      const todo = {
+        id: "todo-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+        list: state.currentTodoList,
+        title: text,
+        priority,
+        dueDate,
+        status: "todo",
+        createdAt: new Date().toISOString()
+      };
+      state.todos.push(todo);
+      $("todoText").value = "";
+      $("todoDueDate").value = "";
+      $("todoText").focus();
+      saveState();
+      renderTodos();
+    }
+
+    $("addTodoBtn").addEventListener("click", addTodo);
+    $("todoText").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addTodo();
+      }
+    });
+
+    function updateTodoStatus(id, status) {
+      const t = state.todos.find((t) => t.id === id);
       if (!t) return;
       t.status = status;
       saveState();
-      renderTasks();
+      renderTodos();
     }
 
-    function deleteTask(id) {
-      const list = getActiveTaskList();
-      const t = list.tasks.find((x) => x.id === id);
-      if (!t) return;
-      const ok = confirm(`Delete this task?\n\n${t.text}`);
-      if (!ok) return;
-      list.tasks = list.tasks.filter((t) => t.id !== id);
+    function deleteTodo(id) {
+      if (!confirmDelete()) return;
+      state.todos = state.todos.filter((t) => t.id !== id);
       saveState();
-      renderTasks();
+      renderTodos();
     }
 
-    function editTask(id) {
-      const list = getActiveTaskList();
-      const t = list.tasks.find((x) => x.id === id);
-      if (!t) return;
-      const newText = prompt("Edit task text:", t.text);
-      if (newText === null) return;
-      const trimmed = newText.trim();
-      if (!trimmed) return;
-      t.text = trimmed;
-      saveState();
-      renderTasks();
+    // Modal for editing todo
+    const modalBackdrop = $("modalBackdrop");
+    const modal = $("modal");
+    const modalTitle = $("modalTitle");
+    const modalBody = $("modalBody");
+    const modalSaveBtn = $("modalSaveBtn");
+    const modalCancelBtn = $("modalCancelBtn");
+    const modalCloseBtn = $("modalCloseBtn");
+
+    let modalContext = null; // { type: 'todo'|'shopping-note', id, listId }
+
+    function openModalTodo(todo) {
+      modalContext = { type: "todo", id: todo.id };
+      modalTitle.textContent = "Edit task";
+      modalBody.innerHTML = `
+        <div class="row">
+          <div>
+            <label>Title</label>
+            <input type="text" id="modalTodoTitle" value="${escapeHtml(
+              todo.title
+            )}" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Priority</label>
+            <select id="modalTodoPriority">
+              <option value="high" ${
+                todo.priority === "high" ? "selected" : ""
+              }>High</option>
+              <option value="medium" ${
+                todo.priority === "medium" ? "selected" : ""
+              }>Medium</option>
+              <option value="low" ${
+                todo.priority === "low" ? "selected" : ""
+              }>Low</option>
+            </select>
+          </div>
+          <div>
+            <label>Due date</label>
+            <input type="date" id="modalTodoDueDate" value="${
+              todo.dueDate || ""
+            }" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Status</label>
+            <select id="modalTodoStatus">
+              <option value="todo" ${
+                todo.status === "todo" ? "selected" : ""
+              }>Not done</option>
+              <option value="half" ${
+                todo.status === "half" ? "selected" : ""
+              }>Half</option>
+              <option value="done" ${
+                todo.status === "done" ? "selected" : ""
+              }>Done</option>
+            </select>
+          </div>
+        </div>
+      `;
+      modalBackdrop.classList.add("active");
     }
 
-    function sortedAndFilteredTasks() {
-      const list = getActiveTaskList();
-      let tasks = [...list.tasks];
+    function openModalShoppingNote(item, listId) {
+      modalContext = { type: "shopping-note", id: item.id, listId };
+      modalTitle.textContent = "Item notes";
+      modalBody.innerHTML = `
+        <div class="row">
+          <div>
+            <label>Item</label>
+            <input type="text" id="modalShoppingName" value="${escapeHtml(
+              item.text
+            )}" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Notes</label>
+            <textarea id="modalShoppingNote" placeholder="Add details, brand, conditions...">${
+              item.note || ""
+            }</textarea>
+          </div>
+        </div>
+      `;
+      modalBackdrop.classList.add("active");
+    }
 
-      // Filter
-      if (todoFilters.status !== "all") {
-        tasks = tasks.filter((t) => t.status === todoFilters.status);
-      }
-      if (todoFilters.priority !== "all") {
-        tasks = tasks.filter((t) => t.priority === todoFilters.priority);
-      }
-      if (todoFilters.text) {
-        tasks = tasks.filter((t) =>
-          t.text.toLowerCase().includes(todoFilters.text)
+    function closeModal() {
+      modalBackdrop.classList.remove("active");
+      modalContext = null;
+    }
+
+    modalCancelBtn.addEventListener("click", closeModal);
+    modalCloseBtn.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+
+    modalSaveBtn.addEventListener("click", () => {
+      if (!modalContext) return;
+      if (modalContext.type === "todo") {
+        const t = state.todos.find((tt) => tt.id === modalContext.id);
+        if (!t) return;
+        t.title = $("modalTodoTitle").value.trim() || t.title;
+        t.priority = $("modalTodoPriority").value;
+        t.dueDate = $("modalTodoDueDate").value;
+        t.status = $("modalTodoStatus").value;
+        saveState();
+        renderTodos();
+      } else if (modalContext.type === "shopping-note") {
+        const list = state.shoppingLists.find(
+          (l) => l.id === modalContext.listId
         );
+        if (!list) return;
+        const item = list.items.find((i) => i.id === modalContext.id);
+        if (!item) return;
+        item.text = $("modalShoppingName").value.trim() || item.text;
+        item.note = $("modalShoppingNote").value.trim();
+        saveState();
+        renderShopping();
       }
+      closeModal();
+    });
 
-      // Sort
-      const today = todayISO();
-      tasks.sort((a, b) => {
-        if (todoFilters.sort === "dueAsc" || todoFilters.sort === "dueDesc") {
-          const ad = a.dueDate || "9999-12-31";
-          const bd = b.dueDate || "9999-12-31";
-          if (ad < bd) return todoFilters.sort === "dueAsc" ? -1 : 1;
-          if (ad > bd) return todoFilters.sort === "dueAsc" ? 1 : -1;
-          return 0;
-        }
-
-        // smart: priority, overdue, due-date, status
-        const prioRank = { high: 0, medium: 1, low: 2 };
-        const aPr = prioRank[a.priority] ?? 3;
-        const bPr = prioRank[b.priority] ?? 3;
-        if (aPr !== bPr) return aPr - bPr;
-
-        const aOver = isOverdue(a) ? 0 : 1;
-        const bOver = isOverdue(b) ? 0 : 1;
-        if (aOver !== bOver) return aOver - bOver;
-
-        const ad = a.dueDate || "9999-12-31";
-        const bd = b.dueDate || "9999-12-31";
-        if (ad < bd) return -1;
-        if (ad > bd) return 1;
-
-        const statusRank = { todo: 0, half: 1, done: 2 };
-        const aSt = statusRank[a.status] ?? 3;
-        const bSt = statusRank[b.status] ?? 3;
-        return aSt - bSt;
+    function escapeHtml(str) {
+      return (str || "").replace(/[&<>"']/g, (c) => {
+        const map = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;"
+        };
+        return map[c] || c;
       });
-
-      return tasks;
     }
 
-    function renderTasks() {
-      renderTodoListsUI();
-      todoListEl.innerHTML = "";
-      const tasks = sortedAndFilteredTasks();
-      if (!tasks.length) {
-        const li = document.createElement("li");
-        li.className = "card-subtitle";
-        li.textContent = "No tasks in this list yet. Add your first one above.";
-        todoListEl.appendChild(li);
-        refreshHomeDashboard();
+    function renderTodos() {
+      const todos = state.todos.filter(
+        (t) => t.list === state.currentTodoList
+      );
+      if (!todos.length) {
+        todoListEl.innerHTML = "";
+        noTodoMsg.style.display = "block";
         return;
       }
+      noTodoMsg.style.display = "none";
 
-      tasks.forEach((task) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
+      // sort: high priority + due date
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      todos.sort((a, b) => {
+        if (a.status === "done" && b.status !== "done") return 1;
+        if (b.status === "done" && a.status !== "done") return -1;
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        if (a.dueDate && !b.dueDate) return -1;
+        if (!a.dueDate && b.dueDate) return 1;
+        return 0;
+      });
+
+      todoListEl.innerHTML = "";
+      todos.forEach((t) => {
+        const item = document.createElement("div");
+        item.className = "item";
 
         const main = document.createElement("div");
-        main.className = "list-item-main";
+        main.className = "item-main";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = t.status === "done";
+        checkbox.addEventListener("change", () => {
+          updateTodoStatus(t.id, checkbox.checked ? "done" : "todo");
+        });
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
 
         const title = document.createElement("div");
-        title.className = "list-item-title";
-        title.textContent = task.text;
-        main.appendChild(title);
+        title.className = "item-title" + (t.status === "done" ? " done" : "");
+        title.textContent = t.title;
 
         const meta = document.createElement("div");
-        meta.className = "list-item-meta";
+        meta.className = "item-meta";
 
-        const prChip = document.createElement("span");
-        prChip.className = "chip " + (task.priority === "high" ? "high" : "");
-        prChip.textContent =
-          "Priority: " +
-          task.priority.charAt(0).toUpperCase() +
-          task.priority.slice(1);
-        meta.appendChild(prChip);
+        const p = document.createElement("span");
+        p.className =
+          "pill " +
+          (t.priority === "high"
+            ? "pill-high"
+            : t.priority === "low"
+            ? "pill-low"
+            : "pill-medium");
+        p.textContent =
+          t.priority.charAt(0).toUpperCase() + t.priority.slice(1);
+        meta.appendChild(p);
 
-        if (task.dueDate) {
-          const dueChip = document.createElement("span");
-          dueChip.className = "chip" + (isOverdue(task) ? " overdue" : "");
-          dueChip.textContent =
-            "Due: " + task.dueDate + (isOverdue(task) ? " (overdue)" : "");
-          meta.appendChild(dueChip);
+        if (t.dueDate) {
+          const due = document.createElement("span");
+          due.className = "pill";
+          due.textContent = "Due " + formatDate(t.dueDate);
+          meta.appendChild(due);
         }
 
-        const stChip = document.createElement("span");
-        stChip.className =
-          "chip " +
-          (task.status === "done"
-            ? "done"
-            : task.status === "half"
-            ? "half"
-            : "");
-        stChip.textContent =
-          task.status === "done"
-            ? "Done"
-            : task.status === "half"
-            ? "Half done"
-            : "Not done";
-        meta.appendChild(stChip);
+        textWrap.appendChild(title);
+        textWrap.appendChild(meta);
 
-        main.appendChild(meta);
+        main.appendChild(checkbox);
+        main.appendChild(textWrap);
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
 
-        const btnTodo = document.createElement("button");
-        btnTodo.className = "btn-ghost";
-        btnTodo.textContent = "Not done";
-        btnTodo.onclick = () => updateTaskStatus(task.id, "todo");
+        const editBtn = document.createElement("button");
+        editBtn.className = "icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit";
+        editBtn.addEventListener("click", () => openModalTodo(t));
 
-        const btnHalf = document.createElement("button");
-        btnHalf.className = "btn-ghost";
-        btnHalf.textContent = "Half";
-        btnHalf.onclick = () => updateTaskStatus(task.id, "half");
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", () => deleteTodo(t.id));
 
-        const btnDone = document.createElement("button");
-        btnDone.className = "btn-ghost";
-        btnDone.textContent = "Done";
-        btnDone.onclick = () => updateTaskStatus(task.id, "done");
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
 
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "btn-ghost";
-        btnEdit.textContent = "Edit";
-        btnEdit.onclick = () => editTask(task.id);
-
-        const btnDel = document.createElement("button");
-        btnDel.className = "btn-ghost danger";
-        btnDel.textContent = "Delete";
-        btnDel.onclick = () => deleteTask(task.id);
-
-        actions.appendChild(btnTodo);
-        actions.appendChild(btnHalf);
-        actions.appendChild(btnDone);
-        actions.appendChild(btnEdit);
-        actions.appendChild(btnDel);
-
-        li.appendChild(main);
-        li.appendChild(actions);
-        todoListEl.appendChild(li);
+        item.appendChild(main);
+        item.appendChild(actions);
+        todoListEl.appendChild(item);
       });
-
-      refreshHomeDashboard();
     }
 
-    // =============================
-    // Shopping with drag & drop
-    // =============================
-    const shoppingForm = document.getElementById("shopping-form");
-    const shoppingInput = document.getElementById("shopping-text");
-    const shoppingListEl = document.getElementById("shopping-list");
+    // =========== SHOPPING ===========
 
-    shoppingForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const text = shoppingInput.value.trim();
-      if (!text) return;
-      state.shoppingItems.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        text,
-        checked: false,
+    const shoppingListsContainer = $("shoppingListsContainer");
+    const shoppingListEl = $("shoppingList");
+    const noShoppingMsg = $("noShoppingMsg");
+
+    function renderShoppingLists() {
+      shoppingListsContainer.innerHTML = "";
+      state.shoppingLists.forEach((list) => {
+        const chip = document.createElement("button");
+        chip.className =
+          "chip" +
+          (list.id === state.currentShoppingListId ? " active" : "");
+        chip.textContent = list.name;
+        chip.addEventListener("click", () => {
+          state.currentShoppingListId = list.id;
+          saveState();
+          renderShoppingLists();
+          renderShopping();
+        });
+        shoppingListsContainer.appendChild(chip);
       });
+    }
+
+    function addShoppingList() {
+      const name = prompt("New shopping list name:");
+      if (!name) return;
+      const id = "shoplist-" + Date.now();
+      state.shoppingLists.push({ id, name, items: [] });
+      state.currentShoppingListId = id;
       saveState();
-      shoppingForm.reset();
+      renderShoppingLists();
       renderShopping();
+    }
+
+    $("addShoppingListBtn").addEventListener("click", addShoppingList);
+
+    function addShoppingItem() {
+      const text = $("shoppingText").value.trim();
+      if (!text) return;
+      const list = state.shoppingLists.find(
+        (l) => l.id === state.currentShoppingListId
+      );
+      if (!list) return;
+      list.items.push({
+        id: "shop-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+        text,
+        done: false,
+        note: ""
+      });
+      $("shoppingText").value = "";
+      $("shoppingText").focus();
+      saveState();
+      renderShopping();
+    }
+
+    $("addShoppingBtn").addEventListener("click", addShoppingItem);
+    $("shoppingText").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addShoppingItem();
+      }
     });
 
-    function toggleShoppingItem(id) {
-      const item = state.shoppingItems.find((i) => i.id === id);
+    function toggleShoppingItem(listId, itemId) {
+      const list = state.shoppingLists.find((l) => l.id === listId);
+      if (!list) return;
+      const item = list.items.find((i) => i.id === itemId);
       if (!item) return;
-      item.checked = !item.checked;
+      item.done = !item.done;
       saveState();
       renderShopping();
     }
 
-    function deleteShoppingItem(id) {
-      const item = state.shoppingItems.find((i) => i.id === id);
-      if (!item) return;
-      const ok = confirm(`Delete this item?\n\n${item.text}`);
-      if (!ok) return;
-      state.shoppingItems = state.shoppingItems.filter((i) => i.id !== id);
-      saveState();
-      renderShopping();
-    }
-
-    function reorderShoppingItems(draggedId, targetId) {
-      if (draggedId === targetId) return;
-      const items = state.shoppingItems;
-      const fromIndex = items.findIndex((i) => i.id === draggedId);
-      const toIndex = items.findIndex((i) => i.id === targetId);
-      if (fromIndex === -1 || toIndex === -1) return;
-      const [moved] = items.splice(fromIndex, 1);
-      items.splice(toIndex, 0, moved);
+    function deleteShoppingItem(listId, itemId) {
+      if (!confirmDelete()) return;
+      const list = state.shoppingLists.find((l) => l.id === listId);
+      if (!list) return;
+      list.items = list.items.filter((i) => i.id !== itemId);
       saveState();
       renderShopping();
     }
 
     function renderShopping() {
-      shoppingListEl.innerHTML = "";
-      if (!state.shoppingItems.length) {
-        const li = document.createElement("li");
-        li.className = "card-subtitle";
-        li.textContent = "Empty list. Add items above.";
-        shoppingListEl.appendChild(li);
-        refreshHomeDashboard();
+      const list = state.shoppingLists.find(
+        (l) => l.id === state.currentShoppingListId
+      );
+      if (!list || !list.items.length) {
+        shoppingListEl.innerHTML = "";
+        noShoppingMsg.style.display = "block";
         return;
       }
+      noShoppingMsg.style.display = "none";
 
-      state.shoppingItems.forEach((item) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
-        li.draggable = true;
-
-        li.addEventListener("dragstart", (e) => {
-          e.dataTransfer.setData("text/plain", item.id);
-        });
-
-        li.addEventListener("dragover", (e) => {
-          e.preventDefault();
-        });
-
-        li.addEventListener("drop", (e) => {
-          e.preventDefault();
-          const draggedId = e.dataTransfer.getData("text/plain");
-          reorderShoppingItems(draggedId, item.id);
-        });
+      shoppingListEl.innerHTML = "";
+      list.items.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "item";
 
         const main = document.createElement("div");
-        main.className = "list-item-main";
+        main.className = "item-main";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = item.done;
+        checkbox.addEventListener("change", () =>
+          toggleShoppingItem(list.id, item.id)
+        );
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
 
         const title = document.createElement("div");
-        title.className = "list-item-title";
+        title.className =
+          "item-title" + (item.done ? " done" : "");
         title.textContent = item.text;
-        main.appendChild(title);
 
         const meta = document.createElement("div");
-        meta.className = "list-item-meta";
-        const status = document.createElement("span");
-        status.className = "chip " + (item.checked ? "done" : "");
-        status.textContent = item.checked ? "Got it" : "Pending";
-        meta.appendChild(status);
-        main.appendChild(meta);
+        meta.className = "item-meta";
+        if (item.note) {
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = "Note";
+          meta.appendChild(pill);
+        }
+
+        textWrap.appendChild(title);
+        textWrap.appendChild(meta);
+
+        main.appendChild(checkbox);
+        main.appendChild(textWrap);
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
 
-        const btnToggle = document.createElement("button");
-        btnToggle.className = "btn-ghost";
-        btnToggle.textContent = item.checked ? "Uncheck" : "Check";
-        btnToggle.onclick = () => toggleShoppingItem(item.id);
+                const noteBtn = document.createElement("button");
+        noteBtn.className = "icon-btn";
+        noteBtn.textContent = "📝";
+        noteBtn.title = "Notes";
+        noteBtn.addEventListener("click", () =>
+          openModalShoppingNote(item, list.id)
+        );
 
-        const btnDel = document.createElement("button");
-        btnDel.className = "btn-ghost danger";
-        btnDel.textContent = "Delete";
-        btnDel.onclick = () => deleteShoppingItem(item.id);
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", () =>
+          deleteShoppingItem(list.id, item.id)
+        );
 
-        actions.appendChild(btnToggle);
-        actions.appendChild(btnDel);
+        actions.appendChild(noteBtn);
+        actions.appendChild(delBtn);
 
-        li.appendChild(main);
-        li.appendChild(actions);
-        shoppingListEl.appendChild(li);
+        row.appendChild(main);
+        row.appendChild(actions);
+        shoppingListEl.appendChild(row);
       });
-
-      refreshHomeDashboard();
     }
 
-    // =============================
-    // Workouts
-    // =============================
-    const workoutForm = document.getElementById("workout-form");
-    const workoutInput = document.getElementById("workout-text");
-    const workoutListEl = document.getElementById("workout-list");
+    // =========== WORKOUTS (simple) ===========
 
-    workoutForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const text = workoutInput.value.trim();
-      if (!text) return;
-      state.workouts.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        text,
-        date: todayISO(),
-      });
+    const workoutListEl = $("workoutList");
+    const noWorkoutMsg = $("noWorkoutMsg");
+
+    function addWorkout() {
+      const name = $("workoutName").value.trim();
+      const notes = $("workoutNotes").value.trim();
+      if (!name) return;
+      const w = {
+        id: "w-" + Date.now(),
+        name,
+        notes,
+        date: new Date().toISOString()
+      };
+      state.workouts.unshift(w);
+      $("workoutName").value = "";
+      $("workoutNotes").value = "";
       saveState();
-      workoutForm.reset();
       renderWorkouts();
+    }
+
+    $("addWorkoutBtn").addEventListener("click", addWorkout);
+    $("workoutName").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addWorkout();
+      }
     });
 
     function deleteWorkout(id) {
-      const w = state.workouts.find((x) => x.id === id);
-      if (!w) return;
-      const ok = confirm(`Delete this workout log?\n\n${w.text}`);
-      if (!ok) return;
+      if (!confirmDelete()) return;
       state.workouts = state.workouts.filter((w) => w.id !== id);
       saveState();
       renderWorkouts();
     }
 
     function renderWorkouts() {
-      workoutListEl.innerHTML = "";
       if (!state.workouts.length) {
-        const li = document.createElement("li");
-        li.className = "card-subtitle";
-        li.textContent = "No workouts logged yet.";
-        workoutListEl.appendChild(li);
-        refreshHomeDashboard();
+        workoutListEl.innerHTML = "";
+        noWorkoutMsg.style.display = "block";
         return;
       }
-
-      const sorted = [...state.workouts].sort((a, b) =>
-        a.date < b.date ? 1 : -1
-      );
-      sorted.forEach((w) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
+      noWorkoutMsg.style.display = "none";
+      workoutListEl.innerHTML = "";
+      state.workouts.forEach((w) => {
+        const item = document.createElement("div");
+        item.className = "item";
 
         const main = document.createElement("div");
-        main.className = "list-item-main";
+        main.className = "item-main";
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
 
         const title = document.createElement("div");
-        title.className = "list-item-title";
-        title.textContent = w.text;
-        main.appendChild(title);
+        title.className = "item-title";
+        title.textContent = w.name;
 
         const meta = document.createElement("div");
-        meta.className = "list-item-meta";
-        const chip = document.createElement("span");
-        chip.className = "chip";
-        chip.textContent = "Date: " + (w.date || "?");
-        meta.appendChild(chip);
-        main.appendChild(meta);
+        meta.className = "item-meta";
+
+        const d = document.createElement("span");
+        d.className = "pill";
+        d.textContent = formatDate(w.date);
+        meta.appendChild(d);
+
+        if (w.notes) {
+          const n = document.createElement("span");
+          n.className = "pill";
+          n.textContent = "Notes";
+          meta.appendChild(n);
+        }
+
+        textWrap.appendChild(title);
+        textWrap.appendChild(meta);
+        main.appendChild(textWrap);
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
 
-        const btnDel = document.createElement("button");
-        btnDel.className = "btn-ghost danger";
-        btnDel.textContent = "Delete";
-        btnDel.onclick = () => deleteWorkout(w.id);
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", () => deleteWorkout(w.id));
 
-        actions.appendChild(btnDel);
+        actions.appendChild(delBtn);
 
-        li.appendChild(main);
-        li.appendChild(actions);
-        workoutListEl.appendChild(li);
+        item.appendChild(main);
+        item.appendChild(actions);
+        workoutListEl.appendChild(item);
       });
-
-      refreshHomeDashboard();
     }
 
-    // =============================
-    // Finance
-    // =============================
-    const financeForm = document.getElementById("finance-form");
-    const financeAmount = document.getElementById("finance-amount");
-    const financeType = document.getElementById("finance-type");
-    const financeCategory = document.getElementById("finance-category");
-    const financeDate = document.getElementById("finance-date");
-    const financeNote = document.getElementById("finance-note");
-    const financeListEl = document.getElementById("finance-list");
+    // =========== FINANCE ===========
 
-    financeForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const amount = parseFloat(financeAmount.value);
-      if (isNaN(amount) || amount <= 0) return;
-      const type = financeType.value;
-      const cat = financeCategory.value.trim() || "Other";
-      const date = financeDate.value || todayISO();
-      const note = financeNote.value.trim();
+    const accountsListEl = $("accountsList");
+    const noAccountsMsg = $("noAccountsMsg");
+    const financeListEl = $("financeList");
+    const noFinanceMsg = $("noFinanceMsg");
+    const financeAccountSelect = $("financeAccount");
 
-      state.finances.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        amount,
-        type,
-        category: cat,
-        date,
-        note,
+    function renderAccounts() {
+      const accounts = state.accounts;
+      accountsListEl.innerHTML = "";
+      financeAccountSelect.innerHTML = "";
+
+      if (!accounts.length) {
+        noAccountsMsg.style.display = "block";
+      } else {
+        noAccountsMsg.style.display = "none";
+      }
+
+      accounts.forEach((acc) => {
+        // list item
+        const row = document.createElement("div");
+        row.className = "item";
+
+        const main = document.createElement("div");
+        main.className = "item-main";
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = acc.name;
+
+        textWrap.appendChild(title);
+        main.appendChild(textWrap);
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete account";
+        delBtn.addEventListener("click", () => deleteAccount(acc.id));
+
+        actions.appendChild(delBtn);
+
+        row.appendChild(main);
+        row.appendChild(actions);
+        accountsListEl.appendChild(row);
+
+        // select option
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = acc.name;
+        financeAccountSelect.appendChild(opt);
       });
 
+      if (!state.accounts.length) return;
+      if (!financeAccountSelect.value) {
+        financeAccountSelect.value = state.accounts[0].id;
+      }
+    }
+
+    function addAccount() {
+      const name = prompt("Account name (e.g. Main THB, BRL savings, USD card):");
+      if (!name) return;
+      const acc = {
+        id: "acc-" + Date.now(),
+        name: name.trim()
+      };
+      state.accounts.push(acc);
       saveState();
-      financeForm.reset();
-      renderFinances();
+      renderAccounts();
+    }
+
+    $("addAccountBtn").addEventListener("click", addAccount);
+
+    function deleteAccount(id) {
+      const used = state.finance.some((tx) => tx.accountId === id);
+      if (used) {
+        alert("This account has transactions. You can't delete it yet.");
+        return;
+      }
+      if (!confirmDelete()) return;
+      state.accounts = state.accounts.filter((a) => a.id !== id);
+      saveState();
+      renderAccounts();
+    }
+
+    function addFinance() {
+      const type = $("financeType").value;
+      const amount = parseFloat($("financeAmount").value);
+      if (!amount || Number.isNaN(amount)) return;
+
+      const accountId =
+        $("financeAccount").value ||
+        (state.accounts[0] && state.accounts[0].id);
+      if (!accountId) {
+        alert("Please create an account first.");
+        return;
+      }
+
+      const category = $("financeCategory").value.trim();
+      const method = $("financeMethod").value.trim();
+      let date = $("financeDate").value;
+      if (!date) {
+        date = new Date().toISOString();
+      } else {
+        date = new Date(date + "T00:00:00").toISOString();
+      }
+      const note = $("financeNote").value.trim();
+
+      const tx = {
+        id: "tx-" + Date.now(),
+        type,
+        amount,
+        accountId,
+        category,
+        method,
+        date,
+        note
+      };
+      state.finance.unshift(tx);
+
+      $("financeAmount").value = "";
+      $("financeCategory").value = "";
+      $("financeMethod").value = "";
+      $("financeDate").value = "";
+      $("financeNote").value = "";
+      saveState();
+      renderFinance();
+    }
+
+    $("addFinanceBtn").addEventListener("click", addFinance);
+    $("financeAmount").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addFinance();
+      }
     });
 
     function deleteFinance(id) {
-      const f = state.finances.find((x) => x.id === id);
-      if (!f) return;
-      const sign = f.type === "expense" ? "-" : "+";
-      const ok = confirm(
-        `Delete this entry?\n\n${sign}${f.amount.toFixed(2)} · ${
-          f.category
-        } · ${f.date}`
-      );
-      if (!ok) return;
-      state.finances = state.finances.filter((f) => f.id !== id);
+      if (!confirmDelete()) return;
+      state.finance = state.finance.filter((tx) => tx.id !== id);
       saveState();
-      renderFinances();
+      renderFinance();
     }
 
-    function renderFinances() {
-      financeListEl.innerHTML = "";
-      if (!state.finances.length) {
-        const li = document.createElement("li");
-        li.className = "card-subtitle";
-        li.textContent = "No entries yet.";
-        financeListEl.appendChild(li);
-        refreshHomeDashboard();
+    function renderFinance() {
+      const txs = state.finance;
+      if (!txs.length) {
+        financeListEl.innerHTML = "";
+        noFinanceMsg.style.display = "block";
         return;
       }
+      noFinanceMsg.style.display = "none";
 
-      const sorted = [...state.finances].sort((a, b) =>
-        a.date < b.date ? 1 : -1
-      );
-      sorted.forEach((f) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
+      const accountMap = {};
+      state.accounts.forEach((a) => {
+        accountMap[a.id] = a.name;
+      });
+
+      financeListEl.innerHTML = "";
+      txs.forEach((tx) => {
+        const item = document.createElement("div");
+        item.className = "item";
 
         const main = document.createElement("div");
-        main.className = "list-item-main";
+        main.className = "item-main";
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
 
         const title = document.createElement("div");
-        title.className = "list-item-title";
-        const sign = f.type === "expense" ? "-" : "+";
-        title.textContent = `${sign}${f.amount.toFixed(2)} · ${f.category}`;
-        main.appendChild(title);
+        title.className = "item-title";
+        const sign = tx.type === "income" ? "+" : "-";
+        title.textContent = `${sign}${tx.amount.toFixed(2)} (${tx.category || "No category"})`;
 
         const meta = document.createElement("div");
-        meta.className = "list-item-meta";
-        const dateChip = document.createElement("span");
-        dateChip.className = "chip";
-        dateChip.textContent = "Date: " + f.date;
-        meta.appendChild(dateChip);
+        meta.className = "item-meta";
 
-        const typeChip = document.createElement("span");
-        typeChip.className =
-          "chip " + (f.type === "expense" ? "overdue" : "done");
-        typeChip.textContent =
-          f.type === "expense" ? "Expense" : "Income";
-        meta.appendChild(typeChip);
+        const typeTag = document.createElement("span");
+        typeTag.className =
+          "tag " + (tx.type === "income" ? "tag-income" : "tag-expense");
+        typeTag.textContent = tx.type === "income" ? "Income" : "Expense";
+        meta.appendChild(typeTag);
 
-        if (f.note) {
-          const noteChip = document.createElement("span");
-          noteChip.className = "chip";
-          noteChip.textContent = f.note;
-          meta.appendChild(noteChip);
+        const accTag = document.createElement("span");
+        accTag.className = "tag";
+        accTag.textContent = accountMap[tx.accountId] || "Unknown account";
+        meta.appendChild(accTag);
+
+        const methodTag = document.createElement("span");
+        methodTag.className = "tag";
+        methodTag.textContent = tx.method || "Method ?";
+        meta.appendChild(methodTag);
+
+        const dateTag = document.createElement("span");
+        dateTag.className = "tag";
+        dateTag.textContent = formatDate(tx.date);
+        meta.appendChild(dateTag);
+
+        if (tx.note) {
+          const noteTag = document.createElement("span");
+          noteTag.className = "tag";
+          noteTag.textContent = "Note";
+          meta.appendChild(noteTag);
         }
 
-        main.appendChild(meta);
+        textWrap.appendChild(title);
+        textWrap.appendChild(meta);
+        main.appendChild(textWrap);
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
 
-        const btnDel = document.createElement("button");
-        btnDel.className = "btn-ghost danger";
-        btnDel.textContent = "Delete";
-        btnDel.onclick = () => deleteFinance(f.id);
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete transaction";
+        delBtn.addEventListener("click", () => deleteFinance(tx.id));
 
-        actions.appendChild(btnDel);
+        actions.appendChild(delBtn);
 
-        li.appendChild(main);
-        li.appendChild(actions);
-        financeListEl.appendChild(li);
+        item.appendChild(main);
+        item.appendChild(actions);
+        financeListEl.appendChild(item);
       });
-
-      refreshHomeDashboard();
     }
 
-    // =============================
-    // Home Dashboard
-    // =============================
-    const todayTasksListEl = document.getElementById("today-tasks-list");
-    const homeTodoCountEl = document.getElementById("home-todo-count");
-    const homeFinanceCountEl = document.getElementById("home-finance-count");
-    const homeWorkoutCountEl = document.getElementById("home-workout-count");
-    const homeShoppingCountEl =
-      document.getElementById("home-shopping-count");
+    // =========== INIT ===========
 
-    const quickTaskForm = document.getElementById("quick-task-form");
-    const quickTaskInput = document.getElementById("quick-task-text");
-
-    quickTaskForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const text = quickTaskInput.value.trim();
-      if (!text) return;
-      ensureAtLeastOneList();
-      const list = getActiveTaskList();
-      const task = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        text,
-        priority: "medium",
-        dueDate: todayISO(),
-        status: "todo",
-      };
-      list.tasks.push(task);
-      saveState();
-      quickTaskForm.reset();
-      renderTasks();
-      showView("home", true);
-    });
-
-    function refreshHomeDashboard() {
-      const today = todayISO();
-
-      // All tasks due today or overdue across all lists
-      const allTasks = getAllTasksAcrossLists();
-      const todayTasks = allTasks.filter((t) => {
-        if (!t.dueDate) return false;
-        if (t.status === "done") return false;
-        return t.dueDate <= today;
-      });
-
-      homeTodoCountEl.textContent = todayTasks.length + " today";
-      todayTasksListEl.innerHTML = "";
-
-      if (!todayTasks.length) {
-        const li = document.createElement("li");
-        li.className = "card-subtitle";
-        li.textContent = "No tasks due today. 🎉";
-        todayTasksListEl.appendChild(li);
-      } else {
-        todayTasks
-          .slice(0, 5)
-          .sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
-          .forEach((t) => {
-            const li = document.createElement("li");
-            li.className = "today-tasks-item";
-            const left = document.createElement("div");
-            left.className = "today-tasks-title";
-            left.textContent = t.text;
-            const right = document.createElement("div");
-            right.className = "today-tasks-meta";
-            right.textContent =
-              (t.dueDate === today ? "Today" : t.dueDate) +
-              " · " +
-              (t.priority === "high"
-                ? "High"
-                : t.priority === "low"
-                ? "Low"
-                : "Medium");
-            li.appendChild(left);
-            li.appendChild(right);
-            todayTasksListEl.appendChild(li);
-          });
-      }
-
-      // Shopping count: pending items
-      const pendingShopping = state.shoppingItems.filter(
-        (i) => !i.checked
-      ).length;
-      homeShoppingCountEl.textContent = pendingShopping + " pending";
-
-      // Finance: entries this month
-      const now = new Date();
-      const m = String(now.getMonth() + 1).padStart(2, "0");
-      const y = now.getFullYear();
-      const prefix = `${y}-${m}-`;
-      const thisMonthFinances = state.finances.filter(
-        (f) => f.date && f.date.startsWith(prefix)
-      );
-      homeFinanceCountEl.textContent =
-        thisMonthFinances.length + " entries";
-
-      // Workouts: last workout date
-      if (!state.workouts.length) {
-        homeWorkoutCountEl.textContent = "None yet";
-      } else {
-        const last = [...state.workouts].sort((a, b) =>
-          a.date < b.date ? 1 : -1
-        )[0];
-        homeWorkoutCountEl.textContent = last.date || "Recent";
-      }
-    }
-
-    // =============================
-    // Initial render
-    // =============================
-    function renderAll() {
-      renderTasks();
+    function init() {
+      renderTodoLists();
+      renderTodos();
+      renderShoppingLists();
       renderShopping();
       renderWorkouts();
-      renderFinances();
-      refreshHomeDashboard();
-    }
-  </script>
+      renderAccounts();
+      renderFinance();
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker
-          .register("./service-worker.js")
-          .catch(function (err) {
-            console.log("Service worker registration failed:", err);
-          });
-      });
+      setPage(state.currentPage || "home");
     }
+
+    init();
   </script>
 </body>
 </html>
