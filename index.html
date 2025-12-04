@@ -924,590 +924,659 @@
   </div>
 
   <script>
-    // Simple state
-    const STORAGE_KEY = "myhub_v0_4";
-
-    function defaultState() {
-      return {
-        currentPage: "home",
-        todoLists: ["General"],
-        currentTodoList: "General",
-        todos: [],
-        shoppingLists: [
-          { id: "default-shopping", name: "Regular shopping", items: [] }
-        ],
-        currentShoppingListId: "default-shopping",
-        workouts: [],
-        accounts: [
-          { id: "acc-main", name: "Main THB" }
-        ],
-        finance: []
-        activeFinanceAccountId: null
-      };
+    // MyHub v0.4.2 – single-file front-end logic
+  
+    // ---------- Helpers ----------
+    const $ = (id) => document.getElementById(id);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const STORAGE_KEY = "myhub-state-v04";
+  
+    function formatDate(iso) {
+      if (!iso) return "No date";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "No date";
+      return d.toLocaleDateString();
     }
-
-    let state = loadState();
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  
+    function confirmDelete() {
+      return confirm("Delete this item? This action cannot be undone.");
     }
-
+  
+    // ---------- State ----------
+    const defaultState = {
+      theme: "dark",
+      currentPage: "home",
+      // To-do
+      todoLists: [
+        { id: "list-personal", name: "Personal", createdAt: new Date().toISOString() }
+      ],
+      todos: [],
+      // Shopping
+      shoppingLists: [
+        { id: "shop-main", name: "Main list", createdAt: new Date().toISOString() }
+      ],
+      shoppingItems: [],
+      // Workouts
+      workouts: [],
+      // Finance
+      accounts: [],
+      finance: [],
+      activeFinanceAccountId: null
+    };
+  
+    let state;
+  
     function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaultState();
       try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          state = structuredClone(defaultState);
+          return;
+        }
         const parsed = JSON.parse(raw);
-        const base = defaultState();
-        return {
-          ...base,
-          ...parsed
-        };
+        state = Object.assign(structuredClone(defaultState), parsed);
       } catch (e) {
         console.error("Error loading state", e);
-        return defaultState();
+        state = structuredClone(defaultState);
       }
     }
-
-    // Helpers
-    function $(id) {
-      return document.getElementById(id);
-    }
-
-    function formatDate(d) {
-      if (!d) return "";
+  
+    function saveState() {
       try {
-        const dt = new Date(d);
-        if (Number.isNaN(dt.getTime())) return d;
-        return dt.toLocaleDateString();
-      } catch {
-        return d;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("Error saving state", e);
       }
     }
-
-    function confirmDelete() {
-      return window.confirm("Delete this item?");
-    }
-
-    // Navigation
-    const navItems = document.querySelectorAll(".nav-item");
-    const pages = document.querySelectorAll(".page");
-
-    function setPage(pageId) {
-      state.currentPage = pageId;
+  
+    // ---------- Navigation ----------
+    function setPage(page) {
+      state.currentPage = page;
       saveState();
-      pages.forEach((p) =>
-        p.id === "page-" + pageId
-          ? p.classList.add("active")
-          : p.classList.remove("active")
-      );
-      navItems.forEach((btn) => {
-        btn.dataset.page === pageId
-          ? btn.classList.add("active")
-          : btn.classList.remove("active");
+  
+      $$(".page").forEach((el) => {
+        if (el.dataset.page === page) {
+          el.classList.remove("hidden");
+        } else {
+          el.classList.add("hidden");
+        }
       });
+  
+      $$(".nav-item").forEach((el) => {
+        if (el.dataset.page === page) {
+          el.classList.add("nav-active");
+        } else {
+          el.classList.remove("nav-active");
+        }
+      });
+  
+      const headerTitle = $("pageTitle");
+      if (headerTitle) {
+        const mapping = {
+          home: "Home",
+          todo: "To-Do",
+          shopping: "Shopping",
+          workouts: "Workouts",
+          finance: "Finances",
+          notes: "Notes",
+          meals: "Meals",
+          calendar: "Calendar",
+          analytics: "Analytics"
+        };
+        headerTitle.textContent = mapping[page] || "MyHub";
+      }
     }
-
-    navItems.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const page = btn.dataset.page;
-        setPage(page);
-      });
-    });
-
-    // Sidebar toggle
-    const sidebar = $("sidebar");
-    $("sidebarToggle").addEventListener("click", () => {
-      sidebar.classList.toggle("expanded");
-    });
-
-    // =========== TODO ===========
-
-    const todoListsContainer = $("todoListsContainer");
-    const todoListEl = $("todoList");
-    const noTodoMsg = $("noTodoMsg");
-
-    function renderTodoLists() {
-      todoListsContainer.innerHTML = "";
-      state.todoLists.forEach((name) => {
-        const chip = document.createElement("button");
-        chip.className =
-          "chip" + (name === state.currentTodoList ? " active" : "");
-        chip.textContent = name;
-        chip.addEventListener("click", () => {
-          state.currentTodoList = name;
-          saveState();
-          renderTodoLists();
-          renderTodos();
+  
+    // attach listeners to sidebar buttons
+    function setupNav() {
+      $$(".nav-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const page = btn.dataset.page;
+          if (page) setPage(page);
         });
-        todoListsContainer.appendChild(chip);
+      });
+  
+      const homeQuick = $("homeQuickTaskBtn");
+      if (homeQuick) {
+        homeQuick.addEventListener("click", () => {
+          const input = $("homeQuickTaskInput");
+          if (!input) return;
+          const text = input.value.trim();
+          if (!text) return;
+          addTodoFromHome(text);
+          input.value = "";
+        });
+      }
+    }
+  
+    // ---------- To-do Lists ----------
+    const todoListSelect = $("todoListSelect");
+    const todoListNameInput = $("todoListName");
+    const todoNewListBtn = $("todoNewListBtn");
+    const todoTitleInput = $("todoTitleInput");
+    const todoPrioritySelect = $("todoPrioritySelect");
+    const todoDueDateInput = $("todoDueDate");
+    const todoListContainer = $("todoList");
+    const todoEmptyMsg = $("noTodosMsg");
+    const todoSearchInput = $("todoSearchInput");
+    const todoFilterPriority = $("todoFilterPriority");
+    const todoFilterStatus = $("todoFilterStatus");
+    const todoFilterList = $("todoFilterList");
+  
+    function getActiveTodoListId() {
+      return todoListSelect.value || (state.todoLists[0] && state.todoLists[0].id);
+    }
+  
+    function renderTodoListOptions() {
+      const selects = [todoListSelect, todoFilterList].filter(Boolean);
+      selects.forEach((sel) => {
+        sel.innerHTML = "";
+        state.todoLists.forEach((list) => {
+          const opt = document.createElement("option");
+          opt.value = list.id;
+          opt.textContent = list.name;
+          sel.appendChild(opt);
+        });
+      });
+  
+      if (!state.todoLists.length) return;
+      if (!todoListSelect.value) {
+        todoListSelect.value = state.todoLists[0].id;
+      }
+    }
+  
+    function addTodoList() {
+      const name = todoListNameInput.value.trim();
+      if (!name) return;
+      const id = "list-" + Date.now();
+      state.todoLists.push({ id, name, createdAt: new Date().toISOString() });
+      saveState();
+      todoListNameInput.value = "";
+      renderTodoListOptions();
+      todoListSelect.value = id;
+      renderTodos();
+    }
+  
+    if (todoNewListBtn) {
+      todoNewListBtn.addEventListener("click", addTodoList);
+    }
+  
+    function addTodo() {
+      const title = todoTitleInput.value.trim();
+      if (!title) return;
+      const listId = getActiveTodoListId();
+      const priority = todoPrioritySelect.value || "medium";
+      let dueIso = null;
+      if (todoDueDateInput.value) {
+        dueIso = new Date(todoDueDateInput.value + "T00:00:00").toISOString();
+      }
+      const todo = {
+        id: "todo-" + Date.now(),
+        listId,
+        title,
+        priority,
+        dueDate: dueIso,
+        status: "open", // open | inprogress | done
+        createdAt: new Date().toISOString(),
+        completedAt: null
+      };
+      state.todos.unshift(todo);
+      saveState();
+      todoTitleInput.value = "";
+      renderTodos();
+    }
+  
+    if (todoTitleInput) {
+      todoTitleInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addTodo();
+        }
       });
     }
-
-    function addTodoList() {
-      const name = prompt("New list name:");
-      if (!name) return;
-      if (!state.todoLists.includes(name)) state.todoLists.push(name);
-      state.currentTodoList = name;
-      saveState();
-      renderTodoLists();
-      renderTodos();
-    }
-
-    $("addTodoListBtn").addEventListener("click", addTodoList);
-
-    function addTodo() {
-      const text = $("todoText").value.trim();
-      const priority = $("todoPriority").value;
-      const dueDate = $("todoDueDate").value;
-      if (!text) return;
-      const todo = {
-        id: "todo-" + Date.now() + "-" + Math.random().toString(16).slice(2),
-        list: state.currentTodoList,
-        title: text,
-        priority,
-        dueDate,
-        status: "todo",
-        createdAt: new Date().toISOString()
-      };
-      state.todos.push(todo);
-      $("todoText").value = "";
-      $("todoDueDate").value = "";
-      $("todoText").focus();
-      saveState();
-      renderTodos();
-    }
-
-    $("addTodoBtn").addEventListener("click", addTodo);
-    $("todoText").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addTodo();
-      }
-    });
-
-    function updateTodoStatus(id, status) {
-      const t = state.todos.find((t) => t.id === id);
+    $("addTodoBtn")?.addEventListener("click", addTodo);
+  
+    function updateTodoStatus(id, newStatus) {
+      const t = state.todos.find((x) => x.id === id);
       if (!t) return;
-      t.status = status;
+      t.status = newStatus;
+      t.completedAt = newStatus === "done" ? new Date().toISOString() : null;
       saveState();
       renderTodos();
     }
-
+  
+    function openEditTodo(todo) {
+      const newTitle = prompt("Edit task title:", todo.title);
+      if (newTitle === null) return;
+      const trimmed = newTitle.trim();
+      if (trimmed) todo.title = trimmed;
+  
+      const newDate = prompt(
+        "Edit due date (YYYY-MM-DD) or leave blank:",
+        todo.dueDate ? todo.dueDate.slice(0, 10) : ""
+      );
+      if (newDate !== null) {
+        if (newDate.trim()) {
+          todo.dueDate = new Date(newDate.trim() + "T00:00:00").toISOString();
+        } else {
+          todo.dueDate = null;
+        }
+      }
+      saveState();
+      renderTodos();
+    }
+  
     function deleteTodo(id) {
       if (!confirmDelete()) return;
       state.todos = state.todos.filter((t) => t.id !== id);
       saveState();
       renderTodos();
     }
-
-    // Modal for editing todo
-    const modalBackdrop = $("modalBackdrop");
-    const modal = $("modal");
-    const modalTitle = $("modalTitle");
-    const modalBody = $("modalBody");
-    const modalSaveBtn = $("modalSaveBtn");
-    const modalCancelBtn = $("modalCancelBtn");
-    const modalCloseBtn = $("modalCloseBtn");
-
-    let modalContext = null; // { type: 'todo'|'shopping-note', id, listId }
-
-    function openModalTodo(todo) {
-      modalContext = { type: "todo", id: todo.id };
-      modalTitle.textContent = "Edit task";
-      modalBody.innerHTML = `
-        <div class="row">
-          <div>
-            <label>Title</label>
-            <input type="text" id="modalTodoTitle" value="${escapeHtml(
-              todo.title
-            )}" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Priority</label>
-            <select id="modalTodoPriority">
-              <option value="high" ${
-                todo.priority === "high" ? "selected" : ""
-              }>High</option>
-              <option value="medium" ${
-                todo.priority === "medium" ? "selected" : ""
-              }>Medium</option>
-              <option value="low" ${
-                todo.priority === "low" ? "selected" : ""
-              }>Low</option>
-            </select>
-          </div>
-          <div>
-            <label>Due date</label>
-            <input type="date" id="modalTodoDueDate" value="${
-              todo.dueDate || ""
-            }" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Status</label>
-            <select id="modalTodoStatus">
-              <option value="todo" ${
-                todo.status === "todo" ? "selected" : ""
-              }>Not done</option>
-              <option value="half" ${
-                todo.status === "half" ? "selected" : ""
-              }>Half</option>
-              <option value="done" ${
-                todo.status === "done" ? "selected" : ""
-              }>Done</option>
-            </select>
-          </div>
-        </div>
-      `;
-      modalBackdrop.classList.add("active");
-    }
-
-    function openModalShoppingNote(item, listId) {
-      modalContext = { type: "shopping-note", id: item.id, listId };
-      modalTitle.textContent = "Item notes";
-      modalBody.innerHTML = `
-        <div class="row">
-          <div>
-            <label>Item</label>
-            <input type="text" id="modalShoppingName" value="${escapeHtml(
-              item.text
-            )}" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Notes</label>
-            <textarea id="modalShoppingNote" placeholder="Add details, brand, conditions...">${
-              item.note || ""
-            }</textarea>
-          </div>
-        </div>
-      `;
-      modalBackdrop.classList.add("active");
-    }
-
-    function closeModal() {
-      modalBackdrop.classList.remove("active");
-      modalContext = null;
-    }
-
-    modalCancelBtn.addEventListener("click", closeModal);
-    modalCloseBtn.addEventListener("click", closeModal);
-    modalBackdrop.addEventListener("click", (e) => {
-      if (e.target === modalBackdrop) closeModal();
-    });
-
-    modalSaveBtn.addEventListener("click", () => {
-      if (!modalContext) return;
-      if (modalContext.type === "todo") {
-        const t = state.todos.find((tt) => tt.id === modalContext.id);
-        if (!t) return;
-        t.title = $("modalTodoTitle").value.trim() || t.title;
-        t.priority = $("modalTodoPriority").value;
-        t.dueDate = $("modalTodoDueDate").value;
-        t.status = $("modalTodoStatus").value;
-        saveState();
-        renderTodos();
-      } else if (modalContext.type === "shopping-note") {
-        const list = state.shoppingLists.find(
-          (l) => l.id === modalContext.listId
-        );
-        if (!list) return;
-        const item = list.items.find((i) => i.id === modalContext.id);
-        if (!item) return;
-        item.text = $("modalShoppingName").value.trim() || item.text;
-        item.note = $("modalShoppingNote").value.trim();
-        saveState();
-        renderShopping();
+  
+    function applyTodoFilters(arr) {
+      let result = [...arr];
+  
+      const q = (todoSearchInput?.value || "").trim().toLowerCase();
+      if (q) {
+        result = result.filter((t) => t.title.toLowerCase().includes(q));
       }
-      closeModal();
-    });
-
-    function escapeHtml(str) {
-      return (str || "").replace(/[&<>"']/g, (c) => {
-        const map = {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#039;"
-        };
-        return map[c] || c;
+  
+      const prio = todoFilterPriority?.value || "all";
+      if (prio !== "all") {
+        result = result.filter((t) => t.priority === prio);
+      }
+  
+      const stat = todoFilterStatus?.value || "all";
+      if (stat !== "all") {
+        result = result.filter((t) => t.status === stat);
+      }
+  
+      const listId = todoFilterList?.value || "all";
+      if (listId !== "all") {
+        result = result.filter((t) => t.listId === listId);
+      }
+  
+      result.sort((a, b) => {
+        // High priority first, then by due date, then open > inprogress > done
+        const prioOrder = { high: 0, medium: 1, low: 2 };
+        const pa = prioOrder[a.priority] ?? 1;
+        const pb = prioOrder[b.priority] ?? 1;
+        if (pa !== pb) return pa - pb;
+  
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        if (da !== db) return da - db;
+  
+        const statusOrder = { open: 0, inprogress: 1, done: 2 };
+        return (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0);
       });
+  
+      return result;
     }
-
+  
     function renderTodos() {
-      const todos = state.todos.filter(
-        (t) => t.list === state.currentTodoList
-      );
-      if (!todos.length) {
-        todoListEl.innerHTML = "";
-        noTodoMsg.style.display = "block";
+      if (!todoListContainer) return;
+      const all = state.todos;
+      const filtered = applyTodoFilters(all);
+  
+      if (!filtered.length) {
+        todoListContainer.innerHTML = "";
+        if (todoEmptyMsg) todoEmptyMsg.style.display = "block";
         return;
       }
-      noTodoMsg.style.display = "none";
-
-      // sort: high priority + due date
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      todos.sort((a, b) => {
-        if (a.status === "done" && b.status !== "done") return 1;
-        if (b.status === "done" && a.status !== "done") return -1;
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
-        }
-        if (a.dueDate && b.dueDate) {
-          return new Date(a.dueDate) - new Date(b.dueDate);
-        }
-        if (a.dueDate && !b.dueDate) return -1;
-        if (!a.dueDate && b.dueDate) return 1;
-        return 0;
-      });
-
-      todoListEl.innerHTML = "";
-      todos.forEach((t) => {
-        const item = document.createElement("div");
-        item.className = "item";
-
+      if (todoEmptyMsg) todoEmptyMsg.style.display = "none";
+  
+      todoListContainer.innerHTML = "";
+      filtered.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "item";
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = t.status === "done";
-        checkbox.addEventListener("change", () => {
-          updateTodoStatus(t.id, checkbox.checked ? "done" : "todo");
+  
+        // left: checkbox
+        const left = document.createElement("div");
+        left.className = "item-checkbox";
+  
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = t.status === "done";
+        cb.addEventListener("change", () => {
+          updateTodoStatus(t.id, cb.checked ? "done" : "open");
         });
-
+        left.appendChild(cb);
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
-        title.className = "item-title" + (t.status === "done" ? " done" : "");
+        title.className = "item-title";
         title.textContent = t.title;
-
+        if (t.status === "done") {
+          title.style.textDecoration = "line-through";
+          title.style.opacity = "0.7";
+        }
+        // click title to edit
+        title.addEventListener("click", () => openEditTodo(t));
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
-
-        const p = document.createElement("span");
-        p.className =
-          "pill " +
-          (t.priority === "high"
-            ? "pill-high"
+  
+        const prioTag = document.createElement("span");
+        prioTag.className = "tag";
+        prioTag.textContent =
+          t.priority === "high"
+            ? "High"
             : t.priority === "low"
-            ? "pill-low"
-            : "pill-medium");
-        p.textContent =
-          t.priority.charAt(0).toUpperCase() + t.priority.slice(1);
-        meta.appendChild(p);
-
+            ? "Low"
+            : "Medium";
+        meta.appendChild(prioTag);
+  
         if (t.dueDate) {
           const due = document.createElement("span");
-          due.className = "pill";
+          due.className = "tag";
           due.textContent = "Due " + formatDate(t.dueDate);
           meta.appendChild(due);
         }
-
+  
+        const listRef = state.todoLists.find((l) => l.id === t.listId);
+        if (listRef) {
+          const listTag = document.createElement("span");
+          listTag.className = "tag";
+          listTag.textContent = listRef.name;
+          meta.appendChild(listTag);
+        }
+  
+        if (t.status === "inprogress") {
+          const st = document.createElement("span");
+          st.className = "tag";
+          st.textContent = "In progress";
+          meta.appendChild(st);
+        }
+  
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
-
-        main.appendChild(checkbox);
+  
+        main.appendChild(left);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
+        const inProgBtn = document.createElement("button");
+        inProgBtn.className = "icon-btn";
+        inProgBtn.textContent = "⏳";
+        inProgBtn.title = "Mark in progress";
+        inProgBtn.addEventListener("click", () =>
+          updateTodoStatus(t.id, "inprogress")
+        );
+  
         const editBtn = document.createElement("button");
         editBtn.className = "icon-btn";
         editBtn.textContent = "✏️";
         editBtn.title = "Edit";
-        editBtn.addEventListener("click", () => openModalTodo(t));
-
+        editBtn.addEventListener("click", () => openEditTodo(t));
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete";
         delBtn.addEventListener("click", () => deleteTodo(t.id));
-
+  
+        actions.appendChild(inProgBtn);
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
-
-        item.appendChild(main);
-        item.appendChild(actions);
-        todoListEl.appendChild(item);
+  
+        row.appendChild(main);
+        row.appendChild(actions);
+  
+        todoListContainer.appendChild(row);
       });
     }
-
-    // =========== SHOPPING ===========
-
-    const shoppingListsContainer = $("shoppingListsContainer");
+  
+    todoListSelect?.addEventListener("change", () => renderTodos());
+    todoSearchInput?.addEventListener("input", renderTodos);
+    todoFilterPriority?.addEventListener("change", renderTodos);
+    todoFilterStatus?.addEventListener("change", renderTodos);
+    todoFilterList?.addEventListener("change", renderTodos);
+  
+    function addTodoFromHome(text) {
+      const listId = state.todoLists[0]?.id;
+      if (!listId) return;
+      const todo = {
+        id: "todo-" + Date.now(),
+        listId,
+        title: text,
+        priority: "medium",
+        dueDate: null,
+        status: "open",
+        createdAt: new Date().toISOString(),
+        completedAt: null
+      };
+      state.todos.unshift(todo);
+      saveState();
+      renderTodos();
+    }
+  
+    // ---------- Shopping Lists ----------
+    const shoppingListSelect = $("shoppingListSelect");
+    const shoppingListNameInput = $("shoppingListName");
+    const shoppingNewListBtn = $("shoppingNewListBtn");
+    const shoppingItemInput = $("shoppingItemInput");
     const shoppingListEl = $("shoppingList");
-    const noShoppingMsg = $("noShoppingMsg");
-
-    function renderShoppingLists() {
-      shoppingListsContainer.innerHTML = "";
+    const shoppingEmptyMsg = $("shoppingEmptyMsg");
+    let draggingShoppingId = null;
+  
+    function getActiveShoppingListId() {
+      return shoppingListSelect.value || (state.shoppingLists[0] && state.shoppingLists[0].id);
+    }
+  
+    function renderShoppingListOptions() {
+      shoppingListSelect.innerHTML = "";
       state.shoppingLists.forEach((list) => {
-        const chip = document.createElement("button");
-        chip.className =
-          "chip" +
-          (list.id === state.currentShoppingListId ? " active" : "");
-        chip.textContent = list.name;
-        chip.addEventListener("click", () => {
-          state.currentShoppingListId = list.id;
-          saveState();
-          renderShoppingLists();
-          renderShopping();
-        });
-        shoppingListsContainer.appendChild(chip);
+        const opt = document.createElement("option");
+        opt.value = list.id;
+        opt.textContent = list.name;
+        shoppingListSelect.appendChild(opt);
       });
+      if (!state.shoppingLists.length) return;
+      if (!shoppingListSelect.value) {
+        shoppingListSelect.value = state.shoppingLists[0].id;
+      }
     }
-
+  
     function addShoppingList() {
-      const name = prompt("New shopping list name:");
+      const name = shoppingListNameInput.value.trim();
       if (!name) return;
-      const id = "shoplist-" + Date.now();
-      state.shoppingLists.push({ id, name, items: [] });
-      state.currentShoppingListId = id;
-      saveState();
-      renderShoppingLists();
-      renderShopping();
-    }
-
-    $("addShoppingListBtn").addEventListener("click", addShoppingList);
-
-    function addShoppingItem() {
-      const text = $("shoppingText").value.trim();
-      if (!text) return;
-      const list = state.shoppingLists.find(
-        (l) => l.id === state.currentShoppingListId
-      );
-      if (!list) return;
-      list.items.push({
-        id: "shop-" + Date.now() + "-" + Math.random().toString(16).slice(2),
-        text,
-        done: false,
-        note: ""
+      const id = "shop-" + Date.now();
+      state.shoppingLists.push({
+        id,
+        name,
+        createdAt: new Date().toISOString()
       });
-      $("shoppingText").value = "";
-      $("shoppingText").focus();
       saveState();
+      shoppingListNameInput.value = "";
+      renderShoppingListOptions();
+      shoppingListSelect.value = id;
       renderShopping();
     }
-
-    $("addShoppingBtn").addEventListener("click", addShoppingItem);
-    $("shoppingText").addEventListener("keydown", (e) => {
+  
+    shoppingNewListBtn?.addEventListener("click", addShoppingList);
+  
+    function addShoppingItem() {
+      const title = shoppingItemInput.value.trim();
+      if (!title) return;
+      const listId = getActiveShoppingListId();
+      const item = {
+        id: "shop-item-" + Date.now(),
+        listId,
+        title,
+        checked: false,
+        note: "",
+        createdAt: new Date().toISOString()
+      };
+      state.shoppingItems.push(item);
+      saveState();
+      shoppingItemInput.value = "";
+      renderShopping();
+    }
+  
+    shoppingItemInput?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         addShoppingItem();
       }
     });
-
-    function toggleShoppingItem(listId, itemId) {
-      const list = state.shoppingLists.find((l) => l.id === listId);
-      if (!list) return;
-      const item = list.items.find((i) => i.id === itemId);
-      if (!item) return;
-      item.done = !item.done;
-      saveState();
-      renderShopping();
-    }
-
+    $("addShoppingBtn")?.addEventListener("click", addShoppingItem);
+  
     function deleteShoppingItem(listId, itemId) {
       if (!confirmDelete()) return;
-      const list = state.shoppingLists.find((l) => l.id === listId);
-      if (!list) return;
-      list.items = list.items.filter((i) => i.id !== itemId);
+      state.shoppingItems = state.shoppingItems.filter(
+        (i) => i.id !== itemId
+      );
       saveState();
       renderShopping();
     }
-
-    function renderShopping() {
-      const list = state.shoppingLists.find(
-        (l) => l.id === state.currentShoppingListId
+  
+    function toggleShoppingItem(id) {
+      const item = state.shoppingItems.find((i) => i.id === id);
+      if (!item) return;
+      item.checked = !item.checked;
+      saveState();
+      renderShopping();
+    }
+  
+    function openModalShoppingNote(item, listId) {
+      const newNote = prompt("Note for this item:", item.note || "");
+      if (newNote === null) return;
+      item.note = newNote.trim();
+      saveState();
+      renderShopping();
+    }
+  
+    function reorderShopping(listId, fromId, toId) {
+      if (!fromId || !toId || fromId === toId) return;
+      const arr = state.shoppingItems;
+      const fromIdx = arr.findIndex(
+        (i) => i.id === fromId && i.listId === listId
       );
-      if (!list || !list.items.length) {
+      const toIdx = arr.findIndex(
+        (i) => i.id === toId && i.listId === listId
+      );
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, moved);
+      saveState();
+      renderShopping();
+    }
+  
+    function renderShopping() {
+      if (!shoppingListEl) return;
+      const listId = getActiveShoppingListId();
+      const items = state.shoppingItems.filter((i) => i.listId === listId);
+  
+      if (!items.length) {
         shoppingListEl.innerHTML = "";
-        noShoppingMsg.style.display = "block";
+        if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "block";
         return;
       }
-      noShoppingMsg.style.display = "none";
-
+      if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "none";
+  
       shoppingListEl.innerHTML = "";
-      list.items.forEach((item) => {
+      items.forEach((item) => {
         const row = document.createElement("div");
         row.className = "item";
-
+        row.dataset.itemId = item.id;
+        row.draggable = true;
+  
+        row.addEventListener("dragstart", () => {
+          draggingShoppingId = item.id;
+        });
+        row.addEventListener("dragover", (e) => {
+          e.preventDefault();
+        });
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const targetId = row.dataset.itemId;
+          reorderShopping(listId, draggingShoppingId, targetId);
+          draggingShoppingId = null;
+        });
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = item.done;
-        checkbox.addEventListener("change", () =>
-          toggleShoppingItem(list.id, item.id)
-        );
-
+  
+        const left = document.createElement("div");
+        left.className = "item-checkbox";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = item.checked;
+        cb.addEventListener("change", () => toggleShoppingItem(item.id));
+        left.appendChild(cb);
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
-        title.className =
-          "item-title" + (item.done ? " done" : "");
-        title.textContent = item.text;
-
+        title.className = "item-title";
+        title.textContent = item.title;
+        if (item.checked) {
+          title.style.textDecoration = "line-through";
+          title.style.opacity = "0.7";
+        }
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
         if (item.note) {
-          const pill = document.createElement("span");
-          pill.className = "pill";
-          pill.textContent = "Note";
-          meta.appendChild(pill);
+          const noteTag = document.createElement("span");
+          noteTag.className = "tag";
+          noteTag.textContent = "Note";
+          meta.appendChild(noteTag);
         }
-
+  
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
-
-        main.appendChild(checkbox);
+  
+        main.appendChild(left);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
-                const noteBtn = document.createElement("button");
+  
+        const noteBtn = document.createElement("button");
         noteBtn.className = "icon-btn";
         noteBtn.textContent = "📝";
-        noteBtn.title = "Notes";
+        noteBtn.title = "Add / edit note";
         noteBtn.addEventListener("click", () =>
-          openModalShoppingNote(item, list.id)
+          openModalShoppingNote(item, listId)
         );
-
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
-        delBtn.title = "Delete";
+        delBtn.title = "Delete item";
         delBtn.addEventListener("click", () =>
-          deleteShoppingItem(list.id, item.id)
+          deleteShoppingItem(listId, item.id)
         );
-
+  
         actions.appendChild(noteBtn);
         actions.appendChild(delBtn);
-
+  
         row.appendChild(main);
         row.appendChild(actions);
+  
         shoppingListEl.appendChild(row);
       });
     }
-
-    // =========== WORKOUTS (simple) ===========
-
+  
+    shoppingListSelect?.addEventListener("change", renderShopping);
+  
+    // ---------- Workouts (simple log) ----------
     const workoutListEl = $("workoutList");
     const noWorkoutMsg = $("noWorkoutMsg");
-
+  
     function addWorkout() {
-      const name = $("workoutName").value.trim();
-      const notes = $("workoutNotes").value.trim();
+      const name = $("workoutName")?.value.trim();
+      const notes = $("workoutNotes")?.value.trim();
       if (!name) return;
       const w = {
         id: "w-" + Date.now(),
@@ -1521,186 +1590,181 @@
       saveState();
       renderWorkouts();
     }
-
-    $("addWorkoutBtn").addEventListener("click", addWorkout);
-    $("workoutName").addEventListener("keydown", (e) => {
+  
+    $("addWorkoutBtn")?.addEventListener("click", addWorkout);
+    $("workoutName")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         addWorkout();
       }
     });
-
+  
     function deleteWorkout(id) {
       if (!confirmDelete()) return;
       state.workouts = state.workouts.filter((w) => w.id !== id);
       saveState();
       renderWorkouts();
     }
-
+  
     function renderWorkouts() {
+      if (!workoutListEl) return;
       if (!state.workouts.length) {
         workoutListEl.innerHTML = "";
-        noWorkoutMsg.style.display = "block";
+        if (noWorkoutMsg) noWorkoutMsg.style.display = "block";
         return;
       }
-      noWorkoutMsg.style.display = "none";
+      if (noWorkoutMsg) noWorkoutMsg.style.display = "none";
+  
       workoutListEl.innerHTML = "";
       state.workouts.forEach((w) => {
         const item = document.createElement("div");
         item.className = "item";
-
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
         title.className = "item-title";
         title.textContent = w.name;
-
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
-
+  
         const d = document.createElement("span");
-        d.className = "pill";
+        d.className = "tag";
         d.textContent = formatDate(w.date);
         meta.appendChild(d);
-
+  
         if (w.notes) {
           const n = document.createElement("span");
-          n.className = "pill";
+          n.className = "tag";
           n.textContent = "Notes";
           meta.appendChild(n);
         }
-
+  
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
-        delBtn.title = "Delete";
+        delBtn.title = "Delete workout";
         delBtn.addEventListener("click", () => deleteWorkout(w.id));
-
+  
         actions.appendChild(delBtn);
-
+  
         item.appendChild(main);
         item.appendChild(actions);
         workoutListEl.appendChild(item);
       });
     }
-
-    // =========== FINANCE ===========
-
+  
+    // ---------- Finance + Accounts (improved) ----------
     const accountsListEl = $("accountsList");
     const noAccountsMsg = $("noAccountsMsg");
     const financeListEl = $("financeList");
     const noFinanceMsg = $("noFinanceMsg");
     const financeAccountSelect = $("financeAccount");
-
+  
     function renderAccounts() {
-  const accounts = state.accounts;
-  accountsListEl.innerHTML = "";
-  financeAccountSelect.innerHTML = "";
-
-  if (!accounts.length) {
-    noAccountsMsg.style.display = "block";
-    state.activeFinanceAccountId = null;
-  } else {
-    noAccountsMsg.style.display = "none";
-    // If nothing selected yet, pick the first account
-    if (!state.activeFinanceAccountId) {
-      state.activeFinanceAccountId = accounts[0].id;
+      if (!accountsListEl || !financeAccountSelect) return;
+  
+      const accounts = state.accounts;
+      accountsListEl.innerHTML = "";
+      financeAccountSelect.innerHTML = "";
+  
+      if (!accounts.length) {
+        if (noAccountsMsg) noAccountsMsg.style.display = "block";
+        state.activeFinanceAccountId = null;
+      } else {
+        if (noAccountsMsg) noAccountsMsg.style.display = "none";
+        if (!state.activeFinanceAccountId) {
+          state.activeFinanceAccountId = accounts[0].id;
+        }
+      }
+  
+      accounts.forEach((acc) => {
+        const balance = state.finance
+          .filter((tx) => tx.accountId === acc.id)
+          .reduce((sum, tx) => {
+            return sum + (tx.type === "income" ? tx.amount : -tx.amount);
+          }, 0);
+  
+        const row = document.createElement("div");
+        row.className = "item";
+        if (state.activeFinanceAccountId === acc.id) {
+          row.classList.add("selected-account");
+        }
+  
+        const main = document.createElement("div");
+        main.className = "item-main";
+  
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+  
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = acc.name;
+  
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+  
+        const balTag = document.createElement("span");
+        balTag.className = "tag";
+        balTag.textContent = `Balance: ${balance.toFixed(2)}`;
+        meta.appendChild(balTag);
+  
+        textWrap.appendChild(title);
+        textWrap.appendChild(meta);
+        main.appendChild(textWrap);
+  
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+  
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete account";
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteAccount(acc.id);
+        });
+  
+        actions.appendChild(delBtn);
+  
+        row.appendChild(main);
+        row.appendChild(actions);
+  
+        row.addEventListener("click", () => {
+          state.activeFinanceAccountId = acc.id;
+          saveState();
+          renderAccounts();
+          renderFinance();
+        });
+  
+        accountsListEl.appendChild(row);
+  
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = acc.name;
+        financeAccountSelect.appendChild(opt);
+      });
+  
+      if (accounts.length) {
+        financeAccountSelect.value =
+          state.activeFinanceAccountId || accounts[0].id;
+      }
     }
-  }
-
-  accounts.forEach((acc) => {
-    // --- calculate balance for this account ---
-    const balance = state.finance
-      .filter((tx) => tx.accountId === acc.id)
-      .reduce((sum, tx) => {
-        return sum + (tx.type === "income" ? tx.amount : -tx.amount);
-      }, 0);
-
-    // --- build row ---
-    const row = document.createElement("div");
-    row.className = "item";
-    if (state.activeFinanceAccountId === acc.id) {
-      row.classList.add("selected-account");
-    }
-
-    const main = document.createElement("div");
-    main.className = "item-main";
-
-    const textWrap = document.createElement("div");
-    textWrap.className = "item-text";
-
-    const title = document.createElement("div");
-    title.className = "item-title";
-    title.textContent = acc.name;
-
-    const meta = document.createElement("div");
-    meta.className = "item-meta";
-
-    const balTag = document.createElement("span");
-    balTag.className = "tag";
-    balTag.textContent = `Balance: ${balance.toFixed(2)}`;
-    meta.appendChild(balTag);
-
-    textWrap.appendChild(title);
-    textWrap.appendChild(meta);
-    main.appendChild(textWrap);
-
-    // actions (delete)
-    const actions = document.createElement("div");
-    actions.className = "item-actions";
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "icon-btn danger";
-    delBtn.textContent = "🗑";
-    delBtn.title = "Delete account";
-    delBtn.addEventListener("click", (e) => {
-      e.stopPropagation(); // don't trigger row click
-      deleteAccount(acc.id);
-    });
-
-    actions.appendChild(delBtn);
-
-    row.appendChild(main);
-    row.appendChild(actions);
-
-    // --- clicking the row selects the account ---
-    row.addEventListener("click", () => {
-      state.activeFinanceAccountId = acc.id;
-      saveState();
-      renderAccounts();
-      renderFinance();
-    });
-
-    accountsListEl.appendChild(row);
-
-    // populate the <select> used when adding transactions
-    const opt = document.createElement("option");
-    opt.value = acc.id;
-    opt.textContent = acc.name;
-    financeAccountSelect.appendChild(opt);
-  });
-
-  if (accounts.length) {
-    // make the select follow the active account
-    financeAccountSelect.value =
-      state.activeFinanceAccountId || accounts[0].id;
-  }
-}
-
-
+  
     function addAccount() {
-      const name = prompt("Account name (e.g. Main THB, BRL savings, USD card):");
+      const name = prompt("Account name (e.g. THB main, BRL savings):");
       if (!name) return;
       const acc = {
         id: "acc-" + Date.now(),
@@ -1710,45 +1774,55 @@
       saveState();
       renderAccounts();
     }
-
-    $("addAccountBtn").addEventListener("click", addAccount);
-
+  
+    $("addAccountBtn")?.addEventListener("click", addAccount);
+  
     function deleteAccount(id) {
       const used = state.finance.some((tx) => tx.accountId === id);
       if (used) {
-        alert("This account has transactions. You can't delete it yet.");
+        alert("This account has transactions and can't be deleted yet.");
         return;
       }
       if (!confirmDelete()) return;
       state.accounts = state.accounts.filter((a) => a.id !== id);
+      if (state.activeFinanceAccountId === id) {
+        state.activeFinanceAccountId =
+          state.accounts[0]?.id || null;
+      }
       saveState();
       renderAccounts();
+      renderFinance();
     }
-
+  
     function addFinance() {
-      const type = $("financeType").value;
-      const amount = parseFloat($("financeAmount").value);
+      const type = $("financeType")?.value || "expense";
+      const amountVal = $("financeAmount")?.value;
+      const amount = parseFloat(amountVal);
       if (!amount || Number.isNaN(amount)) return;
-
+  
       const accountId =
-        $("financeAccount").value ||
+        $("financeAccount")?.value ||
         state.activeFinanceAccountId ||
         (state.accounts[0] && state.accounts[0].id);
+  
       if (!accountId) {
         alert("Please create an account first.");
         return;
       }
-
-      const category = $("financeCategory").value.trim();
-      const method = $("financeMethod").value.trim();
-      let date = $("financeDate").value;
-      if (!date) {
-        date = new Date().toISOString();
+  
+      const category = $("financeCategory")?.value.trim() || "";
+      const method = $("financeMethod")?.value.trim() || "";
+  
+      let dateIso;
+      const dateStr = $("financeDate")?.value;
+      if (!dateStr) {
+        dateIso = new Date().toISOString();
       } else {
-        date = new Date(date + "T00:00:00").toISOString();
+        dateIso = new Date(dateStr + "T00:00:00").toISOString();
       }
-      const note = $("financeNote").value.trim();
-
+  
+      const note = $("financeNote")?.value.trim() || "";
+  
       const tx = {
         id: "tx-" + Date.now(),
         type,
@@ -1756,143 +1830,156 @@
         accountId,
         category,
         method,
-        date,
+        date: dateIso,
         note
       };
+  
       state.finance.unshift(tx);
-
+  
       $("financeAmount").value = "";
       $("financeCategory").value = "";
       $("financeMethod").value = "";
       $("financeDate").value = "";
       $("financeNote").value = "";
+  
       saveState();
+      renderAccounts();
       renderFinance();
     }
-
-    $("addFinanceBtn").addEventListener("click", addFinance);
-    $("financeAmount").addEventListener("keydown", (e) => {
+  
+    $("addFinanceBtn")?.addEventListener("click", addFinance);
+    $("financeAmount")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         addFinance();
       }
     });
-
+  
     function deleteFinance(id) {
       if (!confirmDelete()) return;
       state.finance = state.finance.filter((tx) => tx.id !== id);
       saveState();
+      renderAccounts();
       renderFinance();
     }
-
+  
     function renderFinance() {
+      if (!financeListEl) return;
+  
       let txs = state.finance;
-    
-      // Show only the selected account, if any
       if (state.activeFinanceAccountId) {
         txs = txs.filter(
           (tx) => tx.accountId === state.activeFinanceAccountId
         );
       }
-    
+  
       if (!txs.length) {
         financeListEl.innerHTML = "";
-        noFinanceMsg.style.display = "block";
+        if (noFinanceMsg) noFinanceMsg.style.display = "block";
         return;
       }
-    
-      noFinanceMsg.style.display = "none";
-    
+      if (noFinanceMsg) noFinanceMsg.style.display = "none";
+  
       const accountMap = {};
       state.accounts.forEach((a) => {
         accountMap[a.id] = a.name;
       });
-    
+  
       financeListEl.innerHTML = "";
-    
+  
       txs.forEach((tx) => {
         const item = document.createElement("div");
         item.className = "item";
-
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
         title.className = "item-title";
         const sign = tx.type === "income" ? "+" : "-";
         title.textContent = `${sign}${tx.amount.toFixed(2)} (${tx.category || "No category"})`;
-
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
-
+  
         const typeTag = document.createElement("span");
         typeTag.className =
           "tag " + (tx.type === "income" ? "tag-income" : "tag-expense");
         typeTag.textContent = tx.type === "income" ? "Income" : "Expense";
         meta.appendChild(typeTag);
-
+  
         const accTag = document.createElement("span");
         accTag.className = "tag";
         accTag.textContent = accountMap[tx.accountId] || "Unknown account";
         meta.appendChild(accTag);
-
+  
         const methodTag = document.createElement("span");
         methodTag.className = "tag";
         methodTag.textContent = tx.method || "Method ?";
         meta.appendChild(methodTag);
-
+  
         const dateTag = document.createElement("span");
         dateTag.className = "tag";
         dateTag.textContent = formatDate(tx.date);
         meta.appendChild(dateTag);
-
+  
         if (tx.note) {
           const noteTag = document.createElement("span");
           noteTag.className = "tag";
           noteTag.textContent = "Note";
           meta.appendChild(noteTag);
         }
-
+  
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete transaction";
         delBtn.addEventListener("click", () => deleteFinance(tx.id));
-
+  
         actions.appendChild(delBtn);
-
+  
         item.appendChild(main);
         item.appendChild(actions);
         financeListEl.appendChild(item);
       });
     }
-
-    // =========== INIT ===========
-
+  
+    // ---------- Init ----------
     function init() {
-      renderTodoLists();
+      loadState();
+  
+      // show version text if there's a span
+      const verEl = $("appVersion");
+      if (verEl) verEl.textContent = "v0.4.2";
+  
+      setupNav();
+  
+      renderTodoListOptions();
       renderTodos();
-      renderShoppingLists();
+  
+      renderShoppingListOptions();
       renderShopping();
+  
       renderWorkouts();
       renderAccounts();
       renderFinance();
-
+  
       setPage(state.currentPage || "home");
     }
-
-    init();
+  
+    window.addEventListener("load", init);
   </script>
 </body>
 </html>
+
 
