@@ -1,4 +1,4 @@
-const CACHE_NAME = "myhub-v0.3";
+const CACHE_NAME = "myhub-v0.4";
 const URLS_TO_CACHE = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -26,3 +26,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
