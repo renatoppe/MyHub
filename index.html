@@ -40,6 +40,10 @@
       width: 100%;
       min-height: 100vh;
     }
+    .selected-account {
+      box-shadow: 0 0 0 2px rgba(80, 140, 255, 0.8);
+      border-radius: 14px;
+    }
 
     .sidebar {
       background: rgba(6, 10, 30, 0.96);
@@ -938,6 +942,7 @@
           { id: "acc-main", name: "Main THB" }
         ],
         finance: []
+        activeFinanceAccountId: null
       };
     }
 
@@ -1599,61 +1604,100 @@
     const financeAccountSelect = $("financeAccount");
 
     function renderAccounts() {
-      const accounts = state.accounts;
-      accountsListEl.innerHTML = "";
-      financeAccountSelect.innerHTML = "";
+  const accounts = state.accounts;
+  accountsListEl.innerHTML = "";
+  financeAccountSelect.innerHTML = "";
 
-      if (!accounts.length) {
-        noAccountsMsg.style.display = "block";
-      } else {
-        noAccountsMsg.style.display = "none";
-      }
-
-      accounts.forEach((acc) => {
-        // list item
-        const row = document.createElement("div");
-        row.className = "item";
-
-        const main = document.createElement("div");
-        main.className = "item-main";
-
-        const textWrap = document.createElement("div");
-        textWrap.className = "item-text";
-
-        const title = document.createElement("div");
-        title.className = "item-title";
-        title.textContent = acc.name;
-
-        textWrap.appendChild(title);
-        main.appendChild(textWrap);
-
-        const actions = document.createElement("div");
-        actions.className = "item-actions";
-
-        const delBtn = document.createElement("button");
-        delBtn.className = "icon-btn danger";
-        delBtn.textContent = "🗑";
-        delBtn.title = "Delete account";
-        delBtn.addEventListener("click", () => deleteAccount(acc.id));
-
-        actions.appendChild(delBtn);
-
-        row.appendChild(main);
-        row.appendChild(actions);
-        accountsListEl.appendChild(row);
-
-        // select option
-        const opt = document.createElement("option");
-        opt.value = acc.id;
-        opt.textContent = acc.name;
-        financeAccountSelect.appendChild(opt);
-      });
-
-      if (!state.accounts.length) return;
-      if (!financeAccountSelect.value) {
-        financeAccountSelect.value = state.accounts[0].id;
-      }
+  if (!accounts.length) {
+    noAccountsMsg.style.display = "block";
+    state.activeFinanceAccountId = null;
+  } else {
+    noAccountsMsg.style.display = "none";
+    // If nothing selected yet, pick the first account
+    if (!state.activeFinanceAccountId) {
+      state.activeFinanceAccountId = accounts[0].id;
     }
+  }
+
+  accounts.forEach((acc) => {
+    // --- calculate balance for this account ---
+    const balance = state.finance
+      .filter((tx) => tx.accountId === acc.id)
+      .reduce((sum, tx) => {
+        return sum + (tx.type === "income" ? tx.amount : -tx.amount);
+      }, 0);
+
+    // --- build row ---
+    const row = document.createElement("div");
+    row.className = "item";
+    if (state.activeFinanceAccountId === acc.id) {
+      row.classList.add("selected-account");
+    }
+
+    const main = document.createElement("div");
+    main.className = "item-main";
+
+    const textWrap = document.createElement("div");
+    textWrap.className = "item-text";
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = acc.name;
+
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+
+    const balTag = document.createElement("span");
+    balTag.className = "tag";
+    balTag.textContent = `Balance: ${balance.toFixed(2)}`;
+    meta.appendChild(balTag);
+
+    textWrap.appendChild(title);
+    textWrap.appendChild(meta);
+    main.appendChild(textWrap);
+
+    // actions (delete)
+    const actions = document.createElement("div");
+    actions.className = "item-actions";
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "icon-btn danger";
+    delBtn.textContent = "🗑";
+    delBtn.title = "Delete account";
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // don't trigger row click
+      deleteAccount(acc.id);
+    });
+
+    actions.appendChild(delBtn);
+
+    row.appendChild(main);
+    row.appendChild(actions);
+
+    // --- clicking the row selects the account ---
+    row.addEventListener("click", () => {
+      state.activeFinanceAccountId = acc.id;
+      saveState();
+      renderAccounts();
+      renderFinance();
+    });
+
+    accountsListEl.appendChild(row);
+
+    // populate the <select> used when adding transactions
+    const opt = document.createElement("option");
+    opt.value = acc.id;
+    opt.textContent = acc.name;
+    financeAccountSelect.appendChild(opt);
+  });
+
+  if (accounts.length) {
+    // make the select follow the active account
+    financeAccountSelect.value =
+      state.activeFinanceAccountId || accounts[0].id;
+  }
+}
+
 
     function addAccount() {
       const name = prompt("Account name (e.g. Main THB, BRL savings, USD card):");
@@ -1688,6 +1732,7 @@
 
       const accountId =
         $("financeAccount").value ||
+        state.activeFinanceAccountId ||
         (state.accounts[0] && state.accounts[0].id);
       if (!accountId) {
         alert("Please create an account first.");
@@ -1741,20 +1786,30 @@
     }
 
     function renderFinance() {
-      const txs = state.finance;
+      let txs = state.finance;
+    
+      // Show only the selected account, if any
+      if (state.activeFinanceAccountId) {
+        txs = txs.filter(
+          (tx) => tx.accountId === state.activeFinanceAccountId
+        );
+      }
+    
       if (!txs.length) {
         financeListEl.innerHTML = "";
         noFinanceMsg.style.display = "block";
         return;
       }
+    
       noFinanceMsg.style.display = "none";
-
+    
       const accountMap = {};
       state.accounts.forEach((a) => {
         accountMap[a.id] = a.name;
       });
-
+    
       financeListEl.innerHTML = "";
+    
       txs.forEach((tx) => {
         const item = document.createElement("div");
         item.className = "item";
@@ -1840,3 +1895,4 @@
   </script>
 </body>
 </html>
+
