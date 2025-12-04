@@ -1,4 +1,4 @@
-const CACHE_NAME = "myhub-v0.2";
+const CACHE_NAME = "myhub-v0.3";
 const URLS_TO_CACHE = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
