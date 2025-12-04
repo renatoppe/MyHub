@@ -2,25 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MyHub v0.2</title>
+  <title>MyHub v0.3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#121212" />
+  <meta name="theme-color" content="#020617" />
   <link rel="icon" href="icon-192.png" />
   <style>
     :root {
-      --bg: #0e1116;
-      --bg-elevated: #161b22;
+      --bg: #020617;
+      --bg-elevated: #0f172a;
+      --bg-elevated-softer: #111827;
       --accent: #3b82f6;
-      --accent-soft: rgba(59, 130, 246, 0.15);
+      --accent-soft: rgba(59, 130, 246, 0.18);
       --text: #e5e7eb;
       --text-soft: #9ca3af;
       --danger: #ef4444;
-      --border: #1f2933;
-      --radius-lg: 14px;
+      --border: #1f2937;
+      --radius-lg: 16px;
       --radius-md: 10px;
       --radius-sm: 6px;
-      --shadow-soft: 0 10px 25px rgba(0, 0, 0, 0.35);
+      --shadow-soft: 0 14px 35px rgba(15, 23, 42, 0.85);
     }
 
     * {
@@ -34,7 +35,7 @@
       height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
-      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      background: radial-gradient(circle at top, #020617 0, #000 55%);
       color: var(--text);
       overscroll-behavior-y: none;
     }
@@ -48,70 +49,255 @@
     .app-root {
       height: 100vh;
       width: 100%;
-      max-width: 720px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior-y: contain;
-      padding: 12px 10px 18px;
+      max-width: 820px;
+      display: flex;
+      padding: 10px;
     }
 
-    header {
+    .app-shell {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, #020617, #020617);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.9);
+    }
+
+    /* SIDEBAR */
+
+    .sidebar {
+      width: 220px;
+      background: radial-gradient(circle at top, #020617, #020617 60%, #020617);
+      border-right: 1px solid var(--border);
+      padding: 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sidebar-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin-bottom: 4px;
     }
 
-    .app-title {
+    .sidebar-title {
       font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: #f9fafb;
     }
 
-    .app-badge {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-soft);
-    }
-
-    nav {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .nav-btn {
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      padding: 6px 4px;
+    .sidebar-badge {
       font-size: 0.7rem;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
       background: rgba(15, 23, 42, 0.9);
       color: var(--text-soft);
+    }
+
+    .sidebar-version {
+      font-size: 0.72rem;
+      color: var(--text-soft);
+      padding: 2px 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sidebar-version-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .nav-section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6b7280;
+      margin-bottom: 4px;
+      margin-top: 4px;
+    }
+
+    .nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
       display: flex;
       flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-soft);
+      background: transparent;
+      transition: 0.16s ease;
+    }
+
+    .nav-item-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .nav-item-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .nav-item.active {
+      border-color: rgba(59, 130, 246, 0.7);
+      background: radial-gradient(circle at left, #1e3a8a, #020617);
+      color: #e5edff;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .nav-footer {
+      margin-top: auto;
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nav-footer span {
+      opacity: 0.8;
+    }
+
+    /* COLLAPSED SIDEBAR FOR MOBILE */
+
+    .sidebar-collapsed {
+      width: 56px;
+      padding-inline: 6px;
+    }
+
+    .sidebar-collapsed .nav-item-label,
+    .sidebar-collapsed .nav-section-label,
+    .sidebar-collapsed .sidebar-badge,
+    .sidebar-collapsed .sidebar-version {
+      display: none;
+    }
+
+    .sidebar-collapsed .sidebar-title {
+      font-size: 0.9rem;
+    }
+
+    /* MAIN AREA */
+
+    .app-main {
+      flex: 1;
+      background: radial-gradient(circle at top, #020617, #000 80%);
+      padding: 8px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-title {
+      font-size: 0.9rem;
+      color: var(--text-soft);
+    }
+
+    .topbar-view-label {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .btn,
+    button {
+      font-family: inherit;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 9px;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-soft);
       cursor: pointer;
       transition: 0.16s ease;
     }
 
-    .nav-btn span {
-      font-size: 0.9rem;
+    .btn.icon {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      justify-content: center;
     }
 
-    .nav-btn.active {
-      background: radial-gradient(circle at top left, #1e3a8a, #111827);
-      color: #eff6ff;
-      border-color: rgba(37, 99, 235, 0.7);
-      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
-      transform: translateY(-1px);
+    .btn.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #eef2ff;
+      border-color: rgba(59, 130, 246, 0.8);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.7);
+    }
+
+    .btn.small {
+      padding: 4px 8px;
+      font-size: 0.72rem;
+    }
+
+    .btn:hover {
+      transform: translateY(-0.5px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.9);
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 5px 16px rgba(37, 99, 235, 0.85);
+    }
+
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
     }
 
     main {
@@ -129,11 +315,11 @@
     }
 
     .card {
-      background: radial-gradient(circle at top, #111827, #020617);
+      background: radial-gradient(circle at top, #020617, #020617 70%, #020617);
       border-radius: var(--radius-lg);
-      padding: 12px 12px 10px;
+      padding: 10px 11px 9px;
       border: 1px solid var(--border);
-      box-shadow: var(--shadow-soft);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.9);
     }
 
     .card-header {
@@ -141,11 +327,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .card-title {
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -159,7 +345,7 @@
       border-radius: 999px;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       background: var(--accent-soft);
       color: var(--accent);
     }
@@ -170,84 +356,13 @@
       margin-bottom: 6px;
     }
 
-    .pill-row {
+    .row {
       display: flex;
-      flex-wrap: wrap;
       gap: 6px;
-      margin-bottom: 6px;
     }
 
-    .pill {
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 0.68rem;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.8);
-      color: var(--text-soft);
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .pill.accent {
-      border-color: rgba(59, 130, 246, 0.4);
-      background: rgba(15, 23, 42, 0.96);
-      color: #dbeafe;
-    }
-
-    .pill-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: var(--accent);
-    }
-
-    .btn,
-    button {
-      font-family: inherit;
-    }
-
-    .btn {
-      border-radius: 999px;
-      border: none;
-      padding: 7px 10px;
-      font-size: 0.75rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: 0.16s ease;
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text-soft);
-      border: 1px solid var(--border);
-    }
-
-    .btn.primary {
-      background: linear-gradient(135deg, #2563eb, #4f46e5);
-      color: #eff6ff;
-      border-color: rgba(59, 130, 246, 0.7);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-    }
-
-    .btn.small {
-      padding: 4px 8px;
-      font-size: 0.7rem;
-    }
-
-    .btn.icon-only {
-      padding: 5px 6px;
-      width: 28px;
-      height: 28px;
-      justify-content: center;
-    }
-
-    .btn:hover {
-      transform: translateY(-0.5px);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.8);
-    }
-
-    .btn.primary:hover {
-      box-shadow: 0 5px 14px rgba(37, 99, 235, 0.55);
+    .row > * {
+      flex: 1;
     }
 
     input,
@@ -256,7 +371,7 @@
       width: 100%;
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.98);
       color: var(--text);
       padding: 6px 8px;
       font-size: 0.8rem;
@@ -268,21 +383,12 @@
     select:focus,
     textarea:focus {
       border-color: rgba(59, 130, 246, 0.7);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
     }
 
     textarea {
       resize: vertical;
       min-height: 60px;
-    }
-
-    .row {
-      display: flex;
-      gap: 6px;
-    }
-
-    .row > * {
-      flex: 1;
     }
 
     .list {
@@ -297,11 +403,11 @@
     .list-item {
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.96);
+      background: rgba(15, 23, 42, 0.97);
       padding: 6px 7px;
       display: flex;
       align-items: flex-start;
-      gap: 7px;
+      gap: 8px;
       font-size: 0.78rem;
     }
 
@@ -334,22 +440,22 @@
     }
 
     .chip.high {
-      border-color: rgba(239, 68, 68, 0.6);
+      border-color: rgba(239, 68, 68, 0.7);
       color: #fecaca;
     }
 
     .chip.done {
-      border-color: rgba(34, 197, 94, 0.6);
+      border-color: rgba(34, 197, 94, 0.7);
       color: #bbf7d0;
     }
 
     .chip.half {
-      border-color: rgba(234, 179, 8, 0.6);
+      border-color: rgba(234, 179, 8, 0.7);
       color: #fef3c7;
     }
 
     .chip.overdue {
-      border-color: rgba(248, 113, 113, 0.7);
+      border-color: rgba(248, 113, 113, 0.85);
       color: #fecaca;
     }
 
@@ -373,21 +479,11 @@
       color: var(--danger);
     }
 
-    .hidden {
-      display: none !important;
-    }
-
-    .filter-toggle-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 4px;
-    }
-
     .filter-panel {
       margin-bottom: 6px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.98);
+      background: rgba(15, 23, 42, 0.99);
       padding: 6px;
       font-size: 0.76rem;
       display: flex;
@@ -411,6 +507,12 @@
       margin-top: 2px;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
+    /* Home dashboard */
+
     .home-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -419,9 +521,9 @@
     }
 
     .home-module {
-      border-radius: var(--radius-lg);
+      border-radius: 14px;
       border: 1px solid var(--border);
-      background: radial-gradient(circle at top left, #111827, #020617);
+      background: radial-gradient(circle at top left, #0b1120, #020617);
       padding: 8px 8px 6px;
       cursor: pointer;
       transition: 0.16s ease;
@@ -429,7 +531,7 @@
 
     .home-module:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.9);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.9);
     }
 
     .home-module-title {
@@ -462,7 +564,7 @@
       gap: 6px;
       padding: 4px 6px;
       border-radius: var(--radius-md);
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(15, 23, 42, 0.96);
       border: 1px solid var(--border);
     }
 
@@ -475,355 +577,593 @@
     .today-tasks-meta {
       font-size: 0.7rem;
       color: var(--text-soft);
+      white-space: nowrap;
+      padding-left: 4px;
+    }
+
+    /* To-do lists header */
+
+    .todo-lists-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .todo-lists-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .todo-list-chip {
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-soft);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .todo-list-chip.active {
+      border-color: rgba(59, 130, 246, 0.7);
+      color: #dbeafe;
+      background: rgba(15, 23, 42, 1);
+    }
+
+    .todo-list-chip span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    /* Sidebar overlay for mobile */
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      z-index: 8;
+    }
+
+    .sidebar-mobile {
+      position: fixed;
+      top: 10px;
+      bottom: 10px;
+      left: 10px;
+      z-index: 9;
+      max-width: 260px;
+    }
+
+    .app-root.sidebar-open .sidebar-overlay {
+      display: block;
+    }
+
+    /* Responsive */
+
+    @media (max-width: 768px) {
+      .app-root {
+        padding: 6px;
+      }
+
+      .app-shell {
+        border-radius: 16px;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .sidebar.desktop-only {
+        display: none;
+      }
+
+      .sidebar.mobile-sheet {
+        display: flex;
+      }
+
+      .topbar-title {
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar-overlay,
+      .sidebar.mobile-sheet {
+        display: none !important;
+      }
     }
   </style>
 </head>
 <body>
   <div class="app-root" id="app-root">
-    <header>
-      <div>
-        <div class="app-title">MyHub</div>
-        <div class="card-subtitle">Your personal life hub · v0.2</div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="app-shell">
+      <!-- DESKTOP SIDEBAR -->
+      <aside class="sidebar desktop-only sidebar-collapsed" id="sidebar-desktop">
+        <div class="sidebar-header">
+          <div class="sidebar-title">MyHub</div>
+        </div>
+        <div class="sidebar-version">
+          <span class="sidebar-version-dot"></span>
+          v0.3 · local only
+        </div>
+
+        <div class="nav-section-label">Core</div>
+        <ul class="nav-list">
+          <li class="nav-item active" data-view="home">
+            <div class="nav-item-icon">🏠</div>
+            <div class="nav-item-label">Home</div>
+          </li>
+          <li class="nav-item" data-view="todo">
+            <div class="nav-item-icon">✅</div>
+            <div class="nav-item-label">To-Do</div>
+          </li>
+          <li class="nav-item" data-view="shopping">
+            <div class="nav-item-icon">🛒</div>
+            <div class="nav-item-label">Shopping</div>
+          </li>
+          <li class="nav-item" data-view="workouts">
+            <div class="nav-item-icon">🏋️</div>
+            <div class="nav-item-label">Workouts</div>
+          </li>
+          <li class="nav-item" data-view="finance">
+            <div class="nav-item-icon">💰</div>
+            <div class="nav-item-label">Finance</div>
+          </li>
+        </ul>
+
+        <div class="nav-footer">
+          <span>MyHub</span>
+          <span>v0.3</span>
+        </div>
+      </aside>
+
+      <!-- MOBILE SIDEBAR SHEET -->
+      <aside class="sidebar mobile-sheet sidebar-collapsed" id="sidebar-mobile">
+        <div class="sidebar-header">
+          <div class="sidebar-title">MyHub</div>
+        </div>
+        <div class="sidebar-version">
+          <span class="sidebar-version-dot"></span>
+          v0.3 · local only
+        </div>
+        <div class="nav-section-label">Core</div>
+        <ul class="nav-list">
+          <li class="nav-item active" data-view="home">
+            <div class="nav-item-icon">🏠</div>
+            <div class="nav-item-label">Home</div>
+          </li>
+          <li class="nav-item" data-view="todo">
+            <div class="nav-item-icon">✅</div>
+            <div class="nav-item-label">To-Do</div>
+          </li>
+          <li class="nav-item" data-view="shopping">
+            <div class="nav-item-icon">🛒</div>
+            <div class="nav-item-label">Shopping</div>
+          </li>
+          <li class="nav-item" data-view="workouts">
+            <div class="nav-item-icon">🏋️</div>
+            <div class="nav-item-label">Workouts</div>
+          </li>
+          <li class="nav-item" data-view="finance">
+            <div class="nav-item-icon">💰</div>
+            <div class="nav-item-label">Finance</div>
+          </li>
+        </ul>
+        <div class="nav-footer">
+          <span>MyHub</span>
+          <span>v0.3</span>
+        </div>
+      </aside>
+
+      <!-- MAIN AREA -->
+      <div class="app-main">
+        <div class="topbar">
+          <div class="topbar-left">
+            <button class="btn icon" id="btn-hamburger" title="Menu">
+              ☰
+            </button>
+            <div>
+              <div class="topbar-title">MyHub • Personal OS</div>
+              <div class="topbar-view-label" id="current-view-label">
+                Home
+              </div>
+            </div>
+          </div>
+          <button class="btn small" id="btn-quick-add">
+            + Quick task
+          </button>
+        </div>
+
+        <div class="app-content">
+          <main>
+            <!-- HOME -->
+            <section id="home-section" class="active">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <span class="icon">📅</span>
+                    Today overview
+                  </div>
+                </div>
+                <div class="card-subtitle">
+                  A quick snapshot of your tasks, spending and routines for
+                  today.
+                </div>
+
+                <div class="home-grid">
+                  <div class="home-module" data-jump="todo">
+                    <div class="home-module-title">
+                      <span>To-Dos</span>
+                      <span class="home-module-count" id="home-todo-count">
+                        –
+                      </span>
+                    </div>
+                    <div class="card-subtitle">
+                      Due or overdue tasks across all lists.
+                    </div>
+                  </div>
+
+                  <div class="home-module" data-jump="finance">
+                    <div class="home-module-title">
+                      <span>Finance</span>
+                      <span
+                        class="home-module-count"
+                        id="home-finance-count"
+                      >
+                        –
+                      </span>
+                    </div>
+                    <div class="card-subtitle">
+                      Entries logged this month.
+                    </div>
+                  </div>
+
+                  <div class="home-module" data-jump="workouts">
+                    <div class="home-module-title">
+                      <span>Workout</span>
+                      <span
+                        class="home-module-count"
+                        id="home-workout-count"
+                      >
+                        –
+                      </span>
+                    </div>
+                    <div class="card-subtitle">
+                      Last recorded workout day.
+                    </div>
+                  </div>
+
+                  <div class="home-module" data-jump="shopping">
+                    <div class="home-module-title">
+                      <span>Shopping</span>
+                      <span
+                        class="home-module-count"
+                        id="home-shopping-count"
+                      >
+                        –
+                      </span>
+                    </div>
+                    <div class="card-subtitle">
+                      Items still pending in your active list.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-subtitle" style="margin-top: 4px;">
+                  Quick task for today (default list):
+                </div>
+                <form
+                  id="quick-task-form"
+                  class="row"
+                  style="margin-bottom: 6px;"
+                >
+                  <input
+                    type="text"
+                    id="quick-task-text"
+                    placeholder="Quick task (auto due today)"
+                  />
+                  <button type="submit" class="btn primary small">
+                    Add
+                  </button>
+                </form>
+
+                <ul class="today-tasks-list" id="today-tasks-list"></ul>
+              </div>
+            </section>
+
+            <!-- TO-DO -->
+            <section id="todo-section">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <span class="icon">✅</span>
+                    To-Do Lists
+                  </div>
+                  <button
+                    type="button"
+                    id="todo-filter-toggle"
+                    class="btn icon"
+                    title="Filters"
+                  >
+                    🔍
+                  </button>
+                </div>
+
+                <div class="todo-lists-header">
+                  <div
+                    class="todo-lists-chips"
+                    id="todo-lists-container"
+                  ></div>
+                  <button
+                    type="button"
+                    id="todo-add-list"
+                    class="btn small"
+                  >
+                    + List
+                  </button>
+                </div>
+
+                <div
+                  class="filter-panel hidden"
+                  id="todo-filter-panel"
+                >
+                  <div class="filter-panel-row">
+                    <select id="todo-filter-status">
+                      <option value="all">Status: All</option>
+                      <option value="todo">Not done</option>
+                      <option value="half">Half done</option>
+                      <option value="done">Done</option>
+                    </select>
+                    <select id="todo-filter-priority">
+                      <option value="all">Priority: All</option>
+                      <option value="high">High only</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div class="filter-panel-row">
+                    <select id="todo-filter-sort">
+                      <option value="smart">
+                        Sort: Smart (priority + due)
+                      </option>
+                      <option value="dueAsc">
+                        Sort: Due date ↑
+                      </option>
+                      <option value="dueDesc">
+                        Sort: Due date ↓
+                      </option>
+                    </select>
+                    <input
+                      type="text"
+                      id="todo-filter-text"
+                      placeholder="Search text"
+                    />
+                  </div>
+                  <div class="filter-panel-actions">
+                    <button
+                      type="button"
+                      id="todo-filter-clear"
+                      class="btn small"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      id="todo-filter-apply"
+                      class="btn primary small"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+
+                <div class="card-subtitle">
+                  v0.3: multiple lists + inline editing. Future versions will add
+                  calendar links and deeper stats.
+                </div>
+
+                <form id="todo-form" style="margin-bottom: 8px;">
+                  <input
+                    type="text"
+                    id="todo-text"
+                    placeholder="New task..."
+                    required
+                    style="margin-bottom: 4px;"
+                  />
+                  <div class="row">
+                    <select id="todo-priority">
+                      <option value="medium">Medium priority</option>
+                      <option value="high">High priority</option>
+                      <option value="low">Low priority</option>
+                    </select>
+                    <input type="date" id="todo-due" />
+                  </div>
+                </form>
+
+                <ul class="list" id="todo-list"></ul>
+              </div>
+            </section>
+
+            <!-- SHOPPING -->
+            <section id="shopping-section">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <span class="icon">🛒</span>
+                    Shopping List
+                  </div>
+                </div>
+                <div class="card-subtitle">
+                  Single list with drag & drop. v0.4 will add multiple lists and
+                  price tracking.
+                </div>
+
+                <form id="shopping-form" style="margin-bottom: 8px;">
+                  <input
+                    type="text"
+                    id="shopping-text"
+                    placeholder="New item..."
+                    required
+                  />
+                </form>
+
+                <ul class="list" id="shopping-list"></ul>
+              </div>
+            </section>
+
+            <!-- WORKOUTS -->
+            <section id="workouts-section">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <span class="icon">🏋️</span>
+                    Workouts (basic logs)
+                  </div>
+                </div>
+                <div class="card-subtitle">
+                  Simple per-day notes for now. Later this will become full
+                  workout templates and graphs.
+                </div>
+
+                <form id="workout-form" style="margin-bottom: 8px;">
+                  <input
+                    type="text"
+                    id="workout-text"
+                    placeholder="Workout note (e.g., Workout B – legs, 60min)"
+                    required
+                  />
+                </form>
+
+                <ul class="list" id="workout-list"></ul>
+              </div>
+            </section>
+
+            <!-- FINANCE -->
+            <section id="finance-section">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <span class="icon">💰</span>
+                    Finance (basic logs)
+                  </div>
+                </div>
+                <div class="card-subtitle">
+                  v0.3 keeps simple logging. v0.5 will add accounts, recurring
+                  bills and better analysis.
+                </div>
+
+                <form id="finance-form" style="margin-bottom: 8px;">
+                  <div class="row" style="margin-bottom: 4px;">
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="finance-amount"
+                      placeholder="Amount"
+                      required
+                    />
+                    <select id="finance-type">
+                      <option value="expense">Expense</option>
+                      <option value="income">Income</option>
+                    </select>
+                  </div>
+                  <div class="row" style="margin-bottom: 4px;">
+                    <input
+                      type="text"
+                      id="finance-category"
+                      placeholder="Category (e.g., Food, Rent)"
+                    />
+                    <input type="date" id="finance-date" />
+                  </div>
+                  <input
+                    type="text"
+                    id="finance-note"
+                    placeholder="Note (optional)"
+                  />
+                </form>
+
+                <ul class="list" id="finance-list"></ul>
+              </div>
+            </section>
+          </main>
+        </div>
       </div>
-      <div class="app-badge">PWA · Local only</div>
-    </header>
-
-    <nav>
-      <button class="nav-btn active" data-view="home">
-        <span>🏠</span>
-        Home
-      </button>
-      <button class="nav-btn" data-view="todo">
-        <span>✅</span>
-        To-Do
-      </button>
-      <button class="nav-btn" data-view="shopping">
-        <span>🛒</span>
-        Shop
-      </button>
-      <button class="nav-btn" data-view="workouts">
-        <span>🏋️</span>
-        Gym
-      </button>
-      <button class="nav-btn" data-view="finance">
-        <span>💰</span>
-        Money
-      </button>
-    </nav>
-
-    <main>
-      <!-- HOME / DASHBOARD -->
-      <section id="home-section" class="active">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">📅</span>
-              Today overview
-            </div>
-          </div>
-          <div class="card-subtitle">
-            Quick glance at your most important things today.
-          </div>
-
-          <div class="home-grid">
-            <div
-              class="home-module"
-              data-jump="todo"
-              id="home-module-todo"
-            >
-              <div class="home-module-title">
-                <span>To-dos</span>
-                <span class="home-module-count" id="home-todo-count">
-                  –
-                </span>
-              </div>
-              <div class="card-subtitle">
-                Due or overdue tasks for today.
-              </div>
-            </div>
-
-            <div
-              class="home-module"
-              data-jump="finance"
-              id="home-module-finance"
-            >
-              <div class="home-module-title">
-                <span>Money</span>
-                <span class="home-module-count" id="home-finance-count">
-                  –
-                </span>
-              </div>
-              <div class="card-subtitle">
-                Expenses logged this month.
-              </div>
-            </div>
-
-            <div
-              class="home-module"
-              data-jump="workouts"
-              id="home-module-workouts"
-            >
-              <div class="home-module-title">
-                <span>Workout</span>
-                <span class="home-module-count" id="home-workout-count">
-                  –
-                </span>
-              </div>
-              <div class="card-subtitle">
-                Last workout & quick jump to logs.
-              </div>
-            </div>
-
-            <div
-              class="home-module"
-              data-jump="shopping"
-              id="home-module-shopping"
-            >
-              <div class="home-module-title">
-                <span>Shopping</span>
-                <span class="home-module-count" id="home-shopping-count">
-                  –
-                </span>
-              </div>
-              <div class="card-subtitle">
-                Items left in your active list.
-              </div>
-            </div>
-          </div>
-
-          <div class="card-subtitle" style="margin-top: 4px;">
-            Quick task for today:
-          </div>
-          <form id="quick-task-form" class="row" style="margin-bottom: 6px;">
-            <input
-              type="text"
-              id="quick-task-text"
-              placeholder="Quick task (auto due today)"
-            />
-            <button type="submit" class="btn primary small">
-              Add
-            </button>
-          </form>
-
-          <ul class="today-tasks-list" id="today-tasks-list"></ul>
-        </div>
-      </section>
-
-      <!-- TO-DO SECTION -->
-      <section id="todo-section">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">✅</span>
-              To-Do Lists (v0.2)
-            </div>
-            <button
-              type="button"
-              id="todo-filter-toggle"
-              class="btn icon-only"
-              title="Filters"
-            >
-              🔍
-            </button>
-          </div>
-
-          <div class="filter-panel hidden" id="todo-filter-panel">
-            <div class="filter-panel-row">
-              <select id="todo-filter-status">
-                <option value="all">Status: All</option>
-                <option value="todo">Not done</option>
-                <option value="half">Half done</option>
-                <option value="done">Done</option>
-              </select>
-              <select id="todo-filter-priority">
-                <option value="all">Priority: All</option>
-                <option value="high">High only</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            <div class="filter-panel-row">
-              <select id="todo-filter-sort">
-                <option value="smart">Sort: Smart (priority + due)</option>
-                <option value="dueAsc">Sort: Due date ↑</option>
-                <option value="dueDesc">Sort: Due date ↓</option>
-              </select>
-              <input
-                type="text"
-                id="todo-filter-text"
-                placeholder="Search text"
-              />
-            </div>
-            <div class="filter-panel-actions">
-              <button
-                type="button"
-                id="todo-filter-clear"
-                class="btn small"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                id="todo-filter-apply"
-                class="btn primary small"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-
-          <div class="card-subtitle">
-            Simple single to-do list for now. v0.3 will add multiple lists & more.
-          </div>
-
-          <form id="todo-form" style="margin-bottom: 8px;">
-            <input
-              type="text"
-              id="todo-text"
-              placeholder="New task..."
-              required
-              style="margin-bottom: 4px;"
-            />
-            <div class="row">
-              <select id="todo-priority">
-                <option value="medium">Medium priority</option>
-                <option value="high">High priority</option>
-                <option value="low">Low priority</option>
-              </select>
-              <input type="date" id="todo-due" />
-            </div>
-          </form>
-
-          <ul class="list" id="todo-list"></ul>
-        </div>
-      </section>
-
-      <!-- SHOPPING SECTION -->
-      <section id="shopping-section">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">🛒</span>
-              Shopping List
-            </div>
-          </div>
-          <div class="card-subtitle">
-            v0.2 keeps a single list with drag & drop. v0.3 will add multiple lists.
-          </div>
-
-          <form id="shopping-form" style="margin-bottom: 8px;">
-            <input
-              type="text"
-              id="shopping-text"
-              placeholder="New item..."
-              required
-            />
-          </form>
-
-          <ul class="list" id="shopping-list"></ul>
-        </div>
-      </section>
-
-      <!-- WORKOUTS SECTION -->
-      <section id="workouts-section">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">🏋️</span>
-              Workouts (basic logs)
-            </div>
-          </div>
-          <div class="card-subtitle">
-            Simple notes for now. v0.6 will add templates & detailed tracking.
-          </div>
-
-          <form id="workout-form" style="margin-bottom: 8px;">
-            <input
-              type="text"
-              id="workout-text"
-              placeholder="Workout note (e.g., Workout B - legs, 60min)"
-              required
-            />
-          </form>
-
-          <ul class="list" id="workout-list"></ul>
-        </div>
-      </section>
-
-      <!-- FINANCE SECTION -->
-      <section id="finance-section">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">💰</span>
-              Finance (basic logs)
-            </div>
-          </div>
-          <div class="card-subtitle">
-            v0.2: simple entries. v0.5 will add accounts, categories & analysis.
-          </div>
-
-          <form id="finance-form" style="margin-bottom: 8px;">
-            <div class="row" style="margin-bottom: 4px;">
-              <input
-                type="number"
-                step="0.01"
-                id="finance-amount"
-                placeholder="Amount"
-                required
-              />
-              <select id="finance-type">
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
-            </div>
-            <div class="row" style="margin-bottom: 4px;">
-              <input
-                type="text"
-                id="finance-category"
-                placeholder="Category (e.g., Food, Rent)"
-              />
-              <input type="date" id="finance-date" />
-            </div>
-            <input
-              type="text"
-              id="finance-note"
-              placeholder="Note (optional)"
-            />
-          </form>
-
-          <ul class="list" id="finance-list"></ul>
-        </div>
-      </section>
-    </main>
+    </div>
   </div>
 
   <script>
     // =============================
-    // Storage & State
+    // Storage & State (v0.3)
     // =============================
-    const STORAGE_KEY = "myhub-data-v0.2";
+    const STORAGE_KEY = "myhub-data-v0.3";
 
     const defaultState = {
-      tasks: [],
+      tasksLists: [],
+      activeTaskListId: null,
       shoppingItems: [],
       workouts: [],
       finances: [],
     };
 
+    function migrateLegacyState(parsed) {
+      // v0.2 had: tasks (array), shoppingItems, workouts, finances
+      const tasksLists = [];
+      let activeTaskListId = null;
+
+      if (Array.isArray(parsed.tasksLists) && parsed.tasksLists.length) {
+        parsed.tasksLists.forEach((lst) => {
+          tasksLists.push({
+            id: lst.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
+            name: lst.name || "List",
+            tasks: Array.isArray(lst.tasks) ? lst.tasks : [],
+          });
+        });
+        activeTaskListId = parsed.activeTaskListId || (tasksLists[0] && tasksLists[0].id) || null;
+      } else {
+        const legacyTasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+        const defaultId = crypto.randomUUID ? crypto.randomUUID() : "list-main";
+        tasksLists.push({
+          id: defaultId,
+          name: "Main",
+          tasks: legacyTasks,
+        });
+        activeTaskListId = defaultId;
+      }
+
+      return {
+        tasksLists,
+        activeTaskListId,
+        shoppingItems: Array.isArray(parsed.shoppingItems)
+          ? parsed.shoppingItems
+          : [],
+        workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+        finances: Array.isArray(parsed.finances) ? parsed.finances : [],
+      };
+    }
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return structuredClone(defaultState);
+        if (!raw) {
+          // Try older version key
+          const legacyRaw = localStorage.getItem("myhub-data-v0.2");
+          if (legacyRaw) {
+            const parsedLegacy = JSON.parse(legacyRaw);
+            return migrateLegacyState(parsedLegacy);
+          }
+          return structuredClone(defaultState);
+        }
         const parsed = JSON.parse(raw);
-        return {
-          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-          shoppingItems: Array.isArray(parsed.shoppingItems)
-            ? parsed.shoppingItems
-            : [],
-          workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
-          finances: Array.isArray(parsed.finances) ? parsed.finances : [],
-        };
+        return migrateLegacyState(parsed);
       } catch (e) {
         console.error("Failed to parse state:", e);
         return structuredClone(defaultState);
@@ -837,11 +1177,51 @@
       refreshHomeDashboard();
     }
 
-    // =============================
-    // Navigation & Back Button
-    // =============================
+    function ensureAtLeastOneList() {
+      if (!state.tasksLists.length) {
+        const id = crypto.randomUUID ? crypto.randomUUID() : "list-main";
+        state.tasksLists.push({
+          id,
+          name: "Personal",
+          tasks: [],
+        });
+        state.activeTaskListId = id;
+      } else if (!state.activeTaskListId) {
+        state.activeTaskListId = state.tasksLists[0].id;
+      }
+    }
 
-    const navButtons = document.querySelectorAll(".nav-btn");
+    function getActiveTaskList() {
+      ensureAtLeastOneList();
+      let list = state.tasksLists.find((l) => l.id === state.activeTaskListId);
+      if (!list) {
+        list = state.tasksLists[0];
+        state.activeTaskListId = list.id;
+      }
+      return list;
+    }
+
+    function getActiveTasksArray() {
+      return getActiveTaskList().tasks;
+    }
+
+    function getAllTasksAcrossLists() {
+      return state.tasksLists.flatMap((l) =>
+        (l.tasks || []).map((t) => ({ ...t, _listId: l.id }))
+      );
+    }
+
+    // =============================
+    // Navigation + Sidebar
+    // =============================
+    const appRoot = document.getElementById("app-root");
+    const sidebarDesktop = document.getElementById("sidebar-desktop");
+    const sidebarMobile = document.getElementById("sidebar-mobile");
+    const sidebarOverlay = document.getElementById("sidebar-overlay");
+    const hamburgerBtn = document.getElementById("btn-hamburger");
+    const currentViewLabel = document.getElementById("current-view-label");
+    const quickAddBtn = document.getElementById("btn-quick-add");
+
     const sections = {
       home: document.getElementById("home-section"),
       todo: document.getElementById("todo-section"),
@@ -853,12 +1233,22 @@
     let currentView = "home";
 
     function setActiveNav(view) {
-      navButtons.forEach((btn) => {
-        btn.classList.toggle(
-          "active",
-          btn.getAttribute("data-view") === view
+      document
+        .querySelectorAll(".nav-item")
+        .forEach((el) =>
+          el.classList.toggle(
+            "active",
+            el.getAttribute("data-view") === view
+          )
         );
-      });
+      const labelMap = {
+        home: "Home",
+        todo: "To-Do",
+        shopping: "Shopping",
+        workouts: "Workouts",
+        finance: "Finance",
+      };
+      currentViewLabel.textContent = labelMap[view] || "MyHub";
     }
 
     function showView(view, push = true) {
@@ -871,18 +1261,19 @@
       if (push) {
         history.pushState({ view }, "", "#" + view);
       }
+      // Close mobile sidebar if open
+      closeSidebar();
     }
 
-    navButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const view = btn.getAttribute("data-view");
+    document.querySelectorAll(".nav-item").forEach((el) => {
+      el.addEventListener("click", () => {
+        const view = el.getAttribute("data-view");
         if (view !== currentView) {
           showView(view, true);
         }
       });
     });
 
-    // Home module quick jumps
     document.querySelectorAll(".home-module").forEach((mod) => {
       mod.addEventListener("click", () => {
         const view = mod.getAttribute("data-jump");
@@ -890,13 +1281,62 @@
       });
     });
 
+    hamburgerBtn.addEventListener("click", () => {
+      toggleSidebar();
+    });
+
+    sidebarOverlay.addEventListener("click", () => {
+      closeSidebar();
+    });
+
+    function openSidebar() {
+      appRoot.classList.add("sidebar-open");
+    }
+
+    function closeSidebar() {
+      appRoot.classList.remove("sidebar-open");
+    }
+
+    function toggleSidebar() {
+      if (appRoot.classList.contains("sidebar-open")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    }
+
+    // Simple edge swipe (mobile)
+    let touchStartX = null;
+    appRoot.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+    });
+
+    appRoot.addEventListener("touchend", (e) => {
+      if (touchStartX == null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      // open with swipe right from left edge
+      if (!appRoot.classList.contains("sidebar-open")) {
+        if (touchStartX < 24 && dx > 40) {
+          openSidebar();
+        }
+      } else {
+        // close with swipe left
+        if (dx < -40) {
+          closeSidebar();
+        }
+      }
+      touchStartX = null;
+    });
+
     window.addEventListener("popstate", (event) => {
       const view = event.state && event.state.view ? event.state.view : "home";
       showView(view, false);
     });
 
-    // On load: respect hash if exists
+    // Initial view from hash
     window.addEventListener("DOMContentLoaded", () => {
+      ensureAtLeastOneList();
       const hash = window.location.hash.replace("#", "");
       if (hash && sections[hash]) {
         showView(hash, true);
@@ -904,6 +1344,14 @@
         showView("home", true);
       }
       renderAll();
+    });
+
+    // Quick add button = open todo view & focus
+    quickAddBtn.addEventListener("click", () => {
+      showView("todo", true);
+      setTimeout(() => {
+        document.getElementById("todo-text").focus();
+      }, 150);
     });
 
     // =============================
@@ -925,15 +1373,16 @@
     }
 
     // =============================
-    // To-Do Logic
+    // To-Do Lists & Tasks
     // =============================
-
-    // Task shape: { id, text, priority, dueDate, status }
     const todoListEl = document.getElementById("todo-list");
     const todoForm = document.getElementById("todo-form");
     const todoTextInput = document.getElementById("todo-text");
     const todoPriorityInput = document.getElementById("todo-priority");
     const todoDueInput = document.getElementById("todo-due");
+
+    const todoListsContainer = document.getElementById("todo-lists-container");
+    const todoAddListBtn = document.getElementById("todo-add-list");
 
     let todoFilters = {
       status: "all",
@@ -983,6 +1432,7 @@
       e.preventDefault();
       const text = todoTextInput.value.trim();
       if (!text) return;
+      const list = getActiveTaskList();
       const task = {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         text,
@@ -990,14 +1440,89 @@
         dueDate: todoDueInput.value || "",
         status: "todo", // todo | half | done
       };
-      state.tasks.push(task);
+      list.tasks.push(task);
       saveState();
       todoForm.reset();
       renderTasks();
     });
 
+    todoAddListBtn.addEventListener("click", () => {
+      const name = prompt("New list name:", "New list");
+      if (!name) return;
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      state.tasksLists.push({
+        id,
+        name: trimmed,
+        tasks: [],
+      });
+      state.activeTaskListId = id;
+      saveState();
+      renderTodoListsUI();
+      renderTasks();
+    });
+
+    function renderTodoListsUI() {
+      ensureAtLeastOneList();
+      todoListsContainer.innerHTML = "";
+      state.tasksLists.forEach((lst) => {
+        const span = document.createElement("button");
+        span.type = "button";
+        span.className =
+          "todo-list-chip" +
+          (lst.id === state.activeTaskListId ? " active" : "");
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        span.appendChild(dot);
+        const name = document.createElement("span");
+        name.textContent = lst.name;
+        span.appendChild(name);
+        span.addEventListener("click", () => {
+          state.activeTaskListId = lst.id;
+          saveState();
+          renderTodoListsUI();
+          renderTasks();
+        });
+        span.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          const action = prompt(
+            `Edit list:\n\n${lst.name}\n\nType a new name, or leave empty to delete this list (tasks will be lost).`,
+            lst.name
+          );
+          if (action === null) return;
+          const trimmed = action.trim();
+          if (!trimmed) {
+            if (
+              state.tasksLists.length === 1 ||
+              !confirm(
+                "Delete this list and all its tasks? This cannot be undone."
+              )
+            ) {
+              return;
+            }
+            state.tasksLists = state.tasksLists.filter(
+              (l) => l.id !== lst.id
+            );
+            if (state.tasksLists.length) {
+              state.activeTaskListId = state.tasksLists[0].id;
+            } else {
+              state.activeTaskListId = null;
+            }
+          } else {
+            lst.name = trimmed;
+          }
+          saveState();
+          renderTodoListsUI();
+          renderTasks();
+        });
+        todoListsContainer.appendChild(span);
+      });
+    }
+
     function updateTaskStatus(id, status) {
-      const t = state.tasks.find((t) => t.id === id);
+      const list = getActiveTaskList();
+      const t = list.tasks.find((t) => t.id === id);
       if (!t) return;
       t.status = status;
       saveState();
@@ -1005,17 +1530,19 @@
     }
 
     function deleteTask(id) {
-      const t = state.tasks.find((x) => x.id === id);
+      const list = getActiveTaskList();
+      const t = list.tasks.find((x) => x.id === id);
       if (!t) return;
       const ok = confirm(`Delete this task?\n\n${t.text}`);
       if (!ok) return;
-      state.tasks = state.tasks.filter((t) => t.id !== id);
+      list.tasks = list.tasks.filter((t) => t.id !== id);
       saveState();
       renderTasks();
     }
 
     function editTask(id) {
-      const t = state.tasks.find((x) => x.id === id);
+      const list = getActiveTaskList();
+      const t = list.tasks.find((x) => x.id === id);
       if (!t) return;
       const newText = prompt("Edit task text:", t.text);
       if (newText === null) return;
@@ -1027,7 +1554,8 @@
     }
 
     function sortedAndFilteredTasks() {
-      let tasks = [...state.tasks];
+      const list = getActiveTaskList();
+      let tasks = [...list.tasks];
 
       // Filter
       if (todoFilters.status !== "all") {
@@ -1053,11 +1581,15 @@
           return 0;
         }
 
-        // smart: priority first, then dueDate, then status
+        // smart: priority, overdue, due-date, status
         const prioRank = { high: 0, medium: 1, low: 2 };
         const aPr = prioRank[a.priority] ?? 3;
         const bPr = prioRank[b.priority] ?? 3;
         if (aPr !== bPr) return aPr - bPr;
+
+        const aOver = isOverdue(a) ? 0 : 1;
+        const bOver = isOverdue(b) ? 0 : 1;
+        if (aOver !== bOver) return aOver - bOver;
 
         const ad = a.dueDate || "9999-12-31";
         const bd = b.dueDate || "9999-12-31";
@@ -1074,13 +1606,15 @@
     }
 
     function renderTasks() {
+      renderTodoListsUI();
       todoListEl.innerHTML = "";
       const tasks = sortedAndFilteredTasks();
       if (!tasks.length) {
         const li = document.createElement("li");
         li.className = "card-subtitle";
-        li.textContent = "No tasks yet. Add your first one above.";
+        li.textContent = "No tasks in this list yet. Add your first one above.";
         todoListEl.appendChild(li);
+        refreshHomeDashboard();
         return;
       }
 
@@ -1102,13 +1636,14 @@
         const prChip = document.createElement("span");
         prChip.className = "chip " + (task.priority === "high" ? "high" : "");
         prChip.textContent =
-          "Priority: " + task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
+          "Priority: " +
+          task.priority.charAt(0).toUpperCase() +
+          task.priority.slice(1);
         meta.appendChild(prChip);
 
         if (task.dueDate) {
           const dueChip = document.createElement("span");
-          dueChip.className =
-            "chip" + (isOverdue(task) ? " overdue" : "");
+          dueChip.className = "chip" + (isOverdue(task) ? " overdue" : "");
           dueChip.textContent =
             "Due: " + task.dueDate + (isOverdue(task) ? " (overdue)" : "");
           meta.appendChild(dueChip);
@@ -1175,14 +1710,12 @@
     }
 
     // =============================
-    // Shopping Logic (with delete confirm)
+    // Shopping with drag & drop
     // =============================
-
     const shoppingForm = document.getElementById("shopping-form");
     const shoppingInput = document.getElementById("shopping-text");
     const shoppingListEl = document.getElementById("shopping-list");
 
-    // item: { id, text, checked }
     shoppingForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const text = shoppingInput.value.trim();
@@ -1211,6 +1744,18 @@
       const ok = confirm(`Delete this item?\n\n${item.text}`);
       if (!ok) return;
       state.shoppingItems = state.shoppingItems.filter((i) => i.id !== id);
+      saveState();
+      renderShopping();
+    }
+
+    function reorderShoppingItems(draggedId, targetId) {
+      if (draggedId === targetId) return;
+      const items = state.shoppingItems;
+      const fromIndex = items.findIndex((i) => i.id === draggedId);
+      const toIndex = items.findIndex((i) => i.id === targetId);
+      if (fromIndex === -1 || toIndex === -1) return;
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
       saveState();
       renderShopping();
     }
@@ -1285,22 +1830,9 @@
       refreshHomeDashboard();
     }
 
-    function reorderShoppingItems(draggedId, targetId) {
-      if (draggedId === targetId) return;
-      const items = state.shoppingItems;
-      const fromIndex = items.findIndex((i) => i.id === draggedId);
-      const toIndex = items.findIndex((i) => i.id === targetId);
-      if (fromIndex === -1 || toIndex === -1) return;
-      const [moved] = items.splice(fromIndex, 1);
-      items.splice(toIndex, 0, moved);
-      saveState();
-      renderShopping();
-    }
-
     // =============================
-    // Workouts (basic)
+    // Workouts
     // =============================
-
     const workoutForm = document.getElementById("workout-form");
     const workoutInput = document.getElementById("workout-text");
     const workoutListEl = document.getElementById("workout-list");
@@ -1382,9 +1914,8 @@
     }
 
     // =============================
-    // Finance (basic)
+    // Finance
     // =============================
-
     const financeForm = document.getElementById("finance-form");
     const financeAmount = document.getElementById("finance-amount");
     const financeType = document.getElementById("finance-type");
@@ -1502,12 +2033,12 @@
     // =============================
     // Home Dashboard
     // =============================
-
     const todayTasksListEl = document.getElementById("today-tasks-list");
     const homeTodoCountEl = document.getElementById("home-todo-count");
     const homeFinanceCountEl = document.getElementById("home-finance-count");
     const homeWorkoutCountEl = document.getElementById("home-workout-count");
-    const homeShoppingCountEl = document.getElementById("home-shopping-count");
+    const homeShoppingCountEl =
+      document.getElementById("home-shopping-count");
 
     const quickTaskForm = document.getElementById("quick-task-form");
     const quickTaskInput = document.getElementById("quick-task-text");
@@ -1516,6 +2047,8 @@
       e.preventDefault();
       const text = quickTaskInput.value.trim();
       if (!text) return;
+      ensureAtLeastOneList();
+      const list = getActiveTaskList();
       const task = {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         text,
@@ -1523,7 +2056,7 @@
         dueDate: todayISO(),
         status: "todo",
       };
-      state.tasks.push(task);
+      list.tasks.push(task);
       saveState();
       quickTaskForm.reset();
       renderTasks();
@@ -1531,9 +2064,11 @@
     });
 
     function refreshHomeDashboard() {
-      // Today/overdue tasks
       const today = todayISO();
-      const todayTasks = state.tasks.filter((t) => {
+
+      // All tasks due today or overdue across all lists
+      const allTasks = getAllTasksAcrossLists();
+      const todayTasks = allTasks.filter((t) => {
         if (!t.dueDate) return false;
         if (t.status === "done") return false;
         return t.dueDate <= today;
@@ -1577,16 +2112,15 @@
       const pendingShopping = state.shoppingItems.filter(
         (i) => !i.checked
       ).length;
-      homeShoppingCountEl.textContent =
-        pendingShopping + " pending";
+      homeShoppingCountEl.textContent = pendingShopping + " pending";
 
       // Finance: entries this month
       const now = new Date();
       const m = String(now.getMonth() + 1).padStart(2, "0");
       const y = now.getFullYear();
       const prefix = `${y}-${m}-`;
-      const thisMonthFinances = state.finances.filter((f) =>
-        f.date && f.date.startsWith(prefix)
+      const thisMonthFinances = state.finances.filter(
+        (f) => f.date && f.date.startsWith(prefix)
       );
       homeFinanceCountEl.textContent =
         thisMonthFinances.length + " entries";
@@ -1605,7 +2139,6 @@
     // =============================
     // Initial render
     // =============================
-
     function renderAll() {
       renderTasks();
       renderShopping();
