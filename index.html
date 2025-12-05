@@ -2,946 +2,1067 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MyHub v0.4</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyHub – Personal OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#050816" />
+
   <style>
     :root {
-      --bg: #0b1020;
-      --bg-alt: #141a2a;
-      --card: #1a2135;
-      --accent: #4f9cff;
-      --accent-soft: rgba(79, 156, 255, 0.15);
-      --text: #f5f7ff;
-      --text-soft: #b5bddb;
-      --danger: #ff4f6a;
-      --success: #4fe39c;
-      --border: #252c42;
+      --bg: #050816;
+      --bg-soft: #0c1020;
+      --bg-card: #11152a;
+      --bg-card-soft: #181c35;
+      --accent: #4f8dff;
+      --accent-soft: rgba(79, 141, 255, 0.25);
+      --accent-strong: #7bb0ff;
+      --danger: #ff4d6a;
+      --text: #f7f7ff;
+      --text-soft: #b5b9d9;
+      --border-subtle: #262a4a;
+      --radius-card: 18px;
+      --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.65);
     }
 
     * {
       box-sizing: border-box;
+    }
+
+    html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
+      background: radial-gradient(circle at top, #151b3d 0, #050816 55%);
+      color: var(--text);
     }
 
     body {
-      background: radial-gradient(circle at top left, #20284a 0, #050713 45%, #02030a 100%);
-      color: var(--text);
-      min-height: 100vh;
       display: flex;
+      min-height: 100vh;
+      overflow: hidden;
     }
 
     /* Layout */
 
-    .app {
+    .app-shell {
       display: flex;
       width: 100%;
-      min-height: 100vh;
-    }
-    .selected-account {
-      box-shadow: 0 0 0 2px rgba(80, 140, 255, 0.8);
-      border-radius: 14px;
-    }
-
-    .sidebar {
-      background: rgba(6, 10, 30, 0.96);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 0.75rem 0.4rem;
-      transition: width 0.2s ease;
-      width: 60px;
-      position: sticky;
-      top: 0;
       height: 100vh;
-      z-index: 10;
-    }
-
-    .sidebar.expanded {
-      width: 190px;
-    }
-
-    .sidebar-header {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 0.5rem;
-    }
-
-    #sidebarToggle {
-      background: transparent;
-      border: none;
-      color: var(--text-soft);
-      font-size: 1.1rem;
-      cursor: pointer;
-      padding: 0.25rem;
-      border-radius: 999px;
-      transition: background 0.15s;
-    }
-
-    #sidebarToggle:hover {
-      background: rgba(255,255,255,0.06);
-    }
-
-    .nav {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      margin-top: 0.25rem;
-    }
-
-    .nav-section-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-soft);
-      margin: 0.4rem 0.2rem 0.15rem;
-      opacity: 0.8;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.4rem 0.5rem;
-      border-radius: 999px;
-      border: none;
-      width: 100%;
-      background: transparent;
-      color: var(--text-soft);
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: background 0.15s, color 0.15s, transform 0.05s;
-      position: relative;
-    }
-
-    .nav-item span.label {
-      opacity: 0;
-      white-space: nowrap;
-      transition: opacity 0.15s;
-      font-size: 0.8rem;
-    }
-
-    .sidebar.expanded .nav-item span.label {
-      opacity: 1;
-    }
-
-    .nav-item .icon {
-      font-size: 1.1rem;
-      width: 1.6rem;
-      text-align: center;
-    }
-
-    .nav-item.active {
-      background: linear-gradient(90deg, #4f9cff33, #4fe39c33);
-      color: var(--text);
-    }
-
-    .nav-item:hover {
-      background: rgba(255, 255, 255, 0.04);
-      color: #ffffff;
-    }
-
-    .nav-item:active {
-      transform: scale(0.97);
-    }
-
-    main {
-      flex: 1;
-      padding: 0.75rem;
-      min-height: 100vh;
-    }
-
-    .page {
-      display: none;
-      max-width: 980px;
+      max-width: 1280px;
       margin: 0 auto;
     }
 
-    .page.active {
-      display: block;
+    .sidebar {
+      width: 70px;
+      background: linear-gradient(180deg, #050816 0, #050816 40%, #020510 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      position: relative;
     }
 
-    .page-header {
+    .sidebar-title {
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-soft);
+      margin-top: 6px;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item {
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: radial-gradient(circle at 30% 0, #202749 0, #080b18 55%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 22px;
+      position: relative;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55);
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .nav-item::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 54px;
+      white-space: nowrap;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(8, 10, 26, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--text-soft);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-4px);
+      transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+      z-index: 10;
+    }
+
+    .nav-item:hover::after {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .nav-item:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.55);
+      border-color: var(--accent-soft);
+    }
+
+    .nav-active {
+      border-color: var(--accent);
+      box-shadow:
+        0 0 0 3px rgba(79, 141, 255, 0.25),
+        0 12px 30px rgba(12, 22, 65, 0.9);
+      background: radial-gradient(circle at 25% 0, #3354a8 0, #0b1638 55%);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      font-size: 10px;
+      color: var(--text-soft);
+    }
+
+    .version-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(8, 12, 32, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Main content */
+
+    .main {
+      flex: 1;
+      padding: 14px 16px 18px;
+      overflow-y: auto;
+    }
+
+    .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.8rem;
+      margin-bottom: 16px;
     }
 
-    .page-header h1 {
-      font-size: 1.15rem;
-      font-weight: 600;
-    }
-
-    .page-header small {
-      color: var(--text-soft);
-      font-size: 0.8rem;
-    }
-
-    .chips {
+    .topbar-left {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin: 0.5rem 0 0.75rem;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .chip {
-      border-radius: 999px;
-      padding: 0.2rem 0.7rem;
-      border: 1px solid var(--border);
-      background: rgba(10, 14, 35, 0.92);
+    .topbar-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .topbar-sub {
+      font-size: 12px;
       color: var(--text-soft);
-      font-size: 0.75rem;
-      cursor: pointer;
+    }
+
+    .topbar-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(5, 9, 24, 0.9);
+      padding: 7px 12px;
+      font-size: 11px;
+      color: var(--text-soft);
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 6px;
     }
 
-    .chip.active {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--text);
+    .topbar-chip span {
+      font-size: 14px;
     }
 
-    .chip .small-btn {
-      font-size: 0.7rem;
-      border: none;
-      background: transparent;
-      color: var(--text-soft);
-      cursor: pointer;
-    }
-
-    /* Cards / containers */
+    /* Cards */
 
     .card {
-      background: rgba(9, 13, 32, 0.96);
-      border-radius: 1rem;
-      padding: 0.75rem 0.8rem;
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.6);
-      margin-bottom: 0.8rem;
+      background: radial-gradient(circle at top left, #202747 0, #11152a 45%);
+      border-radius: var(--radius-card);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow: var(--shadow-card);
+      padding: 14px 14px 16px;
+      margin-bottom: 16px;
     }
 
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.4rem;
+      margin-bottom: 8px;
     }
 
-    .card-header h2 {
-      font-size: 0.95rem;
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
       font-weight: 600;
     }
 
-    .card-header small {
-      color: var(--text-soft);
-      font-size: 0.75rem;
-    }
-
-    .row {
+    .card-title-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, #4f8dff 0, #1b2147 60%);
       display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.5rem;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
     }
 
-    .row > * {
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-soft {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(8, 10, 26, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-soft);
+    }
+
+    .icon-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(9, 13, 32, 0.9);
+      color: var(--text);
+      padding: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      transition:
+        background 0.16s ease,
+        transform 0.16s ease,
+        border-color 0.16s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(18, 24, 58, 0.95);
+      transform: translateY(-1px);
+      border-color: var(--accent-soft);
+    }
+
+    .icon-btn.danger {
+      border-color: rgba(255, 77, 106, 0.6);
+      color: #ffcfd9;
+      background: rgba(61, 10, 21, 0.9);
+    }
+
+    .icon-btn.danger:hover {
+      background: rgba(101, 18, 36, 0.95);
+    }
+
+    /* Inputs */
+
+    .input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .input {
       flex: 1;
       min-width: 0;
-    }
-
-    label {
-      font-size: 0.75rem;
-      color: var(--text-soft);
-      display: block;
-      margin-bottom: 0.15rem;
-    }
-
-    input[type="text"],
-    input[type="number"],
-    input[type="date"],
-    input[type="time"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 0.35rem 0.45rem;
-      border-radius: 0.6rem;
-      border: 1px solid var(--border);
-      background: #050713;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(5, 8, 23, 0.96);
       color: var(--text);
-      font-size: 0.8rem;
+      padding: 8px 12px;
+      font-size: 13px;
       outline: none;
     }
 
-    textarea {
-      resize: vertical;
-      min-height: 60px;
+    .input::placeholder {
+      color: rgba(181, 185, 217, 0.6);
     }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #6d7591;
+    select.input {
+      padding-right: 32px;
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, #6972b8 50%),
+        linear-gradient(135deg, #6972b8 50%, transparent 50%);
+      background-position:
+        calc(100% - 14px) 52%,
+        calc(100% - 9px) 52%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
     }
 
-    button.primary {
-      background: linear-gradient(135deg, #4f9cff, #4fe39c);
-      border: none;
-      color: #050713;
-      padding: 0.4rem 0.8rem;
+    .btn-primary {
       border-radius: 999px;
-      font-size: 0.8rem;
+      border: none;
+      background: linear-gradient(135deg, #4f8dff, #7b9cff);
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      box-shadow: 0 10px 24px rgba(24, 66, 153, 0.8);
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      white-space: nowrap;
+      justify-content: center;
+      gap: 6px;
+      min-width: 80px;
+      transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease,
+        filter 0.16s ease;
     }
 
-    button.primary:active {
-      transform: scale(0.97);
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 14px 30px rgba(24, 66, 153, 0.95);
     }
 
-    button.secondary {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      color: var(--text-soft);
-      padding: 0.4rem 0.7rem;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      white-space: nowrap;
-    }
-
-    button.secondary:active {
-      transform: scale(0.97);
-    }
-
-    .muted {
-      color: var(--text-soft);
-      font-size: 0.78rem;
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 6px 16px rgba(24, 66, 153, 0.8);
     }
 
     /* Lists */
 
-    .list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
     .item {
+      border-radius: 14px;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(120deg, #11152a 0, #171b33 45%, #101425 100%);
+      padding: 9px 9px;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 0.4rem;
-      padding: 0.4rem 0.5rem;
-      border-radius: 0.7rem;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      font-size: 0.8rem;
+      gap: 10px;
+      margin-bottom: 6px;
     }
 
     .item-main {
       display: flex;
-      gap: 0.4rem;
-      align-items: flex-start;
+      align-items: center;
+      gap: 10px;
       flex: 1;
       min-width: 0;
     }
 
-    .item-main input[type="checkbox"] {
-      margin-top: 0.2rem;
+    .item-checkbox {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .item-checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
     .item-text {
       display: flex;
       flex-direction: column;
-      gap: 0.15rem;
-      word-break: break-word;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
     }
 
-    .item-title.done {
-      text-decoration: line-through;
-      opacity: 0.6;
+    .item-title {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
     }
 
     .item-meta {
-      font-size: 0.7rem;
-      color: var(--text-soft);
       display: flex;
-      gap: 0.3rem;
       flex-wrap: wrap;
-    }
-
-    .pill {
-      border-radius: 999px;
-      padding: 0.05rem 0.5rem;
-      font-size: 0.68rem;
-      border: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.3);
-    }
-
-    .pill-high {
-      border-color: #ff9b5f;
-      color: #ffcfaa;
-    }
-
-    .pill-medium {
-      border-color: #4f9cff;
-      color: #b6d4ff;
-    }
-
-    .pill-low {
-      border-color: #4fe39c;
-      color: #b6f4d2;
+      gap: 4px;
+      font-size: 11px;
     }
 
     .item-actions {
       display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .icon-btn {
-      border: none;
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text-soft);
-      border-radius: 999px;
-      width: 1.6rem;
-      height: 1.6rem;
-      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      cursor: pointer;
+      gap: 4px;
     }
-
-    .icon-btn.danger {
-      background: rgba(255, 79, 106, 0.08);
-      color: #ff9fb0;
-    }
-
-    .icon-btn:active {
-      transform: scale(0.95);
-    }
-
-    /* Simple two-column layout for some pages */
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-      gap: 0.75rem;
-    }
-
-    @media (max-width: 800px) {
-      .grid-2 {
-        grid-template-columns: minmax(0, 1fr);
-      }
-      .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-      }
-      main {
-        margin-left: 60px;
-      }
-      .sidebar.expanded + main {
-        margin-left: 190px;
-      }
-    }
-
-    /* Modal */
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .modal-backdrop.active {
-      display: flex;
-    }
-
-    .modal {
-      background: #070a16;
-      border-radius: 0.9rem;
-      padding: 0.8rem;
-      border: 1px solid var(--border);
-      max-width: 380px;
-      width: 100%;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.4rem;
-    }
-
-    .modal-header h3 {
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.4rem;
-      margin-top: 0.6rem;
-    }
-
-    /* Small tags */
 
     .tag {
-      font-size: 0.7rem;
-      padding: 0.05rem 0.5rem;
+      padding: 2px 7px;
       border-radius: 999px;
-      border: 1px solid var(--border);
+      background: rgba(10, 13, 34, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       color: var(--text-soft);
-      background: rgba(255, 255, 255, 0.02);
     }
 
     .tag-income {
-      border-color: var(--success);
-      color: #a7f5cf;
+      border-color: rgba(53, 199, 119, 0.6);
+      color: #d6ffe7;
+      background: rgba(10, 49, 31, 0.92);
     }
 
     .tag-expense {
-      border-color: var(--danger);
-      color: #ffc6d1;
+      border-color: rgba(255, 77, 106, 0.6);
+      color: #ffd6de;
+      background: rgba(61, 10, 21, 0.9);
+    }
+
+    .selected-account {
+      box-shadow:
+        0 0 0 2px rgba(79, 141, 255, 0.9),
+        0 12px 34px rgba(12, 22, 65, 0.9);
+    }
+
+    .empty-msg {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .mt-8 {
+      margin-top: 8px;
+    }
+
+    .mt-12 {
+      margin-top: 12px;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      .app-shell {
+        max-width: 100%;
+      }
+
+      .sidebar {
+        width: 60px;
+        padding-inline: 6px;
+      }
+
+      .main {
+        padding-inline: 10px;
+      }
+
+      .card {
+        padding-inline: 10px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <button id="sidebarToggle" title="Toggle sidebar">☰</button>
-      </div>
-      <nav class="nav">
-        <button class="nav-item active" data-page="home">
-          <span class="icon">🏠</span>
-          <span class="label">Home</span>
-        </button>
-        <div class="nav-section-label">Core</div>
-        <button class="nav-item" data-page="todo">
-          <span class="icon">📝</span>
-          <span class="label">To-do</span>
-        </button>
-        <button class="nav-item" data-page="shopping">
-          <span class="icon">🛒</span>
-          <span class="label">Shopping</span>
-        </button>
-        <button class="nav-item" data-page="workouts">
-          <span class="icon">🏋️</span>
-          <span class="label">Workouts</span>
-        </button>
-        <button class="nav-item" data-page="finance">
-          <span class="icon">💰</span>
-          <span class="label">Finance</span>
-        </button>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-title">MYHUB</div>
 
-        <div class="nav-section-label">Next</div>
-        <button class="nav-item" data-page="notes">
-          <span class="icon">🗒</span>
-          <span class="label">Notes</span>
-        </button>
-        <button class="nav-item" data-page="meals">
-          <span class="icon">🍽</span>
-          <span class="label">Meal Tracker</span>
-        </button>
-        <button class="nav-item" data-page="calendar">
-          <span class="icon">📅</span>
-          <span class="label">Calendar</span>
-        </button>
-        <button class="nav-item" data-page="analytics">
-          <span class="icon">📊</span>
-          <span class="label">Analytics</span>
-        </button>
-        <button class="nav-item" data-page="settings">
-          <span class="icon">⚙️</span>
-          <span class="label">Settings</span>
-        </button>
-      </nav>
+      <div class="sidebar-section-label">CORE</div>
+      <div class="sidebar-nav">
+        <div class="nav-item nav-active" data-page="home" data-label="Home">
+          🏠
+        </div>
+        <div class="nav-item" data-page="todo" data-label="To-Do">
+          ✅
+        </div>
+        <div class="nav-item" data-page="shopping" data-label="Shopping">
+          🛒
+        </div>
+        <div class="nav-item" data-page="workouts" data-label="Workouts">
+          🏋️
+        </div>
+        <div class="nav-item" data-page="finance" data-label="Finances">
+          💰
+        </div>
+      </div>
+
+      <div class="sidebar-section-label">NEXT</div>
+      <div class="sidebar-nav">
+        <div class="nav-item" data-page="notes" data-label="Notes">
+          📝
+        </div>
+        <div class="nav-item" data-page="meals" data-label="Meals">
+          🍽️
+        </div>
+        <div class="nav-item" data-page="calendar" data-label="Calendar">
+          📅
+        </div>
+        <div class="nav-item" data-page="analytics" data-label="Analytics">
+          📊
+        </div>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="version-pill">
+          v<span id="appVersion">0.4.2</span>
+        </div>
+        <div>Local only</div>
+      </div>
     </aside>
 
-    <main>
-      <!-- HOME -->
-      <section class="page active" id="page-home">
-        <div class="page-header">
-          <h1>MyHub Overview</h1>
-          <small>v0.4 – prototype build</small>
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-title" id="pageTitle">Home</div>
+          <div class="topbar-sub">Your personal life hub · prototype build</div>
         </div>
-        <div class="grid-2">
-          <div class="card">
+        <div class="topbar-chip">
+          <span>⚡</span> PWA · Offline-first
+        </div>
+      </header>
+
+      <!-- HOME PAGE -->
+      <section class="page active" data-page="home">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">📆</div>
+                <span>MyHub Overview</span>
+              </div>
+              <div class="card-subtitle">
+                v0.4.2 – prototype build
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2 mt-8">
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <div class="card-title-icon">📍</div>
+                    <span>Today</span>
+                  </div>
+                  <div class="card-subtitle">
+                    Quick glance at tasks, spending, and workouts. (Stats
+                    coming soon.)
+                  </div>
+                </div>
+              </div>
+              <p class="card-subtitle">
+                v0.5 will show:
+              </p>
+              <ul class="card-subtitle">
+                <li>Tasks due today across all lists</li>
+                <li>Money spent today / this week</li>
+                <li>Last workout and next planned one</li>
+              </ul>
+            </div>
+
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <div class="card-title-icon">📚</div>
+                    <span>Sections</span>
+                  </div>
+                </div>
+              </div>
+              <ul class="card-subtitle">
+                <li><b>To-Do:</b> Multiple lists with priorities & due dates.</li>
+                <li><b>Shopping:</b> Lists with notes & drag-and-drop.</li>
+                <li><b>Workouts:</b> Simple log of workout days.</li>
+                <li><b>Finances:</b> Accounts & quick transactions.</li>
+              </ul>
+              <p class="card-subtitle">
+                Coming soon: Notes, Meal tracker, Calendar and Analytics.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-12">
             <div class="card-header">
-              <h2>Today</h2>
-              <small>Quick glance</small>
+              <div>
+                <div class="card-title">
+                  <div class="card-title-icon">⚡</div>
+                  <span>Quick task for today</span>
+                </div>
+                <div class="card-subtitle">
+                  Adds directly to your default personal to-do list.
+                </div>
+              </div>
             </div>
-            <p class="muted">
-              This dashboard will later show your key info: today's tasks, today's
-              expenses, and last workout. For now, use the sidebar to navigate.
-            </p>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <h2>Sections</h2>
+            <div class="input-row">
+              <input
+                id="homeQuickTaskInput"
+                class="input"
+                placeholder="Quick task (auto medium priority, no due date)…"
+              />
+              <button id="homeQuickTaskBtn" class="btn-primary">
+                + Add
+              </button>
             </div>
-            <p class="muted" style="margin-bottom:0.4rem;">
-              Available now:
-            </p>
-            <ul class="muted" style="font-size:0.8rem; margin-left:1rem;">
-              <li>To-do lists with priorities and due dates</li>
-              <li>Shopping lists with notes</li>
-              <li>Simple workouts log</li>
-              <li>Finance tracking with accounts</li>
-            </ul>
-            <p class="muted" style="margin-top:0.4rem;">
-              Coming soon: Notes, Meal tracker, Calendar, and Analytics pages.
-            </p>
           </div>
         </div>
       </section>
 
-      <!-- TODO -->
-      <section class="page" id="page-todo">
-        <div class="page-header">
-          <h1>To-do</h1>
-          <small>Lists, priorities, due dates</small>
-        </div>
-
+      <!-- TO-DO PAGE -->
+      <section class="page hidden" data-page="todo">
         <div class="card">
           <div class="card-header">
-            <h2>Lists</h2>
             <div>
-              <button class="secondary" id="addTodoListBtn">+ New list</button>
+              <div class="card-title">
+                <div class="card-title-icon">✅</div>
+                <span>To-Do Lists</span>
+              </div>
+              <div class="card-subtitle">
+                Multiple lists, priorities, due dates & inline editing.
+              </div>
+            </div>
+            <div class="card-actions">
+              <span class="badge-soft">v0.4.2 · multi-list</span>
+              <button class="icon-btn" title="Search & filters focus">
+                🔍
+              </button>
             </div>
           </div>
-          <div class="chips" id="todoListsContainer">
-            <!-- todo lists chips -->
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h2>Add task</h2>
+          <div class="input-row">
+            <select id="todoListSelect" class="input"></select>
+            <input
+              id="todoListName"
+              class="input"
+              placeholder="New list name…"
+            />
+            <button id="todoNewListBtn" class="btn-primary">+ List</button>
           </div>
-          <div class="row">
-            <div>
-              <label for="todoText">Task</label>
-              <input type="text" id="todoText" placeholder="Example: Buy chicken, plan lesson, call mom..." />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="todoPriority">Priority</label>
-              <select id="todoPriority">
-                <option value="high">High</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            <div>
-              <label for="todoDueDate">Due date</label>
-              <input type="date" id="todoDueDate" />
-            </div>
-          </div>
-          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
-            <button class="primary" id="addTodoBtn">+ Add task</button>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h2>Tasks</h2>
+          <div class="input-row">
+            <input
+              id="todoTitleInput"
+              class="input"
+              placeholder="New task…"
+            />
           </div>
-          <div class="list" id="todoList">
-            <!-- todo items -->
+          <div class="input-row">
+            <select id="todoPrioritySelect" class="input">
+              <option value="medium">Medium priority</option>
+              <option value="high">High priority</option>
+              <option value="low">Low priority</option>
+            </select>
+            <input
+              id="todoDueDate"
+              type="date"
+              class="input"
+            />
+            <button id="addTodoBtn" class="btn-primary">
+              + Add
+            </button>
           </div>
-          <p class="muted" id="noTodoMsg" style="margin-top:0.3rem; display:none;">
-            No tasks yet. Add one above.
-          </p>
+
+          <div class="input-row">
+            <input
+              id="todoSearchInput"
+              class="input"
+              placeholder="Search tasks…"
+            />
+          </div>
+          <div class="input-row">
+            <select id="todoFilterPriority" class="input">
+              <option value="all">All priorities</option>
+              <option value="high">High only</option>
+              <option value="medium">Medium only</option>
+              <option value="low">Low only</option>
+            </select>
+            <select id="todoFilterStatus" class="input">
+              <option value="all">All statuses</option>
+              <option value="open">Open only</option>
+              <option value="inprogress">In progress only</option>
+              <option value="done">Done only</option>
+            </select>
+            <select id="todoFilterList" class="input">
+              <option value="all">All lists</option>
+            </select>
+          </div>
+
+          <div id="todoList" class="mt-8"></div>
+          <div id="noTodosMsg" class="empty-msg">
+            No tasks yet. Add your first one above.
+          </div>
         </div>
       </section>
 
-      <!-- SHOPPING -->
-      <section class="page" id="page-shopping">
-        <div class="page-header">
-          <h1>Shopping</h1>
-          <small>Multiple lists + notes per item</small>
-        </div>
-
+      <!-- SHOPPING PAGE -->
+      <section class="page hidden" data-page="shopping">
         <div class="card">
           <div class="card-header">
-            <h2>Lists</h2>
-            <button class="secondary" id="addShoppingListBtn">+ New list</button>
-          </div>
-          <div class="chips" id="shoppingListsContainer"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h2>Add item</h2>
-          </div>
-          <div class="row">
             <div>
-              <label for="shoppingText">Item</label>
-              <input type="text" id="shoppingText" placeholder="Example: chicken breast, yogurt, creatine..." />
+              <div class="card-title">
+                <div class="card-title-icon">🛒</div>
+                <span>Shopping Lists</span>
+              </div>
+              <div class="card-subtitle">
+                Multiple lists with notes and drag & drop ordering.
+              </div>
+            </div>
+            <div class="card-actions">
+              <span class="badge-soft">Tap 📝 on an item for notes</span>
             </div>
           </div>
-          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
-            <button class="primary" id="addShoppingBtn">+ Add item</button>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h2>Items</h2>
+          <div class="input-row">
+            <select id="shoppingListSelect" class="input"></select>
+            <input
+              id="shoppingListName"
+              class="input"
+              placeholder="New shopping list…"
+            />
+            <button id="shoppingNewListBtn" class="btn-primary">
+              + List
+            </button>
           </div>
-          <div class="list" id="shoppingList"></div>
-          <p class="muted" id="noShoppingMsg" style="margin-top:0.3rem; display:none;">
-            No items yet. Add one above.
-          </p>
+
+          <div class="input-row">
+            <input
+              id="shoppingItemInput"
+              class="input"
+              placeholder="New item… (Enter to add)"
+            />
+            <button id="addShoppingBtn" class="btn-primary">+ Add</button>
+          </div>
+
+          <div id="shoppingList" class="mt-8"></div>
+          <div id="shoppingEmptyMsg" class="empty-msg">
+            This list is empty. Add your first item above.
+          </div>
         </div>
       </section>
 
-      <!-- WORKOUTS (simple for now) -->
-      <section class="page" id="page-workouts">
-        <div class="page-header">
-          <h1>Workouts</h1>
-          <small>Simple log (big revamp coming next)</small>
-        </div>
-
+      <!-- WORKOUTS PAGE -->
+      <section class="page hidden" data-page="workouts">
         <div class="card">
           <div class="card-header">
-            <h2>Add workout</h2>
-          </div>
-          <div class="row">
             <div>
-              <label for="workoutName">Workout name</label>
-              <input type="text" id="workoutName" placeholder="Example: Train A – Chest & Triceps" />
+              <div class="card-title">
+                <div class="card-title-icon">🏋️</div>
+                <span>Workouts</span>
+              </div>
+              <div class="card-subtitle">
+                Simple workout log. Future versions will add exercise rows and
+                analysis.
+              </div>
+            </div>
+            <div class="card-actions">
+              <span class="badge-soft">Prototype log</span>
             </div>
           </div>
-          <div class="row">
-            <div>
-              <label for="workoutNotes">Notes (optional)</label>
-              <textarea id="workoutNotes" placeholder="Short notes about this session..."></textarea>
-            </div>
-          </div>
-          <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
-            <button class="primary" id="addWorkoutBtn">+ Add workout</button>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h2>History</h2>
+          <div class="input-row">
+            <input
+              id="workoutName"
+              class="input"
+              placeholder="Workout name (e.g. Push, Legs, Pull)…"
+            />
           </div>
-          <div class="list" id="workoutList"></div>
-          <p class="muted" id="noWorkoutMsg" style="margin-top:0.3rem; display:none;">
+          <div class="input-row">
+            <input
+              id="workoutNotes"
+              class="input"
+              placeholder="Notes (optional)…"
+            />
+            <button id="addWorkoutBtn" class="btn-primary">
+              + Add workout
+            </button>
+          </div>
+
+          <div id="workoutList" class="mt-8"></div>
+          <div id="noWorkoutMsg" class="empty-msg">
             No workouts logged yet.
-          </p>
+          </div>
         </div>
       </section>
 
-      <!-- FINANCE -->
-      <section class="page" id="page-finance">
-        <div class="page-header">
-          <h1>Finance</h1>
-          <small>Transactions + accounts</small>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header">
-              <h2>Add transaction</h2>
-            </div>
-            <div class="row">
-              <div>
-                <label for="financeType">Type</label>
-                <select id="financeType">
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
-              </div>
-              <div>
-                <label for="financeAmount">Amount</label>
-                <input type="number" step="0.01" id="financeAmount" placeholder="0.00" />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="financeAccount">Account</label>
-                <select id="financeAccount"></select>
-              </div>
-              <div>
-                <label for="financeCategory">Category</label>
-                <input type="text" id="financeCategory" placeholder="Food, Transport, Gym..." />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="financeMethod">Method</label>
-                <input type="text" id="financeMethod" placeholder="Cash, card, scan..." />
-              </div>
-              <div>
-                <label for="financeDate">Date</label>
-                <input type="date" id="financeDate" />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="financeNote">Note (optional)</label>
-                <input type="text" id="financeNote" placeholder="Short note..." />
-              </div>
-            </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
-              <button class="primary" id="addFinanceBtn">+ Add</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h2>Accounts</h2>
-              <button class="secondary" id="addAccountBtn">+ Account</button>
-            </div>
-            <div class="list" id="accountsList"></div>
-            <p class="muted" id="noAccountsMsg" style="margin-top:0.3rem; display:none;">
-              No accounts yet. Add one above (e.g. "Main THB", "BRL savings", "USD card").
-            </p>
-          </div>
-        </div>
-
+      <!-- FINANCE PAGE -->
+      <section class="page hidden" data-page="finance">
         <div class="card">
           <div class="card-header">
-            <h2>Transactions</h2>
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">💰</div>
+                <span>Finances</span>
+              </div>
+              <div class="card-subtitle">
+                Track expenses & income by account. Each account behaves like a
+                separate list.
+              </div>
+            </div>
+            <div class="card-actions">
+              <button id="addAccountBtn" class="btn-primary">
+                + Account
+              </button>
+            </div>
           </div>
-          <div class="list" id="financeList"></div>
-          <p class="muted" id="noFinanceMsg" style="margin-top:0.3rem; display:none;">
-            No transactions yet.
+
+          <div class="grid-2 mt-8">
+            <div>
+              <div class="card" style="margin-bottom:10px">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">
+                      <div class="card-title-icon">🏦</div>
+                      <span>Accounts</span>
+                    </div>
+                    <div class="card-subtitle">
+                      Tap an account to select it. The list on the right shows
+                      only that account’s transactions.
+                    </div>
+                  </div>
+                </div>
+                <div id="accountsList" class="mt-8"></div>
+                <div id="noAccountsMsg" class="empty-msg">
+                  No accounts yet. Add one with the button above.
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card" style="margin-bottom:10px">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">
+                      <div class="card-title-icon">➡️</div>
+                      <span>New transaction</span>
+                    </div>
+                    <div class="card-subtitle">
+                      Amount, type, method & category. Saved under the selected
+                      account.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <select id="financeType" class="input">
+                    <option value="expense">Expense (-)</option>
+                    <option value="income">Income (+)</option>
+                  </select>
+                  <input
+                    id="financeAmount"
+                    class="input"
+                    type="number"
+                    step="0.01"
+                    placeholder="Amount…"
+                  />
+                </div>
+                <div class="input-row">
+                  <select id="financeAccount" class="input"></select>
+                </div>
+                <div class="input-row">
+                  <input
+                    id="financeCategory"
+                    class="input"
+                    placeholder="Category (e.g. Food, Transport)…"
+                  />
+                  <input
+                    id="financeMethod"
+                    class="input"
+                    placeholder="Method (cash, card, scan)…"
+                  />
+                </div>
+                <div class="input-row">
+                  <input
+                    id="financeDate"
+                    class="input"
+                    type="date"
+                  />
+                  <input
+                    id="financeNote"
+                    class="input"
+                    placeholder="Note (optional)…"
+                  />
+                  <button id="addFinanceBtn" class="btn-primary">
+                    + Add
+                  </button>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:0">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">
+                      <div class="card-title-icon">📜</div>
+                      <span>Transactions (selected account)</span>
+                    </div>
+                    <div class="card-subtitle">
+                      This feed adjusts automatically when you tap a different
+                      account.
+                    </div>
+                  </div>
+                </div>
+                <div id="financeList" class="mt-8"></div>
+                <div id="noFinanceMsg" class="empty-msg">
+                  No transactions for this account yet.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLACEHOLDER PAGES -->
+      <section class="page hidden" data-page="notes">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">📝</div>
+                <span>Notes</span>
+              </div>
+              <div class="card-subtitle">
+                Quick text & freehand notes (coming soon).
+              </div>
+            </div>
+          </div>
+          <p class="card-subtitle">
+            v0.5 will add a simple notes list and later a drawing/scribble pad.
           </p>
         </div>
       </section>
 
-      <!-- NOTES placeholder -->
-      <section class="page" id="page-notes">
-        <div class="page-header">
-          <h1>Notes</h1>
-          <small>Quick notes & freehand ideas (coming soon)</small>
-        </div>
+      <section class="page hidden" data-page="meals">
         <div class="card">
-          <p class="muted">
-            This page will become your quick notepad: fast text notes and later a
-            freehand/drawing mode. For now it's a placeholder so the structure is ready.
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">🍽️</div>
+                <span>Meals</span>
+              </div>
+              <div class="card-subtitle">
+                Planned meal tracker & macros (future feature).
+              </div>
+            </div>
+          </div>
+          <p class="card-subtitle">
+            Placeholder for future meal tracking and macro calculations.
           </p>
         </div>
       </section>
 
-      <!-- MEALS placeholder -->
-      <section class="page" id="page-meals">
-        <div class="page-header">
-          <h1>Meal Tracker</h1>
-          <small>Macros and food logs (future)</small>
-        </div>
+      <section class="page hidden" data-page="calendar">
         <div class="card">
-          <p class="muted">
-            In future versions, this page will let you log your meals and calculate macros.
-            It might even support reading from images. For now, it's just a stub.
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">📅</div>
+                <span>Calendar</span>
+              </div>
+              <div class="card-subtitle">
+                Light personal calendar integrated with tasks & bills (future).
+              </div>
+            </div>
+          </div>
+          <p class="card-subtitle">
+            Placeholder for a small internal calendar (not as noisy as Google
+            Calendar).
           </p>
         </div>
       </section>
 
-      <!-- CALENDAR placeholder -->
-      <section class="page" id="page-calendar">
-        <div class="page-header">
-          <h1>Calendar</h1>
-          <small>Important days & recurring bills (future)</small>
-        </div>
+      <section class="page hidden" data-page="analytics">
         <div class="card">
-          <p class="muted">
-            The idea: show only what's important for you – tasks, recurring bills, and key
-            reminders – instead of every small birthday. We'll connect this to To-do and Finance later.
-          </p>
-        </div>
-      </section>
-
-      <!-- ANALYTICS placeholder -->
-      <section class="page" id="page-analytics">
-        <div class="page-header">
-          <h1>Analytics</h1>
-          <small>Crossing all your data (future)</small>
-        </div>
-        <div class="card">
-          <p class="muted">
-            Here you'll eventually see things like: expenses vs weight, shopping vs workout
-            frequency, and other KPIs. For now this is a placeholder so the navigation feels complete.
-          </p>
-        </div>
-      </section>
-
-      <!-- SETTINGS placeholder -->
-      <section class="page" id="page-settings">
-        <div class="page-header">
-          <h1>Settings</h1>
-          <small>Theme, backup & more (future)</small>
-        </div>
-        <div class="card">
-          <p class="muted">
-            In the future this page will hold dark mode toggle, data export/import,
-            and backup options. For now, it's a simple stub.
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">📊</div>
+                <span>Analytics</span>
+              </div>
+              <div class="card-subtitle">
+                Future page to cross data between tasks, expenses, workouts,
+                etc.
+              </div>
+            </div>
+          </div>
+          <p class="card-subtitle">
+            Later this can show things like "spending vs workouts vs weight".
           </p>
         </div>
       </section>
     </main>
   </div>
-
-  <!-- Modal for editing todo and shopping notes -->
-  <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal" id="modal">
-      <div class="modal-header">
-        <h3 id="modalTitle">Edit</h3>
-        <button class="icon-btn" id="modalCloseBtn">✕</button>
-      </div>
-      <div id="modalBody"></div>
-      <div class="modal-actions">
-        <button class="secondary" id="modalCancelBtn">Cancel</button>
-        <button class="primary" id="modalSaveBtn">Save</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     // MyHub v0.4.2 – single-file front-end logic
-  
+
     // ---------- Helpers ----------
     const $ = (id) => document.getElementById(id);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     const STORAGE_KEY = "myhub-state-v04";
-  
+
     function formatDate(iso) {
       if (!iso) return "No date";
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return "No date";
       return d.toLocaleDateString();
     }
-  
+
     function confirmDelete() {
       return confirm("Delete this item? This action cannot be undone.");
     }
-  
+
     // ---------- State ----------
     const defaultState = {
       theme: "dark",
@@ -963,9 +1084,9 @@
       finance: [],
       activeFinanceAccountId: null
     };
-  
+
     let state;
-  
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -980,7 +1101,7 @@
         state = structuredClone(defaultState);
       }
     }
-  
+
     function saveState() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -988,20 +1109,22 @@
         console.error("Error saving state", e);
       }
     }
-  
+
     // ---------- Navigation ----------
     function setPage(page) {
       state.currentPage = page;
       saveState();
-  
+
       $$(".page").forEach((el) => {
         if (el.dataset.page === page) {
           el.classList.remove("hidden");
+          el.classList.add("active");
         } else {
           el.classList.add("hidden");
+          el.classList.remove("active");
         }
       });
-  
+
       $$(".nav-item").forEach((el) => {
         if (el.dataset.page === page) {
           el.classList.add("nav-active");
@@ -1009,7 +1132,7 @@
           el.classList.remove("nav-active");
         }
       });
-  
+
       const headerTitle = $("pageTitle");
       if (headerTitle) {
         const mapping = {
@@ -1026,8 +1149,7 @@
         headerTitle.textContent = mapping[page] || "MyHub";
       }
     }
-  
-    // attach listeners to sidebar buttons
+
     function setupNav() {
       $$(".nav-item").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -1035,7 +1157,7 @@
           if (page) setPage(page);
         });
       });
-  
+
       const homeQuick = $("homeQuickTaskBtn");
       if (homeQuick) {
         homeQuick.addEventListener("click", () => {
@@ -1047,8 +1169,18 @@
           input.value = "";
         });
       }
+
+      $("homeQuickTaskInput")?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const text = e.target.value.trim();
+          if (!text) return;
+          addTodoFromHome(text);
+          e.target.value = "";
+        }
+      });
     }
-  
+
     // ---------- To-do Lists ----------
     const todoListSelect = $("todoListSelect");
     const todoListNameInput = $("todoListName");
@@ -1062,11 +1194,11 @@
     const todoFilterPriority = $("todoFilterPriority");
     const todoFilterStatus = $("todoFilterStatus");
     const todoFilterList = $("todoFilterList");
-  
+
     function getActiveTodoListId() {
-      return todoListSelect.value || (state.todoLists[0] && state.todoLists[0].id);
+      return todoListSelect?.value || (state.todoLists[0] && state.todoLists[0].id);
     }
-  
+
     function renderTodoListOptions() {
       const selects = [todoListSelect, todoFilterList].filter(Boolean);
       selects.forEach((sel) => {
@@ -1078,13 +1210,13 @@
           sel.appendChild(opt);
         });
       });
-  
+
       if (!state.todoLists.length) return;
-      if (!todoListSelect.value) {
+      if (todoListSelect && !todoListSelect.value) {
         todoListSelect.value = state.todoLists[0].id;
       }
     }
-  
+
     function addTodoList() {
       const name = todoListNameInput.value.trim();
       if (!name) return;
@@ -1093,14 +1225,12 @@
       saveState();
       todoListNameInput.value = "";
       renderTodoListOptions();
-      todoListSelect.value = id;
+      if (todoListSelect) todoListSelect.value = id;
       renderTodos();
     }
-  
-    if (todoNewListBtn) {
-      todoNewListBtn.addEventListener("click", addTodoList);
-    }
-  
+
+    todoNewListBtn?.addEventListener("click", addTodoList);
+
     function addTodo() {
       const title = todoTitleInput.value.trim();
       if (!title) return;
@@ -1116,7 +1246,7 @@
         title,
         priority,
         dueDate: dueIso,
-        status: "open", // open | inprogress | done
+        status: "open",
         createdAt: new Date().toISOString(),
         completedAt: null
       };
@@ -1125,17 +1255,15 @@
       todoTitleInput.value = "";
       renderTodos();
     }
-  
-    if (todoTitleInput) {
-      todoTitleInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addTodo();
-        }
-      });
-    }
+
+    todoTitleInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addTodo();
+      }
+    });
     $("addTodoBtn")?.addEventListener("click", addTodo);
-  
+
     function updateTodoStatus(id, newStatus) {
       const t = state.todos.find((x) => x.id === id);
       if (!t) return;
@@ -1144,13 +1272,13 @@
       saveState();
       renderTodos();
     }
-  
+
     function openEditTodo(todo) {
       const newTitle = prompt("Edit task title:", todo.title);
       if (newTitle === null) return;
       const trimmed = newTitle.trim();
       if (trimmed) todo.title = trimmed;
-  
+
       const newDate = prompt(
         "Edit due date (YYYY-MM-DD) or leave blank:",
         todo.dueDate ? todo.dueDate.slice(0, 10) : ""
@@ -1165,79 +1293,77 @@
       saveState();
       renderTodos();
     }
-  
+
     function deleteTodo(id) {
       if (!confirmDelete()) return;
       state.todos = state.todos.filter((t) => t.id !== id);
       saveState();
       renderTodos();
     }
-  
+
     function applyTodoFilters(arr) {
       let result = [...arr];
-  
+
       const q = (todoSearchInput?.value || "").trim().toLowerCase();
       if (q) {
         result = result.filter((t) => t.title.toLowerCase().includes(q));
       }
-  
+
       const prio = todoFilterPriority?.value || "all";
       if (prio !== "all") {
         result = result.filter((t) => t.priority === prio);
       }
-  
+
       const stat = todoFilterStatus?.value || "all";
       if (stat !== "all") {
         result = result.filter((t) => t.status === stat);
       }
-  
+
       const listId = todoFilterList?.value || "all";
       if (listId !== "all") {
         result = result.filter((t) => t.listId === listId);
       }
-  
+
       result.sort((a, b) => {
-        // High priority first, then by due date, then open > inprogress > done
         const prioOrder = { high: 0, medium: 1, low: 2 };
         const pa = prioOrder[a.priority] ?? 1;
         const pb = prioOrder[b.priority] ?? 1;
         if (pa !== pb) return pa - pb;
-  
+
         const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         if (da !== db) return da - db;
-  
+
         const statusOrder = { open: 0, inprogress: 1, done: 2 };
         return (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0);
       });
-  
+
       return result;
     }
-  
+
     function renderTodos() {
       if (!todoListContainer) return;
       const all = state.todos;
       const filtered = applyTodoFilters(all);
-  
+
       if (!filtered.length) {
         todoListContainer.innerHTML = "";
         if (todoEmptyMsg) todoEmptyMsg.style.display = "block";
         return;
       }
       if (todoEmptyMsg) todoEmptyMsg.style.display = "none";
-  
+
       todoListContainer.innerHTML = "";
       filtered.forEach((t) => {
         const row = document.createElement("div");
         row.className = "item";
-  
+
         const main = document.createElement("div");
         main.className = "item-main";
-  
-        // left: checkbox
+
         const left = document.createElement("div");
         left.className = "item-checkbox";
-  
+
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = t.status === "done";
@@ -1245,10 +1371,10 @@
           updateTodoStatus(t.id, cb.checked ? "done" : "open");
         });
         left.appendChild(cb);
-  
+
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-  
+
         const title = document.createElement("div");
         title.className = "item-title";
         title.textContent = t.title;
@@ -1256,12 +1382,11 @@
           title.style.textDecoration = "line-through";
           title.style.opacity = "0.7";
         }
-        // click title to edit
         title.addEventListener("click", () => openEditTodo(t));
-  
+
         const meta = document.createElement("div");
         meta.className = "item-meta";
-  
+
         const prioTag = document.createElement("span");
         prioTag.className = "tag";
         prioTag.textContent =
@@ -1271,14 +1396,14 @@
             ? "Low"
             : "Medium";
         meta.appendChild(prioTag);
-  
+
         if (t.dueDate) {
           const due = document.createElement("span");
           due.className = "tag";
           due.textContent = "Due " + formatDate(t.dueDate);
           meta.appendChild(due);
         }
-  
+
         const listRef = state.todoLists.find((l) => l.id === t.listId);
         if (listRef) {
           const listTag = document.createElement("span");
@@ -1286,23 +1411,23 @@
           listTag.textContent = listRef.name;
           meta.appendChild(listTag);
         }
-  
+
         if (t.status === "inprogress") {
           const st = document.createElement("span");
           st.className = "tag";
           st.textContent = "In progress";
           meta.appendChild(st);
         }
-  
+
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
-  
+
         main.appendChild(left);
         main.appendChild(textWrap);
-  
+
         const actions = document.createElement("div");
         actions.className = "item-actions";
-  
+
         const inProgBtn = document.createElement("button");
         inProgBtn.className = "icon-btn";
         inProgBtn.textContent = "⏳";
@@ -1310,36 +1435,36 @@
         inProgBtn.addEventListener("click", () =>
           updateTodoStatus(t.id, "inprogress")
         );
-  
+
         const editBtn = document.createElement("button");
         editBtn.className = "icon-btn";
         editBtn.textContent = "✏️";
         editBtn.title = "Edit";
         editBtn.addEventListener("click", () => openEditTodo(t));
-  
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete";
         delBtn.addEventListener("click", () => deleteTodo(t.id));
-  
+
         actions.appendChild(inProgBtn);
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
-  
+
         row.appendChild(main);
         row.appendChild(actions);
-  
+
         todoListContainer.appendChild(row);
       });
     }
-  
+
     todoListSelect?.addEventListener("change", () => renderTodos());
     todoSearchInput?.addEventListener("input", renderTodos);
     todoFilterPriority?.addEventListener("change", renderTodos);
     todoFilterStatus?.addEventListener("change", renderTodos);
     todoFilterList?.addEventListener("change", renderTodos);
-  
+
     function addTodoFromHome(text) {
       const listId = state.todoLists[0]?.id;
       if (!listId) return;
@@ -1357,8 +1482,8 @@
       saveState();
       renderTodos();
     }
-  
-    // ---------- Shopping Lists ----------
+
+    // ---------- Shopping ----------
     const shoppingListSelect = $("shoppingListSelect");
     const shoppingListNameInput = $("shoppingListName");
     const shoppingNewListBtn = $("shoppingNewListBtn");
@@ -1366,12 +1491,13 @@
     const shoppingListEl = $("shoppingList");
     const shoppingEmptyMsg = $("shoppingEmptyMsg");
     let draggingShoppingId = null;
-  
+
     function getActiveShoppingListId() {
-      return shoppingListSelect.value || (state.shoppingLists[0] && state.shoppingLists[0].id);
+      return shoppingListSelect?.value || (state.shoppingLists[0] && state.shoppingLists[0].id);
     }
-  
+
     function renderShoppingListOptions() {
+      if (!shoppingListSelect) return;
       shoppingListSelect.innerHTML = "";
       state.shoppingLists.forEach((list) => {
         const opt = document.createElement("option");
@@ -1384,7 +1510,7 @@
         shoppingListSelect.value = state.shoppingLists[0].id;
       }
     }
-  
+
     function addShoppingList() {
       const name = shoppingListNameInput.value.trim();
       if (!name) return;
@@ -1400,9 +1526,9 @@
       shoppingListSelect.value = id;
       renderShopping();
     }
-  
+
     shoppingNewListBtn?.addEventListener("click", addShoppingList);
-  
+
     function addShoppingItem() {
       const title = shoppingItemInput.value.trim();
       if (!title) return;
@@ -1420,7 +1546,7 @@
       shoppingItemInput.value = "";
       renderShopping();
     }
-  
+
     shoppingItemInput?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -1428,7 +1554,7 @@
       }
     });
     $("addShoppingBtn")?.addEventListener("click", addShoppingItem);
-  
+
     function deleteShoppingItem(listId, itemId) {
       if (!confirmDelete()) return;
       state.shoppingItems = state.shoppingItems.filter(
@@ -1437,7 +1563,7 @@
       saveState();
       renderShopping();
     }
-  
+
     function toggleShoppingItem(id) {
       const item = state.shoppingItems.find((i) => i.id === id);
       if (!item) return;
@@ -1445,7 +1571,7 @@
       saveState();
       renderShopping();
     }
-  
+
     function openModalShoppingNote(item, listId) {
       const newNote = prompt("Note for this item:", item.note || "");
       if (newNote === null) return;
@@ -1453,7 +1579,7 @@
       saveState();
       renderShopping();
     }
-  
+
     function reorderShopping(listId, fromId, toId) {
       if (!fromId || !toId || fromId === toId) return;
       const arr = state.shoppingItems;
@@ -1469,26 +1595,26 @@
       saveState();
       renderShopping();
     }
-  
+
     function renderShopping() {
       if (!shoppingListEl) return;
       const listId = getActiveShoppingListId();
       const items = state.shoppingItems.filter((i) => i.listId === listId);
-  
+
       if (!items.length) {
         shoppingListEl.innerHTML = "";
         if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "block";
         return;
       }
       if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "none";
-  
+
       shoppingListEl.innerHTML = "";
       items.forEach((item) => {
         const row = document.createElement("div");
         row.className = "item";
         row.dataset.itemId = item.id;
         row.draggable = true;
-  
+
         row.addEventListener("dragstart", () => {
           draggingShoppingId = item.id;
         });
@@ -1501,10 +1627,10 @@
           reorderShopping(listId, draggingShoppingId, targetId);
           draggingShoppingId = null;
         });
-  
+
         const main = document.createElement("div");
         main.className = "item-main";
-  
+
         const left = document.createElement("div");
         left.className = "item-checkbox";
         const cb = document.createElement("input");
@@ -1512,10 +1638,10 @@
         cb.checked = item.checked;
         cb.addEventListener("change", () => toggleShoppingItem(item.id));
         left.appendChild(cb);
-  
+
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-  
+
         const title = document.createElement("div");
         title.className = "item-title";
         title.textContent = item.title;
@@ -1523,7 +1649,7 @@
           title.style.textDecoration = "line-through";
           title.style.opacity = "0.7";
         }
-  
+
         const meta = document.createElement("div");
         meta.className = "item-meta";
         if (item.note) {
@@ -1532,16 +1658,16 @@
           noteTag.textContent = "Note";
           meta.appendChild(noteTag);
         }
-  
+
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
-  
+
         main.appendChild(left);
         main.appendChild(textWrap);
-  
+
         const actions = document.createElement("div");
         actions.className = "item-actions";
-  
+
         const noteBtn = document.createElement("button");
         noteBtn.className = "icon-btn";
         noteBtn.textContent = "📝";
@@ -1549,7 +1675,7 @@
         noteBtn.addEventListener("click", () =>
           openModalShoppingNote(item, listId)
         );
-  
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
@@ -1557,23 +1683,23 @@
         delBtn.addEventListener("click", () =>
           deleteShoppingItem(listId, item.id)
         );
-  
+
         actions.appendChild(noteBtn);
         actions.appendChild(delBtn);
-  
+
         row.appendChild(main);
         row.appendChild(actions);
-  
+
         shoppingListEl.appendChild(row);
       });
     }
-  
+
     shoppingListSelect?.addEventListener("change", renderShopping);
-  
-    // ---------- Workouts (simple log) ----------
+
+    // ---------- Workouts ----------
     const workoutListEl = $("workoutList");
     const noWorkoutMsg = $("noWorkoutMsg");
-  
+
     function addWorkout() {
       const name = $("workoutName")?.value.trim();
       const notes = $("workoutNotes")?.value.trim();
@@ -1590,7 +1716,7 @@
       saveState();
       renderWorkouts();
     }
-  
+
     $("addWorkoutBtn")?.addEventListener("click", addWorkout);
     $("workoutName")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -1598,14 +1724,14 @@
         addWorkout();
       }
     });
-  
+
     function deleteWorkout(id) {
       if (!confirmDelete()) return;
       state.workouts = state.workouts.filter((w) => w.id !== id);
       saveState();
       renderWorkouts();
     }
-  
+
     function renderWorkouts() {
       if (!workoutListEl) return;
       if (!state.workouts.length) {
@@ -1614,72 +1740,72 @@
         return;
       }
       if (noWorkoutMsg) noWorkoutMsg.style.display = "none";
-  
+
       workoutListEl.innerHTML = "";
       state.workouts.forEach((w) => {
         const item = document.createElement("div");
         item.className = "item";
-  
+
         const main = document.createElement("div");
         main.className = "item-main";
-  
+
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-  
+
         const title = document.createElement("div");
         title.className = "item-title";
         title.textContent = w.name;
-  
+
         const meta = document.createElement("div");
         meta.className = "item-meta";
-  
+
         const d = document.createElement("span");
         d.className = "tag";
         d.textContent = formatDate(w.date);
         meta.appendChild(d);
-  
+
         if (w.notes) {
           const n = document.createElement("span");
           n.className = "tag";
           n.textContent = "Notes";
           meta.appendChild(n);
         }
-  
+
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-  
+
         const actions = document.createElement("div");
         actions.className = "item-actions";
-  
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete workout";
         delBtn.addEventListener("click", () => deleteWorkout(w.id));
-  
+
         actions.appendChild(delBtn);
-  
+
         item.appendChild(main);
         item.appendChild(actions);
         workoutListEl.appendChild(item);
       });
     }
-  
-    // ---------- Finance + Accounts (improved) ----------
+
+    // ---------- Finance ----------
     const accountsListEl = $("accountsList");
     const noAccountsMsg = $("noAccountsMsg");
     const financeListEl = $("financeList");
     const noFinanceMsg = $("noFinanceMsg");
     const financeAccountSelect = $("financeAccount");
-  
+
     function renderAccounts() {
       if (!accountsListEl || !financeAccountSelect) return;
-  
+
       const accounts = state.accounts;
       accountsListEl.innerHTML = "";
       financeAccountSelect.innerHTML = "";
-  
+
       if (!accounts.length) {
         if (noAccountsMsg) noAccountsMsg.style.display = "block";
         state.activeFinanceAccountId = null;
@@ -1689,45 +1815,45 @@
           state.activeFinanceAccountId = accounts[0].id;
         }
       }
-  
+
       accounts.forEach((acc) => {
         const balance = state.finance
           .filter((tx) => tx.accountId === acc.id)
           .reduce((sum, tx) => {
             return sum + (tx.type === "income" ? tx.amount : -tx.amount);
           }, 0);
-  
+
         const row = document.createElement("div");
         row.className = "item";
         if (state.activeFinanceAccountId === acc.id) {
           row.classList.add("selected-account");
         }
-  
+
         const main = document.createElement("div");
         main.className = "item-main";
-  
+
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-  
+
         const title = document.createElement("div");
         title.className = "item-title";
         title.textContent = acc.name;
-  
+
         const meta = document.createElement("div");
         meta.className = "item-meta";
-  
+
         const balTag = document.createElement("span");
         balTag.className = "tag";
         balTag.textContent = `Balance: ${balance.toFixed(2)}`;
         meta.appendChild(balTag);
-  
+
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-  
+
         const actions = document.createElement("div");
         actions.className = "item-actions";
-  
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
@@ -1736,33 +1862,33 @@
           e.stopPropagation();
           deleteAccount(acc.id);
         });
-  
+
         actions.appendChild(delBtn);
-  
+
         row.appendChild(main);
         row.appendChild(actions);
-  
+
         row.addEventListener("click", () => {
           state.activeFinanceAccountId = acc.id;
           saveState();
           renderAccounts();
           renderFinance();
         });
-  
+
         accountsListEl.appendChild(row);
-  
+
         const opt = document.createElement("option");
         opt.value = acc.id;
         opt.textContent = acc.name;
         financeAccountSelect.appendChild(opt);
       });
-  
+
       if (accounts.length) {
         financeAccountSelect.value =
           state.activeFinanceAccountId || accounts[0].id;
       }
     }
-  
+
     function addAccount() {
       const name = prompt("Account name (e.g. THB main, BRL savings):");
       if (!name) return;
@@ -1774,9 +1900,9 @@
       saveState();
       renderAccounts();
     }
-  
+
     $("addAccountBtn")?.addEventListener("click", addAccount);
-  
+
     function deleteAccount(id) {
       const used = state.finance.some((tx) => tx.accountId === id);
       if (used) {
@@ -1793,26 +1919,26 @@
       renderAccounts();
       renderFinance();
     }
-  
+
     function addFinance() {
       const type = $("financeType")?.value || "expense";
       const amountVal = $("financeAmount")?.value;
       const amount = parseFloat(amountVal);
       if (!amount || Number.isNaN(amount)) return;
-  
+
       const accountId =
         $("financeAccount")?.value ||
         state.activeFinanceAccountId ||
         (state.accounts[0] && state.accounts[0].id);
-  
+
       if (!accountId) {
         alert("Please create an account first.");
         return;
       }
-  
+
       const category = $("financeCategory")?.value.trim() || "";
       const method = $("financeMethod")?.value.trim() || "";
-  
+
       let dateIso;
       const dateStr = $("financeDate")?.value;
       if (!dateStr) {
@@ -1820,9 +1946,9 @@
       } else {
         dateIso = new Date(dateStr + "T00:00:00").toISOString();
       }
-  
+
       const note = $("financeNote")?.value.trim() || "";
-  
+
       const tx = {
         id: "tx-" + Date.now(),
         type,
@@ -1833,20 +1959,20 @@
         date: dateIso,
         note
       };
-  
+
       state.finance.unshift(tx);
-  
+
       $("financeAmount").value = "";
       $("financeCategory").value = "";
       $("financeMethod").value = "";
       $("financeDate").value = "";
       $("financeNote").value = "";
-  
+
       saveState();
       renderAccounts();
       renderFinance();
     }
-  
+
     $("addFinanceBtn")?.addEventListener("click", addFinance);
     $("financeAmount")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -1854,7 +1980,7 @@
         addFinance();
       }
     });
-  
+
     function deleteFinance(id) {
       if (!confirmDelete()) return;
       state.finance = state.finance.filter((tx) => tx.id !== id);
@@ -1862,124 +1988,121 @@
       renderAccounts();
       renderFinance();
     }
-  
+
     function renderFinance() {
       if (!financeListEl) return;
-  
+
       let txs = state.finance;
       if (state.activeFinanceAccountId) {
         txs = txs.filter(
           (tx) => tx.accountId === state.activeFinanceAccountId
         );
       }
-  
+
       if (!txs.length) {
         financeListEl.innerHTML = "";
         if (noFinanceMsg) noFinanceMsg.style.display = "block";
         return;
       }
       if (noFinanceMsg) noFinanceMsg.style.display = "none";
-  
+
       const accountMap = {};
       state.accounts.forEach((a) => {
         accountMap[a.id] = a.name;
       });
-  
+
       financeListEl.innerHTML = "";
-  
+
       txs.forEach((tx) => {
         const item = document.createElement("div");
         item.className = "item";
-  
+
         const main = document.createElement("div");
         main.className = "item-main";
-  
+
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-  
+
         const title = document.createElement("div");
         title.className = "item-title";
         const sign = tx.type === "income" ? "+" : "-";
         title.textContent = `${sign}${tx.amount.toFixed(2)} (${tx.category || "No category"})`;
-  
+
         const meta = document.createElement("div");
         meta.className = "item-meta";
-  
+
         const typeTag = document.createElement("span");
         typeTag.className =
           "tag " + (tx.type === "income" ? "tag-income" : "tag-expense");
         typeTag.textContent = tx.type === "income" ? "Income" : "Expense";
         meta.appendChild(typeTag);
-  
+
         const accTag = document.createElement("span");
         accTag.className = "tag";
         accTag.textContent = accountMap[tx.accountId] || "Unknown account";
         meta.appendChild(accTag);
-  
+
         const methodTag = document.createElement("span");
         methodTag.className = "tag";
         methodTag.textContent = tx.method || "Method ?";
         meta.appendChild(methodTag);
-  
+
         const dateTag = document.createElement("span");
         dateTag.className = "tag";
         dateTag.textContent = formatDate(tx.date);
         meta.appendChild(dateTag);
-  
+
         if (tx.note) {
           const noteTag = document.createElement("span");
           noteTag.className = "tag";
           noteTag.textContent = "Note";
           meta.appendChild(noteTag);
         }
-  
+
         textWrap.appendChild(title);
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-  
+
         const actions = document.createElement("div");
         actions.className = "item-actions";
-  
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete transaction";
         delBtn.addEventListener("click", () => deleteFinance(tx.id));
-  
+
         actions.appendChild(delBtn);
-  
+
         item.appendChild(main);
         item.appendChild(actions);
         financeListEl.appendChild(item);
       });
     }
-  
+
     // ---------- Init ----------
     function init() {
       loadState();
-  
-      // show version text if there's a span
+
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "v0.4.2";
-  
+      if (verEl) verEl.textContent = "0.4.2";
+
       setupNav();
-  
+
       renderTodoListOptions();
       renderTodos();
-  
+
       renderShoppingListOptions();
       renderShopping();
-  
+
       renderWorkouts();
       renderAccounts();
       renderFinance();
-  
+
       setPage(state.currentPage || "home");
     }
-  
+
     window.addEventListener("load", init);
   </script>
 </body>
 </html>
-
-
