@@ -531,6 +531,51 @@
       font-size: 14px;
     }
 
+    /* Workout favorites grid */
+    .favorites-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .favorite-card {
+      flex: 1 1 calc(50% - 8px);
+      min-width: 110px;
+      height: 70px;
+      border-radius: 14px;
+      border: 1px solid #273041;
+      background: radial-gradient(circle at top, rgba(0, 188, 212, 0.25), #101320);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 13px;
+      color: #e0f7fa;
+      cursor: pointer;
+      padding: 4px;
+      box-shadow: 0 0 12px rgba(0, 188, 212, 0.3);
+      transition: 0.16s ease;
+    }
+
+    .favorite-card:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 18px rgba(0, 188, 212, 0.6);
+    }
+
+    @media (min-width: 600px) {
+      .favorite-card {
+        flex-basis: calc(33.33% - 8px);
+      }
+    }
+
+    .favorites-empty {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
     @media (min-width: 900px) {
       .sidebar.expanded {
         width: 230px;
@@ -572,7 +617,7 @@
           <span class="nav-emoji">📊</span><span class="nav-label">Analytics</span>
         </button>
       </nav>
-      <div class="version">v<span id="appVersion">0.7.1</span></div>
+      <div class="version">v<span id="appVersion">0.7.2</span></div>
     </aside>
 
     <main class="main">
@@ -617,12 +662,14 @@
 
         <div class="card">
           <div class="input-grid">
-            <!-- List selection + new list -->
+            <!-- Row 1: list dropdown -->
+            <div class="input-row">
+              <label for="todoListSelect">List</label>
+              <select id="todoListSelect"></select>
+            </div>
+
+            <!-- Row 2: new list name + + button -->
             <div class="input-row-inline">
-              <div class="input-row">
-                <label for="todoListSelect">List</label>
-                <select id="todoListSelect"></select>
-              </div>
               <div class="input-row">
                 <label for="todoListName">New list</label>
                 <input id="todoListName" type="text" placeholder="e.g. Work, Personal…" />
@@ -632,13 +679,13 @@
               </div>
             </div>
 
-            <!-- Task title -->
+            <!-- Row 3: Task title -->
             <div class="input-row">
               <label for="todoTitleInput">Task</label>
               <input id="todoTitleInput" type="text" placeholder="What do you need to do?" />
             </div>
 
-            <!-- Priority + due date -->
+            <!-- Row 4: Priority + due date -->
             <div class="input-row-inline">
               <div class="input-row">
                 <label for="todoPrioritySelect">Priority</label>
@@ -654,40 +701,50 @@
               </div>
             </div>
 
-            <!-- Add button row -->
+            <!-- Row 5: Add button -->
             <div class="input-row" style="align-items: flex-end;">
               <button id="addTodoBtn" class="btn">➕ Add task</button>
             </div>
           </div>
 
-          <div class="pill-row">
-            <div class="filter-pill">
-              <label for="todoSearchInput">Search</label>
-              <input id="todoSearchInput" type="text" placeholder="Text…" />
-            </div>
-            <div class="filter-pill">
-              <label for="todoFilterPriority">Priority</label>
-              <select id="todoFilterPriority">
-                <option value="all">All</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            <div class="filter-pill">
-              <label for="todoFilterStatus">Status</label>
-              <select id="todoFilterStatus">
-                <option value="all">All</option>
-                <option value="open">Open</option>
-                <option value="inprogress">In progress</option>
-                <option value="done">Done</option>
-              </select>
-            </div>
-            <div class="filter-pill">
-              <label for="todoFilterList">List</label>
-              <select id="todoFilterList">
-                <option value="all">All</option>
-              </select>
+          <!-- Filters toggle -->
+          <div class="input-row" style="margin-bottom: 8px;">
+            <button id="todoFiltersToggle" class="btn btn-secondary btn-icon">
+              ⚙️ Filters
+            </button>
+          </div>
+
+          <!-- Filters panel (hidden by default) -->
+          <div id="todoFiltersPanel" style="display: none;">
+            <div class="pill-row">
+              <div class="filter-pill">
+                <label for="todoSearchInput">Search</label>
+                <input id="todoSearchInput" type="text" placeholder="Text…" />
+              </div>
+              <div class="filter-pill">
+                <label for="todoFilterPriority">Priority</label>
+                <select id="todoFilterPriority">
+                  <option value="all">All</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div class="filter-pill">
+                <label for="todoFilterStatus">Status</label>
+                <select id="todoFilterStatus">
+                  <option value="all">All</option>
+                  <option value="open">Open</option>
+                  <option value="inprogress">In progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+              <div class="filter-pill">
+                <label for="todoFilterList">List</label>
+                <select id="todoFilterList">
+                  <option value="all">All</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -704,12 +761,14 @@
 
         <div class="card">
           <div class="input-grid">
-            <!-- List selection + new list -->
+            <!-- Row 1: list dropdown -->
+            <div class="input-row">
+              <label for="shoppingListSelect">List</label>
+              <select id="shoppingListSelect"></select>
+            </div>
+
+            <!-- Row 2: new list name + + button -->
             <div class="input-row-inline">
-              <div class="input-row">
-                <label for="shoppingListSelect">List</label>
-                <select id="shoppingListSelect"></select>
-              </div>
               <div class="input-row">
                 <label for="shoppingListName">New list</label>
                 <input id="shoppingListName" type="text" placeholder="e.g. Weekly, Work…" />
@@ -719,13 +778,13 @@
               </div>
             </div>
 
-            <!-- Item -->
+            <!-- Row 3: item -->
             <div class="input-row">
               <label for="shoppingItemInput">Item</label>
               <input id="shoppingItemInput" type="text" placeholder="e.g. Chicken, yogurt, vegetables…" />
             </div>
 
-            <!-- Add button -->
+            <!-- Row 4: Add button -->
             <div class="input-row" style="align-items: flex-end;">
               <button id="addShoppingBtn" class="btn">➕ Add item</button>
             </div>
@@ -747,6 +806,14 @@
             <div class="card-title">Current workout</div>
           </div>
 
+          <!-- Favorite workouts grid -->
+          <div id="workoutFavoritesContainer">
+            <div id="workoutFavoritesEmpty" class="favorites-empty">
+              No favorites yet. Tap ★ on a logged workout to save it here.
+            </div>
+            <div id="workoutFavorites" class="favorites-grid"></div>
+          </div>
+
           <div class="input-grid">
             <div class="input-row">
               <label for="workoutName">Workout name</label>
@@ -763,11 +830,6 @@
                 <div id="workoutDurationLabel" class="empty-msg">–</div>
               </div>
             </div>
-
-            <div class="input-row">
-              <label for="workoutNotes">Notes</label>
-              <textarea id="workoutNotes" placeholder="Extra notes for this workout…"></textarea>
-            </div>
           </div>
 
           <div class="input-row-inline" style="margin-bottom: 8px;">
@@ -777,6 +839,14 @@
           </div>
 
           <div id="workoutExercises" class="list"></div>
+
+          <!-- Notes moved to bottom -->
+          <div class="input-grid">
+            <div class="input-row">
+              <label for="workoutNotes">Notes</label>
+              <textarea id="workoutNotes" placeholder="Extra notes for this workout…"></textarea>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -794,19 +864,7 @@
       <section class="page hidden" data-page="finance">
         <h2 class="section-title">Finances</h2>
 
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Accounts</div>
-            <button id="addAccountBtn" class="btn btn-secondary btn-icon">
-              ➕
-            </button>
-          </div>
-          <div id="noAccountsMsg" class="empty-msg">
-            No accounts yet. Add one above (e.g. THB main, BRL savings, USD).
-          </div>
-          <div id="accountsList" class="list"></div>
-        </div>
-
+        <!-- New transaction card FIRST -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">New transaction</div>
@@ -881,6 +939,20 @@
           </div>
           <div id="financeList" class="list"></div>
         </div>
+
+        <!-- Accounts card moved to bottom -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Accounts</div>
+            <button id="addAccountBtn" class="btn btn-secondary btn-icon">
+              ➕
+            </button>
+          </div>
+          <div id="noAccountsMsg" class="empty-msg">
+            No accounts yet. Add one above (e.g. THB main, BRL savings, USD).
+          </div>
+          <div id="accountsList" class="list"></div>
+        </div>
       </section>
 
       <!-- NOTES (placeholder) -->
@@ -905,11 +977,11 @@
     </main>
   </div>
   <script>
-    // MyHub v0.7.1 – single-file front-end logic
+    // MyHub v0.7.2 – single-file front-end logic
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-    const STORAGE_KEY = "myhub-state-v07-1";
+    const STORAGE_KEY = "myhub-state-v07-2";
 
     function formatDate(iso) {
       if (!iso) return "No date";
@@ -948,6 +1020,7 @@
       shoppingItems: [],
       // Workouts
       workouts: [],
+      favoriteWorkouts: [],
       // Finance
       accounts: [],
       finance: [],
@@ -1070,6 +1143,8 @@
     const todoFilterPriority = $("todoFilterPriority");
     const todoFilterStatus = $("todoFilterStatus");
     const todoFilterList = $("todoFilterList");
+    const todoFiltersToggle = $("todoFiltersToggle");
+    const todoFiltersPanel = $("todoFiltersPanel");
 
     function getActiveTodoListId() {
       return todoListSelect?.value || (state.todoLists[0] && state.todoLists[0].id);
@@ -1360,6 +1435,13 @@
     todoFilterStatus?.addEventListener("change", renderTodos);
     todoFilterList?.addEventListener("change", renderTodos);
 
+    if (todoFiltersToggle && todoFiltersPanel) {
+      todoFiltersToggle.addEventListener("click", () => {
+        const visible = todoFiltersPanel.style.display === "block";
+        todoFiltersPanel.style.display = visible ? "none" : "block";
+      });
+    }
+
     function addTodoFromHome(text) {
       const listId = state.todoLists[0]?.id;
       if (!listId) return;
@@ -1598,6 +1680,8 @@
     const startWorkoutBtn = $("startWorkoutBtn");
     const saveWorkoutBtn = $("saveWorkoutBtn");
     const addExerciseRowBtn = $("addExerciseRowBtn");
+    const workoutFavoritesEl = $("workoutFavorites");
+    const workoutFavoritesEmptyEl = $("workoutFavoritesEmpty");
 
     let currentWorkoutStartTime = null;
 
@@ -1754,17 +1838,87 @@
       state.workouts.unshift(workout);
       saveState();
       renderWorkouts();
+      renderWorkoutFavorites();
       resetCurrentWorkoutUI();
     }
 
     saveWorkoutBtn?.addEventListener("click", saveCurrentWorkout);
     addExerciseRowBtn?.addEventListener("click", () => createExerciseRow());
 
+    function isWorkoutFavorite(id) {
+      return state.favoriteWorkouts.some((fw) => fw.templateId === id);
+    }
+
+    function toggleFavoriteWorkout(workout) {
+      const idx = state.favoriteWorkouts.findIndex(
+        (fw) => fw.templateId === workout.id
+      );
+      if (idx >= 0) {
+        state.favoriteWorkouts.splice(idx, 1);
+      } else {
+        const template = {
+          templateId: workout.id,
+          name: workout.name,
+          exercises: workout.exercises || []
+        };
+        state.favoriteWorkouts.unshift(template);
+        if (state.favoriteWorkouts.length > 6) {
+          state.favoriteWorkouts.length = 6;
+        }
+      }
+      saveState();
+      renderWorkouts();
+      renderWorkoutFavorites();
+    }
+
+    function loadWorkoutTemplate(template) {
+      if (!template) return;
+      if (workoutNameInput) workoutNameInput.value = template.name || "";
+      if (workoutExercisesEl) {
+        workoutExercisesEl.innerHTML = "";
+        const exs = template.exercises || [];
+        if (exs.length) {
+          exs.forEach((ex) => createExerciseRow(ex));
+        } else {
+          for (let i = 0; i < 8; i++) createExerciseRow();
+        }
+      }
+      currentWorkoutStartTime = null;
+      if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
+      if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
+      if (workoutNotesInput) workoutNotesInput.value = "";
+    }
+
+    function renderWorkoutFavorites() {
+      if (!workoutFavoritesEl || !workoutFavoritesEmptyEl) return;
+      const favs = state.favoriteWorkouts || [];
+
+      workoutFavoritesEl.innerHTML = "";
+
+      if (!favs.length) {
+        workoutFavoritesEmptyEl.style.display = "block";
+        return;
+      }
+      workoutFavoritesEmptyEl.style.display = "none";
+
+      favs.forEach((fw) => {
+        const card = document.createElement("div");
+        card.className = "favorite-card";
+        card.textContent = fw.name || "Unnamed workout";
+        card.addEventListener("click", () => loadWorkoutTemplate(fw));
+        workoutFavoritesEl.appendChild(card);
+      });
+    }
+
     function deleteWorkout(id) {
       if (!confirmDelete()) return;
       state.workouts = state.workouts.filter((w) => w.id !== id);
+      state.favoriteWorkouts = state.favoriteWorkouts.filter(
+        (fw) => fw.templateId !== id
+      );
       saveState();
       renderWorkouts();
+      renderWorkoutFavorites();
     }
 
     function renderWorkouts() {
@@ -1829,12 +1983,19 @@
         const actions = document.createElement("div");
         actions.className = "item-actions";
 
+        const favBtn = document.createElement("button");
+        favBtn.className = "icon-btn";
+        favBtn.textContent = isWorkoutFavorite(w.id) ? "★" : "☆";
+        favBtn.title = "Toggle favorite template";
+        favBtn.addEventListener("click", () => toggleFavoriteWorkout(w));
+
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete workout";
         delBtn.addEventListener("click", () => deleteWorkout(w.id));
 
+        actions.appendChild(favBtn);
         actions.appendChild(delBtn);
 
         item.appendChild(main);
@@ -2189,7 +2350,7 @@
       loadState();
 
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.7.1";
+      if (verEl) verEl.textContent = "0.7.2";
 
       setupNav();
 
@@ -2200,6 +2361,7 @@
       renderShopping();
 
       renderWorkouts();
+      renderWorkoutFavorites();
       renderAccounts();
       renderFinance();
 
