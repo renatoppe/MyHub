@@ -1,494 +1,149 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>MyHub – Personal OS</title>
+  <meta charset="utf-8" />
+  <title>MyHub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#050816" />
-
   <style>
     :root {
-      --bg: #050816;
-      --bg-soft: #0c1020;
-      --bg-card: #11152a;
-      --bg-card-soft: #181c35;
-      --accent: #4f8dff;
-      --accent-soft: rgba(79, 141, 255, 0.25);
-      --accent-strong: #7bb0ff;
-      --danger: #ff4d6a;
-      --text: #f7f7ff;
-      --text-soft: #b5b9d9;
-      --border-subtle: #262a4a;
-      --radius-card: 18px;
-      --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.65);
+      --bg: #050608;
+      --bg-elevated: #11131b;
+      --bg-elevated-soft: #151826;
+      --accent: #4caf50;
+      --accent-soft: rgba(76, 175, 80, 0.18);
+      --accent-alt: #00bcd4;
+      --danger: #f44336;
+      --text: #f5f5f5;
+      --text-muted: #a0a4b8;
+      --border-subtle: #26293a;
+      --radius-lg: 16px;
+      --radius-sm: 8px;
     }
 
     * {
       box-sizing: border-box;
     }
 
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
-      background: radial-gradient(circle at top, #151b3d 0, #050816 55%);
+      background: radial-gradient(circle at top, #151827 0, #050608 45%);
       color: var(--text);
+      min-height: 100vh;
     }
 
-    body {
+    .app {
       display: flex;
       min-height: 100vh;
-      overflow: hidden;
-    }
-
-    /* Layout */
-
-    .app-shell {
-      display: flex;
-      width: 100%;
-      height: 100vh;
-      max-width: 1280px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
     .sidebar {
       width: 70px;
-      background: linear-gradient(180deg, #050816 0, #050816 40%, #020510 100%);
-      border-right: 1px solid rgba(255, 255, 255, 0.04);
-      padding: 12px 8px;
+      background: linear-gradient(180deg, #11131b 0%, #050608 100%);
+      border-right: 1px solid var(--border-subtle);
+      padding: 16px 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      position: relative;
     }
 
-    .sidebar-title {
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      font-size: 12px;
-      text-transform: uppercase;
-      margin-bottom: 4px;
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      background: radial-gradient(circle at 20% 0, #00e676, #00bcd4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      color: #020308;
+      box-shadow: 0 0 20px rgba(0, 188, 212, 0.6);
     }
 
-    .sidebar-section-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-soft);
-      margin-top: 6px;
-      margin-bottom: 2px;
-    }
-
-    .sidebar-nav {
+    .nav {
+      margin-top: 8px;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-bottom: 4px;
+      flex: 1;
     }
 
     .nav-item {
-      width: 46px;
-      height: 46px;
+      width: 44px;
+      height: 44px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: radial-gradient(circle at 30% 0, #202749 0, #080b18 55%);
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-muted);
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      color: var(--text);
       font-size: 22px;
-      position: relative;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55);
-      transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
-        background 0.18s ease;
-    }
-
-    .nav-item::after {
-      content: attr(data-label);
-      position: absolute;
-      left: 54px;
-      white-space: nowrap;
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(8, 10, 26, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      color: var(--text-soft);
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-4px);
-      transition:
-        opacity 0.18s ease,
-        transform 0.18s ease;
-      z-index: 10;
-    }
-
-    .nav-item:hover::after {
-      opacity: 1;
-      transform: translateX(0);
+      cursor: pointer;
+      transition: 0.18s ease;
     }
 
     .nav-item:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.55);
-      border-color: var(--accent-soft);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--accent-alt);
+      transform: translateY(-1px);
     }
 
-    .nav-active {
-      border-color: var(--accent);
-      box-shadow:
-        0 0 0 3px rgba(79, 141, 255, 0.25),
-        0 12px 30px rgba(12, 22, 65, 0.9);
-      background: radial-gradient(circle at 25% 0, #3354a8 0, #0b1638 55%);
+    .nav-item.nav-active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
     }
 
-    .sidebar-bottom {
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-      font-size: 10px;
-      color: var(--text-soft);
+    .version {
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0.7;
     }
-
-    .version-pill {
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(8, 12, 32, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    /* Main content */
 
     .main {
       flex: 1;
-      padding: 14px 16px 18px;
-      overflow-y: auto;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    .topbar-left {
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 16px;
     }
 
-    .topbar-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .topbar-sub {
-      font-size: 12px;
-      color: var(--text-soft);
-    }
-
-    .topbar-chip {
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(5, 9, 24, 0.9);
-      padding: 7px 12px;
-      font-size: 11px;
-      color: var(--text-soft);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .topbar-chip span {
-      font-size: 14px;
-    }
-
-    /* Cards */
-
-    .card {
-      background: radial-gradient(circle at top left, #202747 0, #11152a 45%);
-      border-radius: var(--radius-card);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      box-shadow: var(--shadow-card);
-      padding: 14px 14px 16px;
-      margin-bottom: 16px;
-    }
-
-    .card-header {
+    .header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
-    }
-
-    .card-title {
-      display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .card-title-icon {
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 0, #4f8dff 0, #1b2147 60%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
-
-    .card-subtitle {
-      font-size: 11px;
-      color: var(--text-soft);
-    }
-
-    .card-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .badge-soft {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: rgba(8, 10, 26, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      color: var(--text-soft);
-    }
-
-    .icon-btn {
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(9, 13, 32, 0.9);
-      color: var(--text);
-      padding: 6px;
-      font-size: 15px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 30px;
-      transition:
-        background 0.16s ease,
-        transform 0.16s ease,
-        border-color 0.16s ease;
-    }
-
-    .icon-btn:hover {
-      background: rgba(18, 24, 58, 0.95);
-      transform: translateY(-1px);
-      border-color: var(--accent-soft);
-    }
-
-    .icon-btn.danger {
-      border-color: rgba(255, 77, 106, 0.6);
-      color: #ffcfd9;
-      background: rgba(61, 10, 21, 0.9);
-    }
-
-    .icon-btn.danger:hover {
-      background: rgba(101, 18, 36, 0.95);
-    }
-
-    /* Inputs */
-
-    .input-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .input {
-      flex: 1;
-      min-width: 0;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(5, 8, 23, 0.96);
-      color: var(--text);
       padding: 8px 12px;
-      font-size: 13px;
-      outline: none;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(90deg, #141827, #0b0d14);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
     }
 
-    .input::placeholder {
-      color: rgba(181, 185, 217, 0.6);
+    #pageTitle {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.03em;
     }
 
-    select.input {
-      padding-right: 32px;
-      appearance: none;
-      background-image: linear-gradient(45deg, transparent 50%, #6972b8 50%),
-        linear-gradient(135deg, #6972b8 50%, transparent 50%);
-      background-position:
-        calc(100% - 14px) 52%,
-        calc(100% - 9px) 52%;
-      background-size: 5px 5px, 5px 5px;
-      background-repeat: no-repeat;
-    }
-
-    .btn-primary {
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, #4f8dff, #7b9cff);
-      color: white;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(24, 66, 153, 0.8);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-width: 80px;
-      transition:
-        transform 0.16s ease,
-        box-shadow 0.16s ease,
-        filter 0.16s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.05);
-      box-shadow: 0 14px 30px rgba(24, 66, 153, 0.95);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-      box-shadow: 0 6px 16px rgba(24, 66, 153, 0.8);
-    }
-
-    .align-right {
-      margin-left: auto;
-    }
-
-    /* Lists */
-
-    .item {
-      border-radius: 14px;
-      border: 1px solid var(--border-subtle);
-      background: linear-gradient(120deg, #11152a 0, #171b33 45%, #101425 100%);
-      padding: 9px 9px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 6px;
-    }
-
-    .item-main {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .item-checkbox {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .item-checkbox input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .item-text {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .item-title {
-      font-size: 14px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
-    }
-
-    .item-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      font-size: 11px;
-    }
-
-    .item-actions {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .tag {
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: rgba(10, 13, 34, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      color: var(--text-soft);
-    }
-
-    .tag-income {
-      border-color: rgba(53, 199, 119, 0.6);
-      color: #d6ffe7;
-      background: rgba(10, 49, 31, 0.92);
-    }
-
-    .tag-expense {
-      border-color: rgba(255, 77, 106, 0.6);
-      color: #ffd6de;
-      background: rgba(61, 10, 21, 0.9);
-    }
-
-    .selected-account {
-      box-shadow:
-        0 0 0 2px rgba(79, 141, 255, 0.9),
-        0 12px 34px rgba(12, 22, 65, 0.9);
-    }
-
-    .empty-msg {
+    .header-sub {
       font-size: 12px;
-      color: var(--text-soft);
-      margin-top: 4px;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-    }
-
-    .mt-8 {
-      margin-top: 8px;
-    }
-
-    .mt-12 {
-      margin-top: 12px;
+      color: var(--text-muted);
     }
 
     .page {
+      flex: 1;
+      border-radius: var(--radius-lg);
+      background: rgba(8, 10, 18, 0.96);
+      border: 1px solid var(--border-subtle);
+      padding: 16px;
       display: none;
+      overflow-y: auto;
     }
 
     .page.active {
@@ -499,478 +154,689 @@
       display: none !important;
     }
 
-    @media (max-width: 768px) {
-      .app-shell {
-        max-width: 100%;
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .section-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .card {
+      border-radius: var(--radius-lg);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #151826;
+      border: 1px solid #26293a;
+      color: var(--text-muted);
+    }
+
+    .chip-highlight {
+      background: rgba(0, 188, 212, 0.12);
+      color: #e0f7fa;
+      border-color: rgba(0, 188, 212, 0.5);
+    }
+
+    .input-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .input-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .input-row-inline {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-row-inline > * {
+      flex: 1;
+    }
+
+    label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 9px;
+      border-radius: 999px;
+      border: 1px solid #26293a;
+      background: #101320;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: 0.16s ease;
+    }
+
+    textarea {
+      border-radius: 10px;
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent-alt);
+      box-shadow: 0 0 0 1px rgba(0, 188, 212, 0.4);
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 8px 14px;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      transition: 0.16s ease;
+    }
+
+    .btn:hover {
+      background: rgba(76, 175, 80, 0.32);
+      transform: translateY(-1px);
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 188, 212, 0.12);
+      color: #b2ebf2;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 188, 212, 0.24);
+    }
+
+    .btn-icon {
+      padding-inline: 10px;
+      font-size: 16px;
+    }
+
+    .btn-danger {
+      background: rgba(244, 67, 54, 0.14);
+      color: #ffcdd2;
+    }
+
+    .btn-danger:hover {
+      background: rgba(244, 67, 54, 0.25);
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .empty-msg {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    .item {
+      border-radius: 12px;
+      padding: 8px 9px;
+      background: var(--bg-elevated-soft);
+      border: 1px solid #25283a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .item-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .item-checkbox {
+      flex-shrink: 0;
+    }
+
+    .item-checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .item-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .item-title {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .item-actions {
+      display: flex;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      border-radius: 999px;
+      border: none;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--accent-alt);
+    }
+
+    .icon-btn.danger {
+      color: #ff8a80;
+    }
+
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #181b2a;
+      color: var(--text-muted);
+    }
+
+    .tag-income {
+      background: rgba(76, 175, 80, 0.16);
+      color: #c8e6c9;
+    }
+
+    .tag-expense {
+      background: rgba(244, 67, 54, 0.16);
+      color: #ffcdd2;
+    }
+
+    .selected-account {
+      border-color: var(--accent-alt);
+      box-shadow: 0 0 0 1px rgba(0, 188, 212, 0.6);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .filter-pill {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid #26293a;
+      background: #121622;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .filter-pill label {
+      font-size: 11px;
+    }
+
+    .filter-pill select,
+    .filter-pill input {
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 999px;
+    }
+
+    @media (max-width: 800px) {
+      .app {
+        flex-direction: column;
       }
 
       .sidebar {
-        width: 60px;
-        padding-inline: 6px;
+        width: 100%;
+        height: 64px;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .nav {
+        flex-direction: row;
+        justify-content: center;
       }
 
       .main {
-        padding-inline: 10px;
+        padding: 10px;
       }
 
-      .card {
-        padding-inline: 10px;
+      .page {
+        padding: 12px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <!-- Sidebar -->
+  <div class="app">
     <aside class="sidebar">
-      <div class="sidebar-title">MYHUB</div>
-
-      <div class="sidebar-section-label">CORE</div>
-      <div class="sidebar-nav">
-        <div class="nav-item nav-active" data-page="home" data-label="Home">
-          🏠
-        </div>
-        <div class="nav-item" data-page="todo" data-label="To-Do">
-          ✅
-        </div>
-        <div class="nav-item" data-page="shopping" data-label="Shopping">
-          🛒
-        </div>
-        <div class="nav-item" data-page="workouts" data-label="Workouts">
-          🏋️
-        </div>
-        <div class="nav-item" data-page="finance" data-label="Finances">
-          💰
-        </div>
-      </div>
-
-      <div class="sidebar-section-label">NEXT</div>
-      <div class="sidebar-nav">
-        <div class="nav-item" data-page="notes" data-label="Notes">
-          📝
-        </div>
-        <div class="nav-item" data-page="meals" data-label="Meals">
-          🍽️
-        </div>
-        <div class="nav-item" data-page="calendar" data-label="Calendar">
-          📅
-        </div>
-        <div class="nav-item" data-page="analytics" data-label="Analytics">
-          📊
-        </div>
-      </div>
-
-      <div class="sidebar-bottom">
-        <div class="version-pill">
-          v<span id="appVersion">0.5.1</span>
-        </div>
-        <div>Local only</div>
-      </div>
+      <div class="logo">H</div>
+      <nav class="nav">
+        <button class="nav-item nav-active" data-page="home" title="Home">🏠</button>
+        <button class="nav-item" data-page="todo" title="To-Do">✅</button>
+        <button class="nav-item" data-page="shopping" title="Shopping">🛒</button>
+        <button class="nav-item" data-page="workouts" title="Workouts">🏋️</button>
+        <button class="nav-item" data-page="finance" title="Finances">💰</button>
+        <button class="nav-item" data-page="notes" title="Notes">📝</button>
+        <button class="nav-item" data-page="meals" title="Meals">🍽️</button>
+        <button class="nav-item" data-page="calendar" title="Calendar">📅</button>
+        <button class="nav-item" data-page="analytics" title="Analytics">📊</button>
+      </nav>
+      <div class="version">v<span id="appVersion">0.6.0</span></div>
     </aside>
 
-    <!-- Main -->
     <main class="main">
-      <header class="topbar">
-        <div class="topbar-left">
-          <div class="topbar-title" id="pageTitle">Home</div>
-          <div class="topbar-sub">Your personal hub</div>
-        </div>
-        <div class="topbar-chip">
-          <span>⚡</span> PWA · Offline-first
-        </div>
+      <header class="header">
+        <h1 id="pageTitle">Home</h1>
+        <div class="header-sub">MyHub – your personal hub</div>
       </header>
 
-      <!-- HOME PAGE -->
+      <!-- HOME -->
       <section class="page active" data-page="home">
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">📆</div>
-                <span>Today</span>
-              </div>
-              <div class="card-subtitle">
-                Quick entry to your main list.
-              </div>
-            </div>
+            <div class="card-title">Quick task</div>
           </div>
-
-          <div class="mt-8">
+          <p class="section-note">
+            Add a quick personal task. It will go to your first to-do list.
+          </p>
+          <div class="input-grid">
             <div class="input-row">
-              <input
-                id="homeQuickTaskInput"
-                class="input"
-                placeholder="Quick task (goes to Personal list)…"
-              />
-              <button id="homeQuickTaskBtn" class="btn-primary">
-                + Add
-              </button>
+              <label for="homeQuickTaskInput">Task</label>
+              <input id="homeQuickTaskInput" type="text" placeholder="e.g. Buy vegetables, send email…" />
             </div>
           </div>
+          <button id="homeQuickTaskBtn" class="btn">
+            ➕ Add quick task
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Overview</div>
+          </div>
+          <div class="chip-row">
+            <span class="chip">✅ To-do</span>
+            <span class="chip">🛒 Shopping</span>
+            <span class="chip">🏋️ Workouts</span>
+            <span class="chip">💰 Finance</span>
+            <span class="chip chip-highlight">More coming soon…</span>
+          </div>
+          <p class="section-note">
+            Use the icons on the left to move between areas. Everything stays offline on your device.
+          </p>
         </div>
       </section>
 
-      <!-- TO-DO PAGE -->
+      <!-- TO-DO -->
       <section class="page hidden" data-page="todo">
+        <h2 class="section-title">To-do lists</h2>
+        <p class="section-note">
+          Create different lists (work, personal, projects). Tasks are grouped by list, priority and due date.
+        </p>
+
         <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">✅</div>
-                <span>To-Do</span>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="todoListSelect">List</label>
+                <select id="todoListSelect"></select>
               </div>
-              <div class="card-subtitle">
-                Multiple lists with priorities & dates.
+              <div class="input-row">
+                <label for="todoListName">New list</label>
+                <input id="todoListName" type="text" placeholder="e.g. Work, Personal…" />
+              </div>
+              <div class="input-row" style="align-self: flex-end;">
+                <button id="todoNewListBtn" class="btn btn-secondary btn-icon">➕</button>
               </div>
             </div>
-            <div class="card-actions">
-              <span class="badge-soft">v0.5.1</span>
+
+            <div class="input-row">
+              <label for="todoTitleInput">Task</label>
+              <input id="todoTitleInput" type="text" placeholder="What do you need to do?" />
+            </div>
+
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="todoPrioritySelect">Priority</label>
+                <select id="todoPrioritySelect">
+                  <option value="high">High</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div class="input-row">
+                <label for="todoDueDate">Due date</label>
+                <input id="todoDueDate" type="date" />
+              </div>
+              <div class="input-row" style="align-self: flex-end;">
+                <button id="addTodoBtn" class="btn btn-icon">➕</button>
+              </div>
             </div>
           </div>
 
-          <!-- List selector & new list -->
-          <div class="input-row">
-            <select id="todoListSelect" class="input"></select>
-          </div>
-          <div class="input-row">
-            <input
-              id="todoListName"
-              class="input"
-              placeholder="New list name…"
-            />
-            <button id="todoNewListBtn" class="btn-primary">+ List</button>
-          </div>
-
-          <!-- Task input (stacked) -->
-          <div class="input-row">
-            <input
-              id="todoTitleInput"
-              class="input"
-              placeholder="New task…"
-            />
-          </div>
-          <div class="input-row">
-            <select id="todoPrioritySelect" class="input">
-              <option value="medium">Medium priority</option>
-              <option value="high">High priority</option>
-              <option value="low">Low priority</option>
-            </select>
-            <input
-              id="todoDueDate"
-              type="date"
-              class="input"
-            />
-            <button id="addTodoBtn" class="btn-primary align-right">
-              + Add
-            </button>
+          <div class="pill-row">
+            <div class="filter-pill">
+              <label for="todoSearchInput">Search</label>
+              <input id="todoSearchInput" type="text" placeholder="Text…" />
+            </div>
+            <div class="filter-pill">
+              <label for="todoFilterPriority">Priority</label>
+              <select id="todoFilterPriority">
+                <option value="all">All</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="filter-pill">
+              <label for="todoFilterStatus">Status</label>
+              <select id="todoFilterStatus">
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="inprogress">In progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            <div class="filter-pill">
+              <label for="todoFilterList">List</label>
+              <select id="todoFilterList">
+                <option value="all">All</option>
+              </select>
+            </div>
           </div>
 
-          <!-- Filters -->
-          <div class="input-row">
-            <input
-              id="todoSearchInput"
-              class="input"
-              placeholder="Search tasks…"
-            />
-          </div>
-          <div class="input-row">
-            <select id="todoFilterPriority" class="input">
-              <option value="all">All priorities</option>
-              <option value="high">High only</option>
-              <option value="medium">Medium only</option>
-              <option value="low">Low only</option>
-            </select>
-            <select id="todoFilterStatus" class="input">
-              <option value="all">All statuses</option>
-              <option value="open">Open only</option>
-              <option value="inprogress">In progress only</option>
-              <option value="done">Done only</option>
-            </select>
-            <select id="todoFilterList" class="input">
-              <option value="all">All lists</option>
-            </select>
-          </div>
-
-          <div id="todoList" class="mt-8"></div>
           <div id="noTodosMsg" class="empty-msg">
             No tasks yet. Add your first one above.
           </div>
+          <div id="todoList" class="list"></div>
         </div>
       </section>
 
-      <!-- SHOPPING PAGE -->
+      <!-- SHOPPING -->
       <section class="page hidden" data-page="shopping">
+        <h2 class="section-title">Shopping lists</h2>
+        <p class="section-note">
+          Organize different lists (weekly, work, Christmas…). You can drag to reorder and add notes per item.
+        </p>
+
         <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">🛒</div>
-                <span>Shopping</span>
-              </div>
-              <div class="card-subtitle">
-                Lists with notes & drag-and-drop.
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="shoppingListSelect">List</label>
+                <select id="shoppingListSelect"></select>
               </div>
             </div>
-            <div class="card-actions">
-              <span class="badge-soft">Tap 📝 on an item for notes</span>
+
+            <div class="input-row">
+              <label for="shoppingItemInput">Item</label>
+              <input id="shoppingItemInput" type="text" placeholder="e.g. Chicken, yogurt, vegetables…" />
+            </div>
+
+            <div class="input-row" style="align-self: flex-start;">
+              <button id="addShoppingBtn" class="btn btn-icon">➕</button>
             </div>
           </div>
 
-          <div class="input-row">
-            <select id="shoppingListSelect" class="input"></select>
-          </div>
-          <div class="input-row">
-            <input
-              id="shoppingItemInput"
-              class="input"
-              placeholder="New item… (Enter to add)"
-            />
-          </div>
-          <div class="input-row">
-            <button id="addShoppingBtn" class="btn-primary align-right">
-              + Add
-            </button>
-          </div>
-
-          <div id="shoppingList" class="mt-8"></div>
           <div id="shoppingEmptyMsg" class="empty-msg">
-            This list is empty. Add your first item above.
+            No items yet. Add something above.
           </div>
+          <div id="shoppingList" class="list"></div>
         </div>
       </section>
 
-      <!-- WORKOUTS PAGE -->
+      <!-- WORKOUTS -->
       <section class="page hidden" data-page="workouts">
+        <h2 class="section-title">Workouts</h2>
+        <p class="section-note">
+          Simple log for now. Later we’ll upgrade with exercises, sets, reps and analysis.
+        </p>
+
+        <div class="card">
+          <div class="input-grid">
+            <div class="input-row">
+              <label for="workoutName">Workout name</label>
+              <input id="workoutName" type="text" placeholder="e.g. Push day, Legs B…" />
+            </div>
+            <div class="input-row">
+              <label for="workoutNotes">Notes</label>
+              <textarea id="workoutNotes" placeholder="Extra notes for this workout…"></textarea>
+            </div>
+          </div>
+          <button id="addWorkoutBtn" class="btn">
+            ➕ Save workout
+          </button>
+        </div>
+
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">🏋️</div>
-                <span>Workouts</span>
-              </div>
-              <div class="card-subtitle">
-                Simple workout log (detailed table in a future version).
-              </div>
-            </div>
-            <div class="card-actions">
-              <span class="badge-soft">Log by day</span>
-            </div>
+            <div class="card-title">Logged workouts</div>
           </div>
-
-          <div class="input-row">
-            <input
-              id="workoutName"
-              class="input"
-              placeholder="Workout name (Push, Legs, Pull)…"
-            />
-          </div>
-          <div class="input-row">
-            <input
-              id="workoutNotes"
-              class="input"
-              placeholder="Notes (optional)…"
-            />
-            <button id="addWorkoutBtn" class="btn-primary">
-              + Add workout
-            </button>
-          </div>
-
-          <div id="workoutList" class="mt-8"></div>
           <div id="noWorkoutMsg" class="empty-msg">
             No workouts logged yet.
           </div>
+          <div id="workoutList" class="list"></div>
         </div>
       </section>
 
-      <!-- FINANCE PAGE -->
+      <!-- FINANCE -->
       <section class="page hidden" data-page="finance">
+        <h2 class="section-title">Finances</h2>
+        <p class="section-note">
+          Quick inputs now, analysis later. Choose an account, log income/expenses and see the monthly summary.
+        </p>
+
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">💰</div>
-                <span>Finances</span>
-              </div>
-              <div class="card-subtitle">
-                Quick inputs now, analysis later.
-              </div>
-            </div>
-            <div class="card-actions">
-              <span class="badge-soft">v0.5.1</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- New transaction card -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">➡️</div>
-                <span>New transaction</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="input-row">
-            <select id="financeAccount" class="input"></select>
-          </div>
-          <div class="input-row">
-            <select id="financeType" class="input">
-              <option value="expense">Expense (-)</option>
-              <option value="income">Income (+)</option>
-            </select>
-            <input
-              id="financeAmount"
-              class="input"
-              type="number"
-              step="0.01"
-              placeholder="Amount…"
-            />
-          </div>
-          <div class="input-row">
-            <input
-              id="financeCategory"
-              class="input"
-              placeholder="Category (e.g. Food, Transport)…"
-            />
-            <input
-              id="financeMethod"
-              class="input"
-              placeholder="Method (cash, card, scan)…"
-            />
-          </div>
-          <div class="input-row">
-            <input
-              id="financeDate"
-              class="input"
-              type="date"
-            />
-            <input
-              id="financeNote"
-              class="input"
-              placeholder="Note (optional)…"
-            />
-          </div>
-          <div class="input-row">
-            <button id="addFinanceBtn" class="btn-primary align-right">
-              + Add
+            <div class="card-title">Accounts</div>
+            <button id="addAccountBtn" class="btn btn-secondary btn-icon">
+              ➕
             </button>
           </div>
+          <p class="section-note">
+            Tap an account to focus. You can’t delete accounts that already have transactions.
+          </p>
+          <div id="noAccountsMsg" class="empty-msg">
+            No accounts yet. Add one above (e.g. THB main, BRL savings, USD).
+          </div>
+          <div id="accountsList" class="list"></div>
         </div>
 
-        <!-- Accounts summary -->
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">🏦</div>
-                <span>Accounts</span>
+            <div class="card-title">New transaction</div>
+          </div>
+
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="financeAccount">Account</label>
+                <select id="financeAccount"></select>
+              </div>
+              <div class="input-row">
+                <label for="financeType">Type</label>
+                <select id="financeType">
+                  <option value="expense" selected>Expense</option>
+                  <option value="income">Income</option>
+                </select>
               </div>
             </div>
-            <div class="card-actions">
-              <button id="addAccountBtn" class="btn-primary">
-                + Account
+
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="financeAmount">Amount</label>
+                <input id="financeAmount" type="number" step="0.01" min="0" placeholder="0.00" />
+              </div>
+              <div class="input-row">
+                <label for="financeDate">Date</label>
+                <input id="financeDate" type="date" />
+              </div>
+            </div>
+
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="financeCategory">Category</label>
+                <input id="financeCategory" type="text" placeholder="e.g. Food, Transport…" />
+              </div>
+              <div class="input-row">
+                <label for="financeMethod">Method</label>
+                <input id="financeMethod" type="text" placeholder="Cash, card, scan…" />
+              </div>
+            </div>
+
+            <div class="input-row">
+              <label for="financeNote">Note</label>
+              <input id="financeNote" type="text" placeholder="Optional note…" />
+            </div>
+
+            <div class="input-row" style="align-self: flex-start;">
+              <button id="addFinanceBtn" class="btn">
+                ➕ Add transaction
               </button>
             </div>
           </div>
 
-          <div id="accountsList" class="mt-8"></div>
-          <div id="noAccountsMsg" class="empty-msg">
-            No accounts yet. Add one with the button above.
-          </div>
-        </div>
-
-        <!-- Transactions -->
-        <div class="card" style="margin-bottom:0">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">📜</div>
-                <span>Transactions (selected account)</span>
-              </div>
+          <div class="pill-row">
+            <div class="filter-pill">
+              <label for="financeFilterCategory">Category filter</label>
+              <select id="financeFilterCategory">
+                <option value="all">All</option>
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Rent">Rent</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
-          <div id="financeList" class="mt-8"></div>
+
+          <div id="financeSummary" class="section-note">
+            <!-- Monthly summary text filled by JS -->
+          </div>
+
           <div id="noFinanceMsg" class="empty-msg">
-            No transactions for this account yet.
+            No transactions yet.
           </div>
+          <div id="financeList" class="list"></div>
         </div>
       </section>
 
-      <!-- PLACEHOLDER PAGES -->
+      <!-- NOTES (placeholder) -->
       <section class="page hidden" data-page="notes">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">📝</div>
-                <span>Notes</span>
-              </div>
-              <div class="card-subtitle">
-                Text & sketch notes coming in a future version.
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 class="section-title">Notes</h2>
+        <p class="section-note">
+          Coming soon: quick notes and free-hand notes so you can jot ideas fast.
+        </p>
       </section>
 
+      <!-- MEALS (placeholder) -->
       <section class="page hidden" data-page="meals">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">🍽️</div>
-                <span>Meals</span>
-              </div>
-              <div class="card-subtitle">
-                Placeholder for meal tracking & macros.
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 class="section-title">Meals</h2>
+        <p class="section-note">
+          Coming soon: meal tracking and macros estimation to match your recomposition goals.
+        </p>
       </section>
 
+      <!-- CALENDAR (placeholder) -->
       <section class="page hidden" data-page="calendar">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">📅</div>
-                <span>Calendar</span>
-              </div>
-              <div class="card-subtitle">
-                Future light calendar, linked to tasks & bills.
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 class="section-title">Calendar</h2>
+        <p class="section-note">
+          Coming soon: simple calendar with recurring bills and important personal reminders.
+        </p>
       </section>
 
+      <!-- ANALYTICS (placeholder) -->
       <section class="page hidden" data-page="analytics">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-title-icon">📊</div>
-                <span>Analytics</span>
-              </div>
-              <div class="card-subtitle">
-                Future cross-analysis of tasks, expenses, workouts, etc.
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 class="section-title">Analytics</h2>
+        <p class="section-note">
+          Coming soon: cross-analysis of expenses, workouts, weight and more.
+        </p>
       </section>
     </main>
   </div>
   <script>
-    // MyHub v0.5.1 – single-file front-end logic
+    // MyHub v0.6.0 – single-file front-end logic
 
     // ---------- Helpers ----------
     const $ = (id) => document.getElementById(id);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-    const STORAGE_KEY = "myhub-state-v04";
+    const STORAGE_KEY = "myhub-state-v06";
 
     function formatDate(iso) {
       if (!iso) return "No date";
@@ -1037,11 +903,11 @@
 
       $$(".page").forEach((el) => {
         if (el.dataset.page === page) {
-          el.classList.remove("hidden");
           el.classList.add("active");
+          el.classList.remove("hidden");
         } else {
-          el.classList.add("hidden");
           el.classList.remove("active");
+          el.classList.add("hidden");
         }
       });
 
@@ -1101,7 +967,7 @@
       });
     }
 
-    // ---------- To-do Lists ----------
+    // ---------- To-do ----------
     const todoListSelect = $("todoListSelect");
     const todoListNameInput = $("todoListName");
     const todoNewListBtn = $("todoNewListBtn");
@@ -1405,8 +1271,6 @@
 
     // ---------- Shopping ----------
     const shoppingListSelect = $("shoppingListSelect");
-    const shoppingListNameInput = $("shoppingListName"); // currently unused
-    const shoppingNewListBtn = $("shoppingNewListBtn"); // currently unused
     const shoppingItemInput = $("shoppingItemInput");
     const shoppingListEl = $("shoppingList");
     const shoppingEmptyMsg = $("shoppingEmptyMsg");
@@ -1474,7 +1338,7 @@
       renderShopping();
     }
 
-    function openModalShoppingNote(item, listId) {
+    function openModalShoppingNote(item) {
       const newNote = prompt("Note for this item:", item.note || "");
       if (newNote === null) return;
       item.note = newNote.trim();
@@ -1575,7 +1439,7 @@
         noteBtn.textContent = "📝";
         noteBtn.title = "Add / edit note";
         noteBtn.addEventListener("click", () =>
-          openModalShoppingNote(item, listId)
+          openModalShoppingNote(item)
         );
 
         const delBtn = document.createElement("button");
@@ -1700,6 +1564,8 @@
     const financeListEl = $("financeList");
     const noFinanceMsg = $("noFinanceMsg");
     const financeAccountSelect = $("financeAccount");
+    const financeSummaryEl = $("financeSummary");
+    const financeFilterCategory = $("financeFilterCategory");
 
     function renderAccounts() {
       if (!accountsListEl || !financeAccountSelect) return;
@@ -1890,12 +1756,37 @@
       renderFinance();
     });
 
+    financeFilterCategory?.addEventListener("change", renderFinance);
+
     function deleteFinance(id) {
       if (!confirmDelete()) return;
       state.finance = state.finance.filter((tx) => tx.id !== id);
       saveState();
       renderAccounts();
       renderFinance();
+    }
+
+    function getMonthlySummary(accountId) {
+      const now = new Date();
+      const m = now.getMonth();
+      const y = now.getFullYear();
+      let income = 0;
+      let expense = 0;
+
+      state.finance.forEach((tx) => {
+        if (accountId && tx.accountId !== accountId) return;
+        const d = new Date(tx.date);
+        if (d.getMonth() === m && d.getFullYear() === y) {
+          if (tx.type === "income") income += tx.amount;
+          else expense += tx.amount;
+        }
+      });
+
+      return {
+        income,
+        expense,
+        balance: income - expense
+      };
     }
 
     function renderFinance() {
@@ -1906,6 +1797,26 @@
         txs = txs.filter(
           (tx) => tx.accountId === state.activeFinanceAccountId
         );
+      }
+
+      const catFilter = financeFilterCategory?.value || "all";
+      if (catFilter !== "all") {
+        txs = txs.filter((tx) => (tx.category || "") === catFilter);
+      }
+
+      // Summary
+      if (financeSummaryEl) {
+        const summary = getMonthlySummary(state.activeFinanceAccountId);
+        if (state.activeFinanceAccountId && (summary.income || summary.expense)) {
+          financeSummaryEl.textContent =
+            `This month – Income: +${summary.income.toFixed(2)} ` +
+            `/ Expenses: -${summary.expense.toFixed(2)} ` +
+            `/ Balance: ${(summary.balance >= 0 ? "+" : "")}${summary.balance.toFixed(2)}`;
+        } else if (state.activeFinanceAccountId) {
+          financeSummaryEl.textContent = "This month – no transactions yet.";
+        } else {
+          financeSummaryEl.textContent = "Create an account to see the monthly summary.";
+        }
       }
 
       if (!txs.length) {
@@ -1994,7 +1905,7 @@
       loadState();
 
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.5.1";
+      if (verEl) verEl.textContent = "0.6.0";
 
       setupNav();
 
