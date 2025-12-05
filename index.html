@@ -373,6 +373,10 @@
       box-shadow: 0 6px 16px rgba(24, 66, 153, 0.8);
     }
 
+    .align-right {
+      margin-left: auto;
+    }
+
     /* Lists */
 
     .item {
@@ -558,7 +562,7 @@
 
       <div class="sidebar-bottom">
         <div class="version-pill">
-          v<span id="appVersion">0.4.2</span>
+          v<span id="appVersion">0.5.1</span>
         </div>
         <div>Local only</div>
       </div>
@@ -569,7 +573,7 @@
       <header class="topbar">
         <div class="topbar-left">
           <div class="topbar-title" id="pageTitle">Home</div>
-          <div class="topbar-sub">Your personal life hub · prototype build</div>
+          <div class="topbar-sub">Your personal hub</div>
         </div>
         <div class="topbar-chip">
           <span>⚡</span> PWA · Offline-first
@@ -583,76 +587,20 @@
             <div>
               <div class="card-title">
                 <div class="card-title-icon">📆</div>
-                <span>MyHub Overview</span>
+                <span>Today</span>
               </div>
               <div class="card-subtitle">
-                v0.4.2 – prototype build
+                Quick entry to your main list.
               </div>
             </div>
           </div>
 
-          <div class="grid-2 mt-8">
-            <div class="card" style="margin-bottom:0">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">
-                    <div class="card-title-icon">📍</div>
-                    <span>Today</span>
-                  </div>
-                  <div class="card-subtitle">
-                    Quick glance at tasks, spending, and workouts. (Stats
-                    coming soon.)
-                  </div>
-                </div>
-              </div>
-              <p class="card-subtitle">
-                v0.5 will show:
-              </p>
-              <ul class="card-subtitle">
-                <li>Tasks due today across all lists</li>
-                <li>Money spent today / this week</li>
-                <li>Last workout and next planned one</li>
-              </ul>
-            </div>
-
-            <div class="card" style="margin-bottom:0">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">
-                    <div class="card-title-icon">📚</div>
-                    <span>Sections</span>
-                  </div>
-                </div>
-              </div>
-              <ul class="card-subtitle">
-                <li><b>To-Do:</b> Multiple lists with priorities & due dates.</li>
-                <li><b>Shopping:</b> Lists with notes & drag-and-drop.</li>
-                <li><b>Workouts:</b> Simple log of workout days.</li>
-                <li><b>Finances:</b> Accounts & quick transactions.</li>
-              </ul>
-              <p class="card-subtitle">
-                Coming soon: Notes, Meal tracker, Calendar and Analytics.
-              </p>
-            </div>
-          </div>
-
-          <div class="mt-12">
-            <div class="card-header">
-              <div>
-                <div class="card-title">
-                  <div class="card-title-icon">⚡</div>
-                  <span>Quick task for today</span>
-                </div>
-                <div class="card-subtitle">
-                  Adds directly to your default personal to-do list.
-                </div>
-              </div>
-            </div>
+          <div class="mt-8">
             <div class="input-row">
               <input
                 id="homeQuickTaskInput"
                 class="input"
-                placeholder="Quick task (auto medium priority, no due date)…"
+                placeholder="Quick task (goes to Personal list)…"
               />
               <button id="homeQuickTaskBtn" class="btn-primary">
                 + Add
@@ -669,22 +617,22 @@
             <div>
               <div class="card-title">
                 <div class="card-title-icon">✅</div>
-                <span>To-Do Lists</span>
+                <span>To-Do</span>
               </div>
               <div class="card-subtitle">
-                Multiple lists, priorities, due dates & inline editing.
+                Multiple lists with priorities & dates.
               </div>
             </div>
             <div class="card-actions">
-              <span class="badge-soft">v0.4.2 · multi-list</span>
-              <button class="icon-btn" title="Search & filters focus">
-                🔍
-              </button>
+              <span class="badge-soft">v0.5.1</span>
             </div>
           </div>
 
+          <!-- List selector & new list -->
           <div class="input-row">
             <select id="todoListSelect" class="input"></select>
+          </div>
+          <div class="input-row">
             <input
               id="todoListName"
               class="input"
@@ -693,6 +641,7 @@
             <button id="todoNewListBtn" class="btn-primary">+ List</button>
           </div>
 
+          <!-- Task input (stacked) -->
           <div class="input-row">
             <input
               id="todoTitleInput"
@@ -711,11 +660,12 @@
               type="date"
               class="input"
             />
-            <button id="addTodoBtn" class="btn-primary">
+            <button id="addTodoBtn" class="btn-primary align-right">
               + Add
             </button>
           </div>
 
+          <!-- Filters -->
           <div class="input-row">
             <input
               id="todoSearchInput"
@@ -755,10 +705,10 @@
             <div>
               <div class="card-title">
                 <div class="card-title-icon">🛒</div>
-                <span>Shopping Lists</span>
+                <span>Shopping</span>
               </div>
               <div class="card-subtitle">
-                Multiple lists with notes and drag & drop ordering.
+                Lists with notes & drag-and-drop.
               </div>
             </div>
             <div class="card-actions">
@@ -768,23 +718,18 @@
 
           <div class="input-row">
             <select id="shoppingListSelect" class="input"></select>
-            <input
-              id="shoppingListName"
-              class="input"
-              placeholder="New shopping list…"
-            />
-            <button id="shoppingNewListBtn" class="btn-primary">
-              + List
-            </button>
           </div>
-
           <div class="input-row">
             <input
               id="shoppingItemInput"
               class="input"
               placeholder="New item… (Enter to add)"
             />
-            <button id="addShoppingBtn" class="btn-primary">+ Add</button>
+          </div>
+          <div class="input-row">
+            <button id="addShoppingBtn" class="btn-primary align-right">
+              + Add
+            </button>
           </div>
 
           <div id="shoppingList" class="mt-8"></div>
@@ -804,12 +749,11 @@
                 <span>Workouts</span>
               </div>
               <div class="card-subtitle">
-                Simple workout log. Future versions will add exercise rows and
-                analysis.
+                Simple workout log (detailed table in a future version).
               </div>
             </div>
             <div class="card-actions">
-              <span class="badge-soft">Prototype log</span>
+              <span class="badge-soft">Log by day</span>
             </div>
           </div>
 
@@ -817,7 +761,7 @@
             <input
               id="workoutName"
               class="input"
-              placeholder="Workout name (e.g. Push, Legs, Pull)…"
+              placeholder="Workout name (Push, Legs, Pull)…"
             />
           </div>
           <div class="input-row">
@@ -848,8 +792,80 @@
                 <span>Finances</span>
               </div>
               <div class="card-subtitle">
-                Track expenses & income by account. Each account behaves like a
-                separate list.
+                Quick inputs now, analysis later.
+              </div>
+            </div>
+            <div class="card-actions">
+              <span class="badge-soft">v0.5.1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- New transaction card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">➡️</div>
+                <span>New transaction</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <select id="financeAccount" class="input"></select>
+          </div>
+          <div class="input-row">
+            <select id="financeType" class="input">
+              <option value="expense">Expense (-)</option>
+              <option value="income">Income (+)</option>
+            </select>
+            <input
+              id="financeAmount"
+              class="input"
+              type="number"
+              step="0.01"
+              placeholder="Amount…"
+            />
+          </div>
+          <div class="input-row">
+            <input
+              id="financeCategory"
+              class="input"
+              placeholder="Category (e.g. Food, Transport)…"
+            />
+            <input
+              id="financeMethod"
+              class="input"
+              placeholder="Method (cash, card, scan)…"
+            />
+          </div>
+          <div class="input-row">
+            <input
+              id="financeDate"
+              class="input"
+              type="date"
+            />
+            <input
+              id="financeNote"
+              class="input"
+              placeholder="Note (optional)…"
+            />
+          </div>
+          <div class="input-row">
+            <button id="addFinanceBtn" class="btn-primary align-right">
+              + Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Accounts summary -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-title-icon">🏦</div>
+                <span>Accounts</span>
               </div>
             </div>
             <div class="card-actions">
@@ -859,107 +875,25 @@
             </div>
           </div>
 
-          <div class="grid-2 mt-8">
+          <div id="accountsList" class="mt-8"></div>
+          <div id="noAccountsMsg" class="empty-msg">
+            No accounts yet. Add one with the button above.
+          </div>
+        </div>
+
+        <!-- Transactions -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
             <div>
-              <div class="card" style="margin-bottom:10px">
-                <div class="card-header">
-                  <div>
-                    <div class="card-title">
-                      <div class="card-title-icon">🏦</div>
-                      <span>Accounts</span>
-                    </div>
-                    <div class="card-subtitle">
-                      Tap an account to select it. The list on the right shows
-                      only that account’s transactions.
-                    </div>
-                  </div>
-                </div>
-                <div id="accountsList" class="mt-8"></div>
-                <div id="noAccountsMsg" class="empty-msg">
-                  No accounts yet. Add one with the button above.
-                </div>
+              <div class="card-title">
+                <div class="card-title-icon">📜</div>
+                <span>Transactions (selected account)</span>
               </div>
             </div>
-
-            <div>
-              <div class="card" style="margin-bottom:10px">
-                <div class="card-header">
-                  <div>
-                    <div class="card-title">
-                      <div class="card-title-icon">➡️</div>
-                      <span>New transaction</span>
-                    </div>
-                    <div class="card-subtitle">
-                      Amount, type, method & category. Saved under the selected
-                      account.
-                    </div>
-                  </div>
-                </div>
-
-                <div class="input-row">
-                  <select id="financeType" class="input">
-                    <option value="expense">Expense (-)</option>
-                    <option value="income">Income (+)</option>
-                  </select>
-                  <input
-                    id="financeAmount"
-                    class="input"
-                    type="number"
-                    step="0.01"
-                    placeholder="Amount…"
-                  />
-                </div>
-                <div class="input-row">
-                  <select id="financeAccount" class="input"></select>
-                </div>
-                <div class="input-row">
-                  <input
-                    id="financeCategory"
-                    class="input"
-                    placeholder="Category (e.g. Food, Transport)…"
-                  />
-                  <input
-                    id="financeMethod"
-                    class="input"
-                    placeholder="Method (cash, card, scan)…"
-                  />
-                </div>
-                <div class="input-row">
-                  <input
-                    id="financeDate"
-                    class="input"
-                    type="date"
-                  />
-                  <input
-                    id="financeNote"
-                    class="input"
-                    placeholder="Note (optional)…"
-                  />
-                  <button id="addFinanceBtn" class="btn-primary">
-                    + Add
-                  </button>
-                </div>
-              </div>
-
-              <div class="card" style="margin-bottom:0">
-                <div class="card-header">
-                  <div>
-                    <div class="card-title">
-                      <div class="card-title-icon">📜</div>
-                      <span>Transactions (selected account)</span>
-                    </div>
-                    <div class="card-subtitle">
-                      This feed adjusts automatically when you tap a different
-                      account.
-                    </div>
-                  </div>
-                </div>
-                <div id="financeList" class="mt-8"></div>
-                <div id="noFinanceMsg" class="empty-msg">
-                  No transactions for this account yet.
-                </div>
-              </div>
-            </div>
+          </div>
+          <div id="financeList" class="mt-8"></div>
+          <div id="noFinanceMsg" class="empty-msg">
+            No transactions for this account yet.
           </div>
         </div>
       </section>
@@ -974,13 +908,10 @@
                 <span>Notes</span>
               </div>
               <div class="card-subtitle">
-                Quick text & freehand notes (coming soon).
+                Text & sketch notes coming in a future version.
               </div>
             </div>
           </div>
-          <p class="card-subtitle">
-            v0.5 will add a simple notes list and later a drawing/scribble pad.
-          </p>
         </div>
       </section>
 
@@ -993,13 +924,10 @@
                 <span>Meals</span>
               </div>
               <div class="card-subtitle">
-                Planned meal tracker & macros (future feature).
+                Placeholder for meal tracking & macros.
               </div>
             </div>
           </div>
-          <p class="card-subtitle">
-            Placeholder for future meal tracking and macro calculations.
-          </p>
         </div>
       </section>
 
@@ -1012,14 +940,10 @@
                 <span>Calendar</span>
               </div>
               <div class="card-subtitle">
-                Light personal calendar integrated with tasks & bills (future).
+                Future light calendar, linked to tasks & bills.
               </div>
             </div>
           </div>
-          <p class="card-subtitle">
-            Placeholder for a small internal calendar (not as noisy as Google
-            Calendar).
-          </p>
         </div>
       </section>
 
@@ -1032,20 +956,16 @@
                 <span>Analytics</span>
               </div>
               <div class="card-subtitle">
-                Future page to cross data between tasks, expenses, workouts,
-                etc.
+                Future cross-analysis of tasks, expenses, workouts, etc.
               </div>
             </div>
           </div>
-          <p class="card-subtitle">
-            Later this can show things like "spending vs workouts vs weight".
-          </p>
         </div>
       </section>
     </main>
   </div>
   <script>
-    // MyHub v0.4.2 – single-file front-end logic
+    // MyHub v0.5.1 – single-file front-end logic
 
     // ---------- Helpers ----------
     const $ = (id) => document.getElementById(id);
@@ -1485,8 +1405,8 @@
 
     // ---------- Shopping ----------
     const shoppingListSelect = $("shoppingListSelect");
-    const shoppingListNameInput = $("shoppingListName");
-    const shoppingNewListBtn = $("shoppingNewListBtn");
+    const shoppingListNameInput = $("shoppingListName"); // now unused but kept
+    const shoppingNewListBtn = $("shoppingNewListBtn); // might be undefined (we removed button)
     const shoppingItemInput = $("shoppingItemInput");
     const shoppingListEl = $("shoppingList");
     const shoppingEmptyMsg = $("shoppingEmptyMsg");
@@ -1510,24 +1430,6 @@
         shoppingListSelect.value = state.shoppingLists[0].id;
       }
     }
-
-    function addShoppingList() {
-      const name = shoppingListNameInput.value.trim();
-      if (!name) return;
-      const id = "shop-" + Date.now();
-      state.shoppingLists.push({
-        id,
-        name,
-        createdAt: new Date().toISOString()
-      });
-      saveState();
-      shoppingListNameInput.value = "";
-      renderShoppingListOptions();
-      shoppingListSelect.value = id;
-      renderShopping();
-    }
-
-    shoppingNewListBtn?.addEventListener("click", addShoppingList);
 
     function addShoppingItem() {
       const title = shoppingItemInput.value.trim();
@@ -1981,6 +1883,13 @@
       }
     });
 
+    financeAccountSelect?.addEventListener("change", () => {
+      state.activeFinanceAccountId = financeAccountSelect.value;
+      saveState();
+      renderAccounts();
+      renderFinance();
+    });
+
     function deleteFinance(id) {
       if (!confirmDelete()) return;
       state.finance = state.finance.filter((tx) => tx.id !== id);
@@ -2085,7 +1994,7 @@
       loadState();
 
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.4.2";
+      if (verEl) verEl.textContent = "0.5.1";
 
       setupNav();
 
