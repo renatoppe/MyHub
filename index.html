@@ -48,7 +48,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
+      gap: 10px;
+      transition: width 0.2s ease;
+    }
+
+    .sidebar.expanded {
+      width: 210px;
     }
 
     .logo {
@@ -65,17 +70,38 @@
       box-shadow: 0 0 20px rgba(0, 188, 212, 0.6);
     }
 
+    .nav-toggle {
+      border: none;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: 0.18s ease;
+    }
+
+    .nav-toggle:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--accent-alt);
+    }
+
     .nav {
-      margin-top: 8px;
+      margin-top: 6px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       flex: 1;
+      width: 100%;
     }
 
     .nav-item {
-      width: 44px;
-      height: 44px;
+      width: 100%;
       border-radius: 999px;
       border: none;
       outline: none;
@@ -84,9 +110,30 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       cursor: pointer;
       transition: 0.18s ease;
+      padding: 8px 0;
+      gap: 8px;
+    }
+
+    .nav-emoji {
+      flex-shrink: 0;
+    }
+
+    .nav-label {
+      display: none;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .sidebar.expanded .nav-item {
+      justify-content: flex-start;
+      padding-inline: 10px;
+    }
+
+    .sidebar.expanded .nav-label {
+      display: inline;
     }
 
     .nav-item:hover {
@@ -131,11 +178,6 @@
       letter-spacing: 0.03em;
     }
 
-    .header-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
     .page {
       flex: 1;
       border-radius: var(--radius-lg);
@@ -158,12 +200,6 @@
       margin: 0 0 10px;
       font-size: 15px;
       font-weight: 600;
-    }
-
-    .section-note {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
     }
 
     .card {
@@ -459,28 +495,46 @@
     /* Workout rows */
     .workout-row {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      padding: 6px 8px;
+      background: #101320;
     }
 
-    .workout-row input[type="text"],
-    .workout-row input[type="number"] {
+    .workout-row-top {
+      width: 100%;
+    }
+
+    .workout-row-bottom {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .workout-row-bottom input[type="number"] {
       padding: 6px 7px;
       font-size: 12px;
     }
 
-    .workout-row .workout-done {
+    .workout-row-bottom .workout-done {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
     }
 
-    .workout-row .icon-btn {
+    .workout-row-bottom .icon-btn {
       width: 26px;
       height: 26px;
       flex-shrink: 0;
       font-size: 14px;
+    }
+
+    @media (min-width: 900px) {
+      .sidebar.expanded {
+        width: 230px;
+      }
     }
   </style>
 </head>
@@ -488,24 +542,42 @@
   <div class="app">
     <aside class="sidebar">
       <div class="logo">H</div>
+      <button id="navToggle" class="nav-toggle" title="Expand menu">☰</button>
       <nav class="nav">
-        <button class="nav-item nav-active" data-page="home" title="Home">🏠</button>
-        <button class="nav-item" data-page="todo" title="To-Do">✅</button>
-        <button class="nav-item" data-page="shopping" title="Shopping">🛒</button>
-        <button class="nav-item" data-page="workouts" title="Workouts">🏋️</button>
-        <button class="nav-item" data-page="finance" title="Finances">💰</button>
-        <button class="nav-item" data-page="notes" title="Notes">📝</button>
-        <button class="nav-item" data-page="meals" title="Meals">🍽️</button>
-        <button class="nav-item" data-page="calendar" title="Calendar">📅</button>
-        <button class="nav-item" data-page="analytics" title="Analytics">📊</button>
+        <button class="nav-item nav-active" data-page="home" title="Home">
+          <span class="nav-emoji">🏠</span><span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" data-page="todo" title="To-Do">
+          <span class="nav-emoji">✅</span><span class="nav-label">To-Do</span>
+        </button>
+        <button class="nav-item" data-page="shopping" title="Shopping">
+          <span class="nav-emoji">🛒</span><span class="nav-label">Shopping</span>
+        </button>
+        <button class="nav-item" data-page="workouts" title="Workouts">
+          <span class="nav-emoji">🏋️</span><span class="nav-label">Workouts</span>
+        </button>
+        <button class="nav-item" data-page="finance" title="Finances">
+          <span class="nav-emoji">💰</span><span class="nav-label">Finances</span>
+        </button>
+        <button class="nav-item" data-page="notes" title="Notes">
+          <span class="nav-emoji">📝</span><span class="nav-label">Notes</span>
+        </button>
+        <button class="nav-item" data-page="meals" title="Meals">
+          <span class="nav-emoji">🍽️</span><span class="nav-label">Meals</span>
+        </button>
+        <button class="nav-item" data-page="calendar" title="Calendar">
+          <span class="nav-emoji">📅</span><span class="nav-label">Calendar</span>
+        </button>
+        <button class="nav-item" data-page="analytics" title="Analytics">
+          <span class="nav-emoji">📊</span><span class="nav-label">Analytics</span>
+        </button>
       </nav>
-      <div class="version">v<span id="appVersion">0.7.0</span></div>
+      <div class="version">v<span id="appVersion">0.7.1</span></div>
     </aside>
 
     <main class="main">
       <header class="header">
         <h1 id="pageTitle">Home</h1>
-        <div class="header-sub">MyHub – your personal hub</div>
       </header>
 
       <!-- HOME -->
@@ -514,9 +586,6 @@
           <div class="card-header">
             <div class="card-title">Quick task</div>
           </div>
-          <p class="section-note">
-            Add a quick personal task. It will go to your first to-do list.
-          </p>
           <div class="input-grid">
             <div class="input-row">
               <label for="homeQuickTaskInput">Task</label>
@@ -539,21 +608,16 @@
             <span class="chip">💰 Finance</span>
             <span class="chip chip-highlight">More coming soon…</span>
           </div>
-          <p class="section-note">
-            Use the icons on the left to move between areas. Everything stays offline on your device.
-          </p>
         </div>
       </section>
 
       <!-- TO-DO -->
       <section class="page hidden" data-page="todo">
         <h2 class="section-title">To-do lists</h2>
-        <p class="section-note">
-          Create different lists (work, personal, projects). Tasks are grouped by list, priority and due date.
-        </p>
 
         <div class="card">
           <div class="input-grid">
+            <!-- List selection + new list -->
             <div class="input-row-inline">
               <div class="input-row">
                 <label for="todoListSelect">List</label>
@@ -568,11 +632,13 @@
               </div>
             </div>
 
+            <!-- Task title -->
             <div class="input-row">
               <label for="todoTitleInput">Task</label>
               <input id="todoTitleInput" type="text" placeholder="What do you need to do?" />
             </div>
 
+            <!-- Priority + due date -->
             <div class="input-row-inline">
               <div class="input-row">
                 <label for="todoPrioritySelect">Priority</label>
@@ -586,9 +652,11 @@
                 <label for="todoDueDate">Due date</label>
                 <input id="todoDueDate" type="date" />
               </div>
-              <div class="input-row" style="align-self: flex-end;">
-                <button id="addTodoBtn" class="btn btn-icon">➕</button>
-              </div>
+            </div>
+
+            <!-- Add button row -->
+            <div class="input-row" style="align-items: flex-end;">
+              <button id="addTodoBtn" class="btn">➕ Add task</button>
             </div>
           </div>
 
@@ -633,26 +701,33 @@
       <!-- SHOPPING -->
       <section class="page hidden" data-page="shopping">
         <h2 class="section-title">Shopping lists</h2>
-        <p class="section-note">
-          Organize different lists (weekly, work, Christmas…). You can drag to reorder and add notes per item.
-        </p>
 
         <div class="card">
           <div class="input-grid">
+            <!-- List selection + new list -->
             <div class="input-row-inline">
               <div class="input-row">
                 <label for="shoppingListSelect">List</label>
                 <select id="shoppingListSelect"></select>
               </div>
+              <div class="input-row">
+                <label for="shoppingListName">New list</label>
+                <input id="shoppingListName" type="text" placeholder="e.g. Weekly, Work…" />
+              </div>
+              <div class="input-row" style="align-self: flex-end;">
+                <button id="shoppingNewListBtn" class="btn btn-secondary btn-icon">➕</button>
+              </div>
             </div>
 
+            <!-- Item -->
             <div class="input-row">
               <label for="shoppingItemInput">Item</label>
               <input id="shoppingItemInput" type="text" placeholder="e.g. Chicken, yogurt, vegetables…" />
             </div>
 
-            <div class="input-row" style="align-self: flex-start;">
-              <button id="addShoppingBtn" class="btn btn-icon">➕</button>
+            <!-- Add button -->
+            <div class="input-row" style="align-items: flex-end;">
+              <button id="addShoppingBtn" class="btn">➕ Add item</button>
             </div>
           </div>
 
@@ -666,9 +741,6 @@
       <!-- WORKOUTS -->
       <section class="page hidden" data-page="workouts">
         <h2 class="section-title">Workouts</h2>
-        <p class="section-note">
-          Plan and log your session with exercises, sets, reps, weight and total time.
-        </p>
 
         <div class="card">
           <div class="card-header">
@@ -684,11 +756,11 @@
             <div class="input-row-inline">
               <div class="input-row">
                 <label>Start</label>
-                <div id="workoutStartLabel" class="section-note">Not started</div>
+                <div id="workoutStartLabel" class="empty-msg">Not started</div>
               </div>
               <div class="input-row">
                 <label>Duration</label>
-                <div id="workoutDurationLabel" class="section-note">–</div>
+                <div id="workoutDurationLabel" class="empty-msg">–</div>
               </div>
             </div>
 
@@ -721,9 +793,6 @@
       <!-- FINANCE -->
       <section class="page hidden" data-page="finance">
         <h2 class="section-title">Finances</h2>
-        <p class="section-note">
-          Quick inputs now, analysis later. Choose an account, log income/expenses and see the monthly summary.
-        </p>
 
         <div class="card">
           <div class="card-header">
@@ -732,9 +801,6 @@
               ➕
             </button>
           </div>
-          <p class="section-note">
-            Tap an account to focus. You can’t delete accounts that already have transactions.
-          </p>
           <div id="noAccountsMsg" class="empty-msg">
             No accounts yet. Add one above (e.g. THB main, BRL savings, USD).
           </div>
@@ -788,7 +854,7 @@
               <input id="financeNote" type="text" placeholder="Optional note…" />
             </div>
 
-            <div class="input-row" style="align-self: flex-start;">
+            <div class="input-row" style="align-items: flex-end;">
               <button id="addFinanceBtn" class="btn">
                 ➕ Add transaction
               </button>
@@ -808,9 +874,7 @@
             </div>
           </div>
 
-          <div id="financeSummary" class="section-note">
-            <!-- Monthly summary text filled by JS -->
-          </div>
+          <div id="financeSummary" class="empty-msg"></div>
 
           <div id="noFinanceMsg" class="empty-msg">
             No transactions yet.
@@ -822,43 +886,30 @@
       <!-- NOTES (placeholder) -->
       <section class="page hidden" data-page="notes">
         <h2 class="section-title">Notes</h2>
-        <p class="section-note">
-          Coming soon: quick notes and free-hand notes so you can jot ideas fast.
-        </p>
       </section>
 
       <!-- MEALS (placeholder) -->
       <section class="page hidden" data-page="meals">
         <h2 class="section-title">Meals</h2>
-        <p class="section-note">
-          Coming soon: meal tracking and macros estimation to match your recomposition goals.
-        </p>
       </section>
 
       <!-- CALENDAR (placeholder) -->
       <section class="page hidden" data-page="calendar">
         <h2 class="section-title">Calendar</h2>
-        <p class="section-note">
-          Coming soon: simple calendar with recurring bills and important personal reminders.
-        </p>
       </section>
 
       <!-- ANALYTICS (placeholder) -->
       <section class="page hidden" data-page="analytics">
         <h2 class="section-title">Analytics</h2>
-        <p class="section-note">
-          Coming soon: cross-analysis of expenses, workouts, weight and more.
-        </p>
       </section>
     </main>
   </div>
   <script>
-    // MyHub v0.7.0 – single-file front-end logic
+    // MyHub v0.7.1 – single-file front-end logic
 
-    // ---------- Helpers ----------
     const $ = (id) => document.getElementById(id);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-    const STORAGE_KEY = "myhub-state-v07";
+    const STORAGE_KEY = "myhub-state-v07-1";
 
     function formatDate(iso) {
       if (!iso) return "No date";
@@ -969,6 +1020,13 @@
     }
 
     function setupNav() {
+      const sidebar = document.querySelector(".sidebar");
+      const navToggle = $("navToggle");
+
+      navToggle?.addEventListener("click", () => {
+        sidebar.classList.toggle("expanded");
+      });
+
       $$(".nav-item").forEach((btn) => {
         btn.addEventListener("click", () => {
           const page = btn.dataset.page;
@@ -1027,6 +1085,13 @@
           opt.textContent = list.name;
           sel.appendChild(opt);
         });
+
+        if (sel === todoFilterList) {
+          const allOpt = document.createElement("option");
+          allOpt.value = "all";
+          allOpt.textContent = "All";
+          sel.insertBefore(allOpt, sel.firstChild);
+        }
       });
 
       if (!state.todoLists.length) return;
@@ -1108,6 +1173,18 @@
           todo.dueDate = null;
         }
       }
+
+      const newPriority = prompt(
+        "Priority (high / medium / low):",
+        todo.priority
+      );
+      if (newPriority !== null) {
+        const p = newPriority.trim().toLowerCase();
+        if (["high", "medium", "low"].includes(p)) {
+          todo.priority = p;
+        }
+      }
+
       saveState();
       renderTodos();
     }
@@ -1277,7 +1354,7 @@
       });
     }
 
-    todoListSelect?.addEventListener("change", () => renderTodos());
+    todoListSelect?.addEventListener("change", renderTodos);
     todoSearchInput?.addEventListener("input", renderTodos);
     todoFilterPriority?.addEventListener("change", renderTodos);
     todoFilterStatus?.addEventListener("change", renderTodos);
@@ -1303,6 +1380,8 @@
 
     // ---------- Shopping ----------
     const shoppingListSelect = $("shoppingListSelect");
+    const shoppingListNameInput = $("shoppingListName");
+    const shoppingNewListBtn = $("shoppingNewListBtn");
     const shoppingItemInput = $("shoppingItemInput");
     const shoppingListEl = $("shoppingList");
     const shoppingEmptyMsg = $("shoppingEmptyMsg");
@@ -1326,6 +1405,20 @@
         shoppingListSelect.value = state.shoppingLists[0].id;
       }
     }
+
+    function addShoppingList() {
+      const name = shoppingListNameInput.value.trim();
+      if (!name) return;
+      const id = "shop-" + Date.now();
+      state.shoppingLists.push({ id, name, createdAt: new Date().toISOString() });
+      saveState();
+      shoppingListNameInput.value = "";
+      renderShoppingListOptions();
+      if (shoppingListSelect) shoppingListSelect.value = id;
+      renderShopping();
+    }
+
+    shoppingNewListBtn?.addEventListener("click", addShoppingList);
 
     function addShoppingItem() {
       const title = shoppingItemInput.value.trim();
@@ -1512,6 +1605,13 @@
       if (!workoutExercisesEl) return;
       const row = document.createElement("div");
       row.className = "workout-row";
+      row.dataset.note = "";
+
+      const top = document.createElement("div");
+      top.className = "workout-row-top";
+
+      const bottom = document.createElement("div");
+      bottom.className = "workout-row-bottom";
 
       const nameInput = document.createElement("input");
       nameInput.type = "text";
@@ -1544,7 +1644,6 @@
       noteBtn.className = "icon-btn";
       noteBtn.textContent = "📝";
       noteBtn.title = "Add note";
-      row.dataset.note = "";
 
       noteBtn.addEventListener("click", () => {
         const currentNote = row.dataset.note || "";
@@ -1566,12 +1665,16 @@
         }
       }
 
-      row.appendChild(nameInput);
-      row.appendChild(setsInput);
-      row.appendChild(repsInput);
-      row.appendChild(weightInput);
-      row.appendChild(doneCb);
-      row.appendChild(noteBtn);
+      top.appendChild(nameInput);
+
+      bottom.appendChild(setsInput);
+      bottom.appendChild(repsInput);
+      bottom.appendChild(weightInput);
+      bottom.appendChild(doneCb);
+      bottom.appendChild(noteBtn);
+
+      row.appendChild(top);
+      row.appendChild(bottom);
 
       workoutExercisesEl.appendChild(row);
     }
@@ -2086,7 +2189,7 @@
       loadState();
 
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.7.0";
+      if (verEl) verEl.textContent = "0.7.1";
 
       setupNav();
 
