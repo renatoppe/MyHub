@@ -456,30 +456,31 @@
       border-radius: 999px;
     }
 
-    @media (max-width: 800px) {
-      .app {
-        flex-direction: column;
-      }
+    /* Workout rows */
+    .workout-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
 
-      .sidebar {
-        width: 100%;
-        height: 64px;
-        flex-direction: row;
-        justify-content: space-between;
-      }
+    .workout-row input[type="text"],
+    .workout-row input[type="number"] {
+      padding: 6px 7px;
+      font-size: 12px;
+    }
 
-      .nav {
-        flex-direction: row;
-        justify-content: center;
-      }
+    .workout-row .workout-done {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
 
-      .main {
-        padding: 10px;
-      }
-
-      .page {
-        padding: 12px;
-      }
+    .workout-row .icon-btn {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -498,7 +499,7 @@
         <button class="nav-item" data-page="calendar" title="Calendar">📅</button>
         <button class="nav-item" data-page="analytics" title="Analytics">📊</button>
       </nav>
-      <div class="version">v<span id="appVersion">0.6.0</span></div>
+      <div class="version">v<span id="appVersion">0.7.0</span></div>
     </aside>
 
     <main class="main">
@@ -666,23 +667,44 @@
       <section class="page hidden" data-page="workouts">
         <h2 class="section-title">Workouts</h2>
         <p class="section-note">
-          Simple log for now. Later we’ll upgrade with exercises, sets, reps and analysis.
+          Plan and log your session with exercises, sets, reps, weight and total time.
         </p>
 
         <div class="card">
+          <div class="card-header">
+            <div class="card-title">Current workout</div>
+          </div>
+
           <div class="input-grid">
             <div class="input-row">
               <label for="workoutName">Workout name</label>
               <input id="workoutName" type="text" placeholder="e.g. Push day, Legs B…" />
             </div>
+
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label>Start</label>
+                <div id="workoutStartLabel" class="section-note">Not started</div>
+              </div>
+              <div class="input-row">
+                <label>Duration</label>
+                <div id="workoutDurationLabel" class="section-note">–</div>
+              </div>
+            </div>
+
             <div class="input-row">
               <label for="workoutNotes">Notes</label>
               <textarea id="workoutNotes" placeholder="Extra notes for this workout…"></textarea>
             </div>
           </div>
-          <button id="addWorkoutBtn" class="btn">
-            ➕ Save workout
-          </button>
+
+          <div class="input-row-inline" style="margin-bottom: 8px;">
+            <button id="startWorkoutBtn" class="btn btn-secondary">▶ Start workout</button>
+            <button id="saveWorkoutBtn" class="btn">💾 Finish & save</button>
+            <button id="addExerciseRowBtn" class="btn btn-secondary">➕ Add exercise row</button>
+          </div>
+
+          <div id="workoutExercises" class="list"></div>
         </div>
 
         <div class="card">
@@ -831,12 +853,12 @@
     </main>
   </div>
   <script>
-    // MyHub v0.6.0 – single-file front-end logic
+    // MyHub v0.7.0 – single-file front-end logic
 
     // ---------- Helpers ----------
     const $ = (id) => document.getElementById(id);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-    const STORAGE_KEY = "myhub-state-v06";
+    const STORAGE_KEY = "myhub-state-v07";
 
     function formatDate(iso) {
       if (!iso) return "No date";
@@ -847,6 +869,16 @@
 
     function confirmDelete() {
       return confirm("Delete this item? This action cannot be undone.");
+    }
+
+    function calcDurationMinutes(startIso, endIso) {
+      if (!startIso || !endIso) return null;
+      const s = new Date(startIso);
+      const e = new Date(endIso);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
+      const ms = e.getTime() - s.getTime();
+      if (ms <= 0) return null;
+      return Math.round(ms / 60000);
     }
 
     // ---------- State ----------
@@ -1465,31 +1497,165 @@
     // ---------- Workouts ----------
     const workoutListEl = $("workoutList");
     const noWorkoutMsg = $("noWorkoutMsg");
+    const workoutNameInput = $("workoutName");
+    const workoutNotesInput = $("workoutNotes");
+    const workoutExercisesEl = $("workoutExercises");
+    const workoutStartLabel = $("workoutStartLabel");
+    const workoutDurationLabel = $("workoutDurationLabel");
+    const startWorkoutBtn = $("startWorkoutBtn");
+    const saveWorkoutBtn = $("saveWorkoutBtn");
+    const addExerciseRowBtn = $("addExerciseRowBtn");
 
-    function addWorkout() {
-      const name = $("workoutName")?.value.trim();
-      const notes = $("workoutNotes")?.value.trim();
-      if (!name) return;
-      const w = {
+    let currentWorkoutStartTime = null;
+
+    function createExerciseRow(data) {
+      if (!workoutExercisesEl) return;
+      const row = document.createElement("div");
+      row.className = "workout-row";
+
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.placeholder = "Exercise";
+      nameInput.className = "ex-name";
+
+      const setsInput = document.createElement("input");
+      setsInput.type = "number";
+      setsInput.placeholder = "Sets";
+      setsInput.min = "0";
+      setsInput.className = "ex-sets";
+
+      const repsInput = document.createElement("input");
+      repsInput.type = "number";
+      repsInput.placeholder = "Reps";
+      repsInput.min = "0";
+      repsInput.className = "ex-reps";
+
+      const weightInput = document.createElement("input");
+      weightInput.type = "number";
+      weightInput.placeholder = "Weight";
+      weightInput.min = "0";
+      weightInput.className = "ex-weight";
+
+      const doneCb = document.createElement("input");
+      doneCb.type = "checkbox";
+      doneCb.className = "workout-done";
+
+      const noteBtn = document.createElement("button");
+      noteBtn.className = "icon-btn";
+      noteBtn.textContent = "📝";
+      noteBtn.title = "Add note";
+      row.dataset.note = "";
+
+      noteBtn.addEventListener("click", () => {
+        const currentNote = row.dataset.note || "";
+        const newNote = prompt("Note for this exercise:", currentNote);
+        if (newNote === null) return;
+        row.dataset.note = newNote.trim();
+        noteBtn.textContent = newNote.trim() ? "📝*" : "📝";
+      });
+
+      if (data) {
+        if (data.name) nameInput.value = data.name;
+        if (data.sets != null) setsInput.value = data.sets;
+        if (data.reps != null) repsInput.value = data.reps;
+        if (data.weight != null) weightInput.value = data.weight;
+        if (data.done) doneCb.checked = true;
+        if (data.note) {
+          row.dataset.note = data.note;
+          noteBtn.textContent = "📝*";
+        }
+      }
+
+      row.appendChild(nameInput);
+      row.appendChild(setsInput);
+      row.appendChild(repsInput);
+      row.appendChild(weightInput);
+      row.appendChild(doneCb);
+      row.appendChild(noteBtn);
+
+      workoutExercisesEl.appendChild(row);
+    }
+
+    function resetCurrentWorkoutUI() {
+      if (workoutNameInput) workoutNameInput.value = "";
+      if (workoutNotesInput) workoutNotesInput.value = "";
+      if (workoutExercisesEl) workoutExercisesEl.innerHTML = "";
+      currentWorkoutStartTime = null;
+      if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
+      if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
+
+      // default 8 rows
+      for (let i = 0; i < 8; i++) {
+        createExerciseRow();
+      }
+    }
+
+    startWorkoutBtn?.addEventListener("click", () => {
+      const now = new Date();
+      currentWorkoutStartTime = now.toISOString();
+      if (workoutStartLabel) {
+        workoutStartLabel.textContent = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+      if (workoutDurationLabel) workoutDurationLabel.textContent = "Running…";
+    });
+
+    function saveCurrentWorkout() {
+      const name = workoutNameInput?.value.trim();
+      if (!name) {
+        alert("Please enter the workout name.");
+        return;
+      }
+      const notes = workoutNotesInput?.value.trim() || "";
+
+      const rows = Array.from(
+        workoutExercisesEl?.querySelectorAll(".workout-row") || []
+      );
+      const exercises = [];
+      rows.forEach((row) => {
+        const n = row.querySelector(".ex-name")?.value.trim() || "";
+        const setsVal = row.querySelector(".ex-sets")?.value;
+        const repsVal = row.querySelector(".ex-reps")?.value;
+        const weightVal = row.querySelector(".ex-weight")?.value;
+        const done = row.querySelector(".workout-done")?.checked || false;
+        const note = row.dataset.note || "";
+
+        if (!n && !setsVal && !repsVal && !weightVal && !note) return;
+
+        exercises.push({
+          name: n,
+          sets: setsVal ? parseInt(setsVal, 10) : null,
+          reps: repsVal ? parseInt(repsVal, 10) : null,
+          weight: weightVal ? parseFloat(weightVal) : null,
+          done,
+          note
+        });
+      });
+
+      const nowIso = new Date().toISOString();
+      const start = currentWorkoutStartTime || nowIso;
+      const end = nowIso;
+
+      const workout = {
         id: "w-" + Date.now(),
         name,
         notes,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        startTime: start,
+        endTime: end,
+        exercises
       };
-      state.workouts.unshift(w);
-      $("workoutName").value = "";
-      $("workoutNotes").value = "";
+
+      state.workouts.unshift(workout);
       saveState();
       renderWorkouts();
+      resetCurrentWorkoutUI();
     }
 
-    $("addWorkoutBtn")?.addEventListener("click", addWorkout);
-    $("workoutName")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addWorkout();
-      }
-    });
+    saveWorkoutBtn?.addEventListener("click", saveCurrentWorkout);
+    addExerciseRowBtn?.addEventListener("click", () => createExerciseRow());
 
     function deleteWorkout(id) {
       if (!confirmDelete()) return;
@@ -1529,6 +1695,22 @@
         d.className = "tag";
         d.textContent = formatDate(w.date);
         meta.appendChild(d);
+
+        const durationMin = calcDurationMinutes(w.startTime, w.endTime);
+        if (durationMin != null) {
+          const durTag = document.createElement("span");
+          durTag.className = "tag";
+          durTag.textContent = `Duration: ${durationMin} min`;
+          meta.appendChild(durTag);
+        }
+
+        const exCount = w.exercises ? w.exercises.length : 0;
+        if (exCount > 0) {
+          const exTag = document.createElement("span");
+          exTag.className = "tag";
+          exTag.textContent = `Exercises: ${exCount}`;
+          meta.appendChild(exTag);
+        }
 
         if (w.notes) {
           const n = document.createElement("span");
@@ -1804,7 +1986,6 @@
         txs = txs.filter((tx) => (tx.category || "") === catFilter);
       }
 
-      // Summary
       if (financeSummaryEl) {
         const summary = getMonthlySummary(state.activeFinanceAccountId);
         if (state.activeFinanceAccountId && (summary.income || summary.expense)) {
@@ -1905,7 +2086,7 @@
       loadState();
 
       const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.6.0";
+      if (verEl) verEl.textContent = "0.7.0";
 
       setupNav();
 
@@ -1918,6 +2099,8 @@
       renderWorkouts();
       renderAccounts();
       renderFinance();
+
+      resetCurrentWorkoutUI();
 
       setPage(state.currentPage || "home");
     }
