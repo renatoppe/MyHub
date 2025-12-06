@@ -52,8 +52,9 @@
       transition: width 0.2s ease;
     }
 
+    /* Slight expansion only, not huge */
     .sidebar.expanded {
-      width: 210px;
+      width: 110px;
     }
 
     .logo {
@@ -108,13 +109,14 @@
       background: transparent;
       color: var(--text-muted);
       display: flex;
+      flex-direction: column; /* icon + label vertical by default too */
       align-items: center;
       justify-content: center;
       font-size: 20px;
       cursor: pointer;
       transition: 0.18s ease;
       padding: 8px 0;
-      gap: 8px;
+      gap: 4px;
     }
 
     .nav-emoji {
@@ -123,17 +125,20 @@
 
     .nav-label {
       display: none;
-      font-size: 13px;
+      font-size: 11px;
       white-space: nowrap;
     }
 
+    /* When expanded, show labels under icons */
     .sidebar.expanded .nav-item {
-      justify-content: flex-start;
-      padding-inline: 10px;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding-inline: 0;
     }
 
     .sidebar.expanded .nav-label {
-      display: inline;
+      display: block;
     }
 
     .nav-item:hover {
@@ -578,7 +583,7 @@
 
     @media (min-width: 900px) {
       .sidebar.expanded {
-        width: 230px;
+        width: 120px;
       }
     }
   </style>
@@ -617,7 +622,7 @@
           <span class="nav-emoji">📊</span><span class="nav-label">Analytics</span>
         </button>
       </nav>
-      <div class="version">v<span id="appVersion">0.7.2</span></div>
+      <div class="version">v<span id="appVersion">0.8.0</span></div>
     </aside>
 
     <main class="main">
@@ -977,1400 +982,1634 @@
     </main>
   </div>
   <script>
-    // MyHub v0.7.2 – single-file front-end logic
-
-    const $ = (id) => document.getElementById(id);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-    const STORAGE_KEY = "myhub-state-v07-2";
-
-    function formatDate(iso) {
-      if (!iso) return "No date";
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "No date";
-      return d.toLocaleDateString();
+  document.addEventListener("DOMContentLoaded", () => {
+    const STORAGE_KEY = "myhub_state_v0_8";
+  
+    let appState = loadState();
+    const versionEl = document.getElementById("appVersion");
+    if (versionEl) versionEl.textContent = "0.8.0";
+  
+    // --------- STATE LOAD / SAVE ----------
+    function defaultState() {
+      const now = Date.now();
+      return {
+        version: "0.8.0",
+        todos: {
+          lists: [
+            { id: "todo_personal", name: "Personal" },
+            { id: "todo_work", name: "Work" }
+          ],
+          items: []
+        },
+        shopping: {
+          lists: [{ id: "shop_general", name: "General" }],
+          items: []
+        },
+        workouts: {
+          logs: [],
+          favorites: []
+        },
+        finance: {
+          accounts: [
+            { id: "acc_thb_main", name: "THB main", currency: "THB" }
+          ],
+          transactions: []
+        }
+      };
     }
-
-    function confirmDelete() {
-      return confirm("Delete this item? This action cannot be undone.");
-    }
-
-    function calcDurationMinutes(startIso, endIso) {
-      if (!startIso || !endIso) return null;
-      const s = new Date(startIso);
-      const e = new Date(endIso);
-      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
-      const ms = e.getTime() - s.getTime();
-      if (ms <= 0) return null;
-      return Math.round(ms / 60000);
-    }
-
-    // ---------- State ----------
-    const defaultState = {
-      theme: "dark",
-      currentPage: "home",
-      // To-do
-      todoLists: [
-        { id: "list-personal", name: "Personal", createdAt: new Date().toISOString() }
-      ],
-      todos: [],
-      // Shopping
-      shoppingLists: [
-        { id: "shop-main", name: "Main list", createdAt: new Date().toISOString() }
-      ],
-      shoppingItems: [],
-      // Workouts
-      workouts: [],
-      favoriteWorkouts: [],
-      // Finance
-      accounts: [],
-      finance: [],
-      activeFinanceAccountId: null
-    };
-
-    let state;
-
+  
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          state = structuredClone(defaultState);
-          return;
-        }
+        if (!raw) return defaultState();
         const parsed = JSON.parse(raw);
-        state = Object.assign(structuredClone(defaultState), parsed);
+        // very light migrations
+        if (!parsed.todos) parsed.todos = defaultState().todos;
+        if (!parsed.shopping) parsed.shopping = defaultState().shopping;
+        if (!parsed.workouts) parsed.workouts = defaultState().workouts;
+        if (!parsed.finance) parsed.finance = defaultState().finance;
+        return parsed;
       } catch (e) {
-        console.error("Error loading state", e);
-        state = structuredClone(defaultState);
+        console.warn("Failed to load state, using defaults", e);
+        return defaultState();
       }
     }
-
+  
     function saveState() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
       } catch (e) {
-        console.error("Error saving state", e);
+        console.warn("Failed saving state", e);
       }
     }
-
-    // ---------- Navigation ----------
-    function setPage(page) {
-      state.currentPage = page;
-      saveState();
-
-      $$(".page").forEach((el) => {
-        if (el.dataset.page === page) {
-          el.classList.add("active");
-          el.classList.remove("hidden");
-        } else {
-          el.classList.remove("active");
-          el.classList.add("hidden");
-        }
+  
+    function newId(prefix = "id") {
+      return `${prefix}_${Date.now().toString(36)}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+    }
+  
+    // --------- NAVIGATION ----------
+    const sidebar = document.querySelector(".sidebar");
+    const navToggle = document.getElementById("navToggle");
+    const navItems = document.querySelectorAll(".nav-item");
+    const pages = document.querySelectorAll(".page");
+    const pageTitleEl = document.getElementById("pageTitle");
+  
+    function showPage(pageName, push = true) {
+      navItems.forEach(btn => {
+        btn.classList.toggle(
+          "nav-active",
+          btn.dataset.page === pageName
+        );
       });
-
-      $$(".nav-item").forEach((el) => {
-        if (el.dataset.page === page) {
-          el.classList.add("nav-active");
-        } else {
-          el.classList.remove("nav-active");
-        }
+      pages.forEach(sec => {
+        sec.classList.toggle(
+          "active",
+          sec.dataset.page === pageName
+        );
+        sec.classList.toggle(
+          "hidden",
+          sec.dataset.page !== pageName
+        );
       });
-
-      const headerTitle = $("pageTitle");
-      if (headerTitle) {
-        const mapping = {
-          home: "Home",
-          todo: "To-Do",
-          shopping: "Shopping",
-          workouts: "Workouts",
-          finance: "Finances",
-          notes: "Notes",
-          meals: "Meals",
-          calendar: "Calendar",
-          analytics: "Analytics"
-        };
-        headerTitle.textContent = mapping[page] || "MyHub";
+      if (pageTitleEl) {
+        const active = document.querySelector(
+          `.nav-item[data-page="${pageName}"] .nav-label`
+        );
+        pageTitleEl.textContent =
+          (active && active.textContent) ||
+          (pageName.charAt(0).toUpperCase() + pageName.slice(1));
+      }
+      if (push && history && history.pushState) {
+        history.pushState({ page: pageName }, "", `#${pageName}`);
       }
     }
-
-    function setupNav() {
-      const sidebar = document.querySelector(".sidebar");
-      const navToggle = $("navToggle");
-
-      navToggle?.addEventListener("click", () => {
+  
+    navItems.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const page = btn.dataset.page;
+        showPage(page);
+      });
+    });
+  
+    if (navToggle) {
+      navToggle.addEventListener("click", () => {
         sidebar.classList.toggle("expanded");
       });
-
-      $$(".nav-item").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const page = btn.dataset.page;
-          if (page) setPage(page);
+    }
+  
+    window.addEventListener("popstate", e => {
+      const page = e.state?.page || "home";
+      showPage(page, false);
+    });
+  
+    // initial route
+    const initialHash = location.hash.replace("#", "");
+    const initialPage = initialHash || "home";
+    showPage(initialPage, false);
+    if (history && history.replaceState) {
+      history.replaceState({ page: initialPage }, "", `#${initialPage}`);
+    }
+  
+    // --------- HOME QUICK TASK ----------
+    function initHomeQuickTask() {
+      const input = document.getElementById("homeQuickTaskInput");
+      const btn = document.getElementById("homeQuickTaskBtn");
+      if (!input || !btn) return;
+  
+      btn.addEventListener("click", () => {
+        const text = input.value.trim();
+        if (!text) return;
+        // default to first todo list
+        const list =
+          appState.todos.lists[0] ||
+          appState.todos.lists[0] ||
+          null;
+        const listId = list ? list.id : "todo_personal";
+        const now = Date.now();
+        appState.todos.items.push({
+          id: newId("todo"),
+          title: text,
+          priority: "medium",
+          dueDate: null,
+          status: "open",
+          listId,
+          createdAt: now,
+          updatedAt: now,
+          doneAt: null
         });
+        saveState();
+        input.value = "";
+        renderTodoLists();
       });
-
-      const homeQuick = $("homeQuickTaskBtn");
-      if (homeQuick) {
-        homeQuick.addEventListener("click", () => {
-          const input = $("homeQuickTaskInput");
-          if (!input) return;
-          const text = input.value.trim();
-          if (!text) return;
-          addTodoFromHome(text);
-          input.value = "";
-        });
-      }
-
-      $("homeQuickTaskInput")?.addEventListener("keydown", (e) => {
+  
+      input.addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
-          const text = e.target.value.trim();
-          if (!text) return;
-          addTodoFromHome(text);
-          e.target.value = "";
+          btn.click();
         }
       });
     }
-
-    // ---------- To-do ----------
-    const todoListSelect = $("todoListSelect");
-    const todoListNameInput = $("todoListName");
-    const todoNewListBtn = $("todoNewListBtn");
-    const todoTitleInput = $("todoTitleInput");
-    const todoPrioritySelect = $("todoPrioritySelect");
-    const todoDueDateInput = $("todoDueDate");
-    const todoListContainer = $("todoList");
-    const todoEmptyMsg = $("noTodosMsg");
-    const todoSearchInput = $("todoSearchInput");
-    const todoFilterPriority = $("todoFilterPriority");
-    const todoFilterStatus = $("todoFilterStatus");
-    const todoFilterList = $("todoFilterList");
-    const todoFiltersToggle = $("todoFiltersToggle");
-    const todoFiltersPanel = $("todoFiltersPanel");
-
-    function getActiveTodoListId() {
-      return todoListSelect?.value || (state.todoLists[0] && state.todoLists[0].id);
+  
+    // --------- TO-DO ----------
+    const DONE_RETENTION_DAYS = 3;
+  
+    let todoListSelect,
+      todoListName,
+      todoNewListBtn,
+      todoTitleInput,
+      todoPrioritySelect,
+      todoDueDate,
+      addTodoBtn,
+      todoSearchInput,
+      todoFilterPriority,
+      todoFilterStatus,
+      todoFilterList,
+      todoFiltersToggle,
+      todoFiltersPanel,
+      todoListEl,
+      noTodosMsgEl;
+  
+    function initTodo() {
+      todoListSelect = document.getElementById("todoListSelect");
+      todoListName = document.getElementById("todoListName");
+      todoNewListBtn = document.getElementById("todoNewListBtn");
+      todoTitleInput = document.getElementById("todoTitleInput");
+      todoPrioritySelect = document.getElementById("todoPrioritySelect");
+      todoDueDate = document.getElementById("todoDueDate");
+      addTodoBtn = document.getElementById("addTodoBtn");
+      todoSearchInput = document.getElementById("todoSearchInput");
+      todoFilterPriority = document.getElementById("todoFilterPriority");
+      todoFilterStatus = document.getElementById("todoFilterStatus");
+      todoFilterList = document.getElementById("todoFilterList");
+      todoFiltersToggle = document.getElementById("todoFiltersToggle");
+      todoFiltersPanel = document.getElementById("todoFiltersPanel");
+      todoListEl = document.getElementById("todoList");
+      noTodosMsgEl = document.getElementById("noTodosMsg");
+  
+      if (!todoListSelect) return;
+  
+      if (!appState.todos.lists || appState.todos.lists.length === 0) {
+        appState.todos.lists = defaultState().todos.lists;
+      }
+  
+      todoNewListBtn.addEventListener("click", () => {
+        const name = todoListName.value.trim();
+        if (!name) return;
+        const id = newId("todoList");
+        appState.todos.lists.push({ id, name });
+        saveState();
+        todoListName.value = "";
+        populateTodoListSelectors(id);
+        renderTodoLists();
+      });
+  
+      todoListSelect.addEventListener("change", renderTodoLists);
+  
+      addTodoBtn.addEventListener("click", () => {
+        addTodoFromForm();
+      });
+  
+      todoTitleInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addTodoFromForm();
+        }
+      });
+  
+      if (todoSearchInput) {
+        todoSearchInput.addEventListener("input", renderTodoLists);
+      }
+      if (todoFilterPriority) {
+        todoFilterPriority.addEventListener("change", renderTodoLists);
+      }
+      if (todoFilterStatus) {
+        todoFilterStatus.addEventListener("change", renderTodoLists);
+      }
+      if (todoFilterList) {
+        todoFilterList.addEventListener("change", renderTodoLists);
+      }
+  
+      if (todoFiltersToggle && todoFiltersPanel) {
+        todoFiltersToggle.addEventListener("click", () => {
+          const visible = todoFiltersPanel.style.display === "block";
+          todoFiltersPanel.style.display = visible ? "none" : "block";
+        });
+      }
+  
+      populateTodoListSelectors();
+      cleanupOldDoneTodos();
+      renderTodoLists();
     }
-
-    function renderTodoListOptions() {
-      const selects = [todoListSelect, todoFilterList].filter(Boolean);
-      selects.forEach((sel) => {
-        sel.innerHTML = "";
-        state.todoLists.forEach((list) => {
+  
+    function populateTodoListSelectors(selectedId) {
+      const lists = appState.todos.lists;
+      if (todoListSelect) {
+        todoListSelect.innerHTML = "";
+        lists.forEach(list => {
           const opt = document.createElement("option");
           opt.value = list.id;
           opt.textContent = list.name;
-          sel.appendChild(opt);
+          todoListSelect.appendChild(opt);
         });
-
-        if (sel === todoFilterList) {
-          const allOpt = document.createElement("option");
-          allOpt.value = "all";
-          allOpt.textContent = "All";
-          sel.insertBefore(allOpt, sel.firstChild);
-        }
-      });
-
-      if (!state.todoLists.length) return;
-      if (todoListSelect && !todoListSelect.value) {
-        todoListSelect.value = state.todoLists[0].id;
+        if (selectedId) todoListSelect.value = selectedId;
+      }
+      if (todoFilterList) {
+        const prev = todoFilterList.value;
+        todoFilterList.innerHTML = "";
+        const allOpt = document.createElement("option");
+        allOpt.value = "all";
+        allOpt.textContent = "All";
+        todoFilterList.appendChild(allOpt);
+        lists.forEach(list => {
+          const opt = document.createElement("option");
+          opt.value = list.id;
+          opt.textContent = list.name;
+          todoFilterList.appendChild(opt);
+        });
+        if (prev) todoFilterList.value = prev;
       }
     }
-
-    function addTodoList() {
-      const name = todoListNameInput.value.trim();
-      if (!name) return;
-      const id = "list-" + Date.now();
-      state.todoLists.push({ id, name, createdAt: new Date().toISOString() });
-      saveState();
-      todoListNameInput.value = "";
-      renderTodoListOptions();
-      if (todoListSelect) todoListSelect.value = id;
-      renderTodos();
-    }
-
-    todoNewListBtn?.addEventListener("click", addTodoList);
-
-    function addTodo() {
+  
+    function addTodoFromForm() {
       const title = todoTitleInput.value.trim();
       if (!title) return;
-      const listId = getActiveTodoListId();
+      const listId =
+        todoListSelect.value || appState.todos.lists[0]?.id;
       const priority = todoPrioritySelect.value || "medium";
-      let dueIso = null;
-      if (todoDueDateInput.value) {
-        dueIso = new Date(todoDueDateInput.value + "T00:00:00").toISOString();
-      }
-      const todo = {
-        id: "todo-" + Date.now(),
-        listId,
+      const dueDateVal = todoDueDate.value || null;
+      const now = Date.now();
+      appState.todos.items.push({
+        id: newId("todo"),
         title,
         priority,
-        dueDate: dueIso,
+        dueDate: dueDateVal,
         status: "open",
-        createdAt: new Date().toISOString(),
-        completedAt: null
-      };
-      state.todos.unshift(todo);
+        listId,
+        createdAt: now,
+        updatedAt: now,
+        doneAt: null
+      });
       saveState();
       todoTitleInput.value = "";
-      renderTodos();
+      todoDueDate.value = "";
+      renderTodoLists();
     }
-
-    todoTitleInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addTodo();
-      }
-    });
-    $("addTodoBtn")?.addEventListener("click", addTodo);
-
-    function updateTodoStatus(id, newStatus) {
-      const t = state.todos.find((x) => x.id === id);
-      if (!t) return;
-      t.status = newStatus;
-      t.completedAt = newStatus === "done" ? new Date().toISOString() : null;
-      saveState();
-      renderTodos();
-    }
-
-    function openEditTodo(todo) {
-      const newTitle = prompt("Edit task title:", todo.title);
-      if (newTitle === null) return;
-      const trimmed = newTitle.trim();
-      if (trimmed) todo.title = trimmed;
-
-      const newDate = prompt(
-        "Edit due date (YYYY-MM-DD) or leave blank:",
-        todo.dueDate ? todo.dueDate.slice(0, 10) : ""
-      );
-      if (newDate !== null) {
-        if (newDate.trim()) {
-          todo.dueDate = new Date(newDate.trim() + "T00:00:00").toISOString();
-        } else {
-          todo.dueDate = null;
-        }
-      }
-
-      const newPriority = prompt(
-        "Priority (high / medium / low):",
-        todo.priority
-      );
-      if (newPriority !== null) {
-        const p = newPriority.trim().toLowerCase();
-        if (["high", "medium", "low"].includes(p)) {
-          todo.priority = p;
-        }
-      }
-
-      saveState();
-      renderTodos();
-    }
-
-    function deleteTodo(id) {
-      if (!confirmDelete()) return;
-      state.todos = state.todos.filter((t) => t.id !== id);
-      saveState();
-      renderTodos();
-    }
-
-    function applyTodoFilters(arr) {
-      let result = [...arr];
-
-      const q = (todoSearchInput?.value || "").trim().toLowerCase();
-      if (q) {
-        result = result.filter((t) => t.title.toLowerCase().includes(q));
-      }
-
-      const prio = todoFilterPriority?.value || "all";
-      if (prio !== "all") {
-        result = result.filter((t) => t.priority === prio);
-      }
-
-      const stat = todoFilterStatus?.value || "all";
-      if (stat !== "all") {
-        result = result.filter((t) => t.status === stat);
-      }
-
-      const listId = todoFilterList?.value || "all";
-      if (listId !== "all") {
-        result = result.filter((t) => t.listId === listId);
-      }
-
-      result.sort((a, b) => {
-        const prioOrder = { high: 0, medium: 1, low: 2 };
-        const pa = prioOrder[a.priority] ?? 1;
-        const pb = prioOrder[b.priority] ?? 1;
-        if (pa !== pb) return pa - pb;
-
-        const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        if (da !== db) return da - db;
-
-        const statusOrder = { open: 0, inprogress: 1, done: 2 };
-        return (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0);
+  
+    function cleanupOldDoneTodos() {
+      const cutoff =
+        Date.now() - DONE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+      appState.todos.items = appState.todos.items.filter(item => {
+        if (item.status !== "done") return true;
+        if (!item.doneAt) return true;
+        return item.doneAt > cutoff;
       });
-
-      return result;
+      saveState();
     }
-
-    function renderTodos() {
-      if (!todoListContainer) return;
-      const all = state.todos;
-      const filtered = applyTodoFilters(all);
-
-      if (!filtered.length) {
-        todoListContainer.innerHTML = "";
-        if (todoEmptyMsg) todoEmptyMsg.style.display = "block";
+  
+    function renderTodoLists() {
+      if (!todoListEl) return;
+      cleanupOldDoneTodos();
+  
+      const searchText = (todoSearchInput?.value || "")
+        .toLowerCase()
+        .trim();
+      const filterPriority = todoFilterPriority?.value || "all";
+      const filterStatus = todoFilterStatus?.value || "all";
+      const filterList = todoFilterList?.value || "all";
+      const activeListId =
+        todoListSelect?.value || appState.todos.lists[0]?.id;
+  
+      let items = [...appState.todos.items];
+  
+      items = items.filter(item => {
+        if (filterList !== "all" && item.listId !== filterList)
+          return false;
+        if (filterPriority !== "all" && item.priority !== filterPriority)
+          return false;
+        if (filterStatus !== "all" && item.status !== filterStatus)
+          return false;
+        if (searchText) {
+          if (
+            !item.title.toLowerCase().includes(searchText)
+          ) {
+            return false;
+          }
+        }
+        // always keep
+        return true;
+      });
+  
+      items.sort((a, b) => {
+        const orderStatus = val => {
+          if (val === "open") return 0;
+          if (val === "inprogress") return 1;
+          if (val === "done") return 2;
+          return 0;
+        };
+        const sDiff = orderStatus(a.status) - orderStatus(b.status);
+        if (sDiff !== 0) return sDiff;
+  
+        const prioNum = p => {
+          if (p === "high") return 0;
+          if (p === "medium") return 1;
+          return 2;
+        };
+        const pDiff = prioNum(a.priority) - prioNum(b.priority);
+        if (pDiff !== 0) return pDiff;
+  
+        const da = a.dueDate || "";
+        const db = b.dueDate || "";
+        if (da && db) return da.localeCompare(db);
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+  
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+  
+      todoListEl.innerHTML = "";
+      if (items.length === 0) {
+        if (noTodosMsgEl) noTodosMsgEl.style.display = "block";
         return;
       }
-      if (todoEmptyMsg) todoEmptyMsg.style.display = "none";
-
-      todoListContainer.innerHTML = "";
-      filtered.forEach((t) => {
-        const row = document.createElement("div");
-        row.className = "item";
-
+      if (noTodosMsgEl) noTodosMsgEl.style.display = "none";
+  
+      items.forEach(item => {
+        const li = document.createElement("div");
+        li.className = "item";
+        li.draggable = true;
+        li.dataset.id = item.id;
+  
+        li.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", item.id);
+        });
+        li.addEventListener("dragover", e => {
+          e.preventDefault();
+        });
+        li.addEventListener("drop", e => {
+          e.preventDefault();
+          const draggedId = e.dataTransfer.getData("text/plain");
+          if (!draggedId || draggedId === item.id) return;
+          reorderTodoItems(draggedId, item.id);
+        });
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
-        const left = document.createElement("div");
-        left.className = "item-checkbox";
-
+  
+        const cbWrap = document.createElement("div");
+        cbWrap.className = "item-checkbox";
         const cb = document.createElement("input");
         cb.type = "checkbox";
-        cb.checked = t.status === "done";
-        cb.addEventListener("change", () => {
-          updateTodoStatus(t.id, cb.checked ? "done" : "open");
+        cb.checked = item.status === "done";
+        cb.indeterminate = item.status === "inprogress";
+        cb.addEventListener("click", e => {
+          e.preventDefault();
+          cycleTodoStatus(item.id);
         });
-        left.appendChild(cb);
-
+        cbWrap.appendChild(cb);
+        main.appendChild(cbWrap);
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
-        const title = document.createElement("div");
-        title.className = "item-title";
-        title.textContent = t.title;
-        if (t.status === "done") {
-          title.style.textDecoration = "line-through";
-          title.style.opacity = "0.7";
+  
+        const titleEl = document.createElement("div");
+        titleEl.className = "item-title";
+        titleEl.textContent = item.title;
+        if (item.status === "done") {
+          titleEl.style.textDecoration = "line-through";
+          titleEl.style.opacity = "0.7";
         }
-        title.addEventListener("click", () => openEditTodo(t));
-
-        const meta = document.createElement("div");
-        meta.className = "item-meta";
-
-        const prioTag = document.createElement("span");
-        prioTag.className = "tag";
-        prioTag.textContent =
-          t.priority === "high"
-            ? "High"
-            : t.priority === "low"
-            ? "Low"
-            : "Medium";
-        meta.appendChild(prioTag);
-
-        if (t.dueDate) {
-          const due = document.createElement("span");
-          due.className = "tag";
-          due.textContent = "Due " + formatDate(t.dueDate);
-          meta.appendChild(due);
+        if (item.status === "inprogress") {
+          titleEl.style.fontStyle = "italic";
         }
-
-        const listRef = state.todoLists.find((l) => l.id === t.listId);
-        if (listRef) {
-          const listTag = document.createElement("span");
-          listTag.className = "tag";
-          listTag.textContent = listRef.name;
-          meta.appendChild(listTag);
+        titleEl.addEventListener("click", () => {
+          editTodoItem(item.id);
+        });
+        textWrap.appendChild(titleEl);
+  
+        const metaRow = document.createElement("div");
+        metaRow.className = "item-meta";
+  
+        const list = appState.todos.lists.find(
+          l => l.id === item.listId
+        );
+        if (list) {
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = list.name;
+          metaRow.appendChild(tag);
         }
-
-        if (t.status === "inprogress") {
+  
+        const prTag = document.createElement("span");
+        prTag.className = "tag";
+        prTag.textContent = item.priority;
+        if (item.priority === "high") {
+          prTag.style.background = "rgba(244,67,54,0.2)";
+          prTag.style.color = "#ffcdd2";
+        } else if (item.priority === "low") {
+          prTag.style.background = "rgba(0,188,212,0.16)";
+          prTag.style.color = "#b2ebf2";
+        }
+        metaRow.appendChild(prTag);
+  
+        if (item.dueDate) {
+          const dTag = document.createElement("span");
+          dTag.className = "tag";
+          dTag.textContent = item.dueDate;
+          metaRow.appendChild(dTag);
+        }
+  
+        if (item.status === "inprogress") {
           const st = document.createElement("span");
           st.className = "tag";
           st.textContent = "In progress";
-          meta.appendChild(st);
+          metaRow.appendChild(st);
+        } else if (item.status === "done") {
+          const st = document.createElement("span");
+          st.className = "tag";
+          st.textContent = "Done";
+          metaRow.appendChild(st);
         }
-
-        textWrap.appendChild(title);
-        textWrap.appendChild(meta);
-
-        main.appendChild(left);
+  
+        textWrap.appendChild(metaRow);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
-        const inProgBtn = document.createElement("button");
-        inProgBtn.className = "icon-btn";
-        inProgBtn.textContent = "⏳";
-        inProgBtn.title = "Mark in progress";
-        inProgBtn.addEventListener("click", () =>
-          updateTodoStatus(t.id, "inprogress")
-        );
-
+  
         const editBtn = document.createElement("button");
         editBtn.className = "icon-btn";
         editBtn.textContent = "✏️";
-        editBtn.title = "Edit";
-        editBtn.addEventListener("click", () => openEditTodo(t));
-
+        editBtn.title = "Edit task";
+        editBtn.addEventListener("click", () => {
+          editTodoItem(item.id);
+        });
+        actions.appendChild(editBtn);
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
-        delBtn.title = "Delete";
-        delBtn.addEventListener("click", () => deleteTodo(t.id));
-
-        actions.appendChild(inProgBtn);
-        actions.appendChild(editBtn);
+        delBtn.title = "Delete task";
+        delBtn.addEventListener("click", () => {
+          if (!confirm("Delete this task?")) return;
+          appState.todos.items = appState.todos.items.filter(
+            t => t.id !== item.id
+          );
+          saveState();
+          renderTodoLists();
+        });
         actions.appendChild(delBtn);
-
-        row.appendChild(main);
-        row.appendChild(actions);
-
-        todoListContainer.appendChild(row);
+  
+        li.appendChild(main);
+        li.appendChild(actions);
+        todoListEl.appendChild(li);
       });
     }
-
-    todoListSelect?.addEventListener("change", renderTodos);
-    todoSearchInput?.addEventListener("input", renderTodos);
-    todoFilterPriority?.addEventListener("change", renderTodos);
-    todoFilterStatus?.addEventListener("change", renderTodos);
-    todoFilterList?.addEventListener("change", renderTodos);
-
-    if (todoFiltersToggle && todoFiltersPanel) {
-      todoFiltersToggle.addEventListener("click", () => {
-        const visible = todoFiltersPanel.style.display === "block";
-        todoFiltersPanel.style.display = visible ? "none" : "block";
-      });
-    }
-
-    function addTodoFromHome(text) {
-      const listId = state.todoLists[0]?.id;
-      if (!listId) return;
-      const todo = {
-        id: "todo-" + Date.now(),
-        listId,
-        title: text,
-        priority: "medium",
-        dueDate: null,
-        status: "open",
-        createdAt: new Date().toISOString(),
-        completedAt: null
-      };
-      state.todos.unshift(todo);
+  
+    function reorderTodoItems(draggedId, targetId) {
+      const items = appState.todos.items;
+      const draggedIndex = items.findIndex(i => i.id === draggedId);
+      const targetIndex = items.findIndex(i => i.id === targetId);
+      if (draggedIndex < 0 || targetIndex < 0) return;
+      const [dragged] = items.splice(draggedIndex, 1);
+      items.splice(targetIndex, 0, dragged);
       saveState();
-      renderTodos();
+      renderTodoLists();
     }
-
-    // ---------- Shopping ----------
-    const shoppingListSelect = $("shoppingListSelect");
-    const shoppingListNameInput = $("shoppingListName");
-    const shoppingNewListBtn = $("shoppingNewListBtn");
-    const shoppingItemInput = $("shoppingItemInput");
-    const shoppingListEl = $("shoppingList");
-    const shoppingEmptyMsg = $("shoppingEmptyMsg");
-    let draggingShoppingId = null;
-
-    function getActiveShoppingListId() {
-      return shoppingListSelect?.value || (state.shoppingLists[0] && state.shoppingLists[0].id);
+  
+    function cycleTodoStatus(id) {
+      const item = appState.todos.items.find(t => t.id === id);
+      if (!item) return;
+      const now = Date.now();
+      if (item.status === "open") {
+        item.status = "inprogress";
+        item.doneAt = null;
+      } else if (item.status === "inprogress") {
+        item.status = "done";
+        item.doneAt = now;
+      } else {
+        item.status = "open";
+        item.doneAt = null;
+      }
+      item.updatedAt = now;
+      saveState();
+      renderTodoLists();
     }
-
-    function renderShoppingListOptions() {
+  
+    function editTodoItem(id) {
+      const item = appState.todos.items.find(t => t.id === id);
+      if (!item) return;
+      const newTitle = prompt("Edit task", item.title);
+      if (newTitle === null) return;
+      const trimmed = newTitle.trim();
+      if (!trimmed) return;
+      item.title = trimmed;
+  
+      const newDue =
+        prompt(
+          "Due date (YYYY-MM-DD, leave blank for none)",
+          item.dueDate || ""
+        ) || "";
+      item.dueDate = newDue.trim() || null;
+  
+      const newPrio =
+        prompt(
+          "Priority (high / medium / low)",
+          item.priority
+        ) || item.priority;
+      const p = newPrio.toLowerCase();
+      if (["high", "medium", "low"].includes(p)) {
+        item.priority = p;
+      }
+  
+      item.updatedAt = Date.now();
+      saveState();
+      renderTodoLists();
+    }
+  
+    // --------- SHOPPING ----------
+    let shoppingListSelect,
+      shoppingListName,
+      shoppingNewListBtn,
+      shoppingItemInput,
+      addShoppingBtn,
+      shoppingListEl,
+      shoppingEmptyMsgEl;
+  
+    function initShopping() {
+      shoppingListSelect = document.getElementById(
+        "shoppingListSelect"
+      );
+      shoppingListName = document.getElementById("shoppingListName");
+      shoppingNewListBtn = document.getElementById(
+        "shoppingNewListBtn"
+      );
+      shoppingItemInput = document.getElementById("shoppingItemInput");
+      addShoppingBtn = document.getElementById("addShoppingBtn");
+      shoppingListEl = document.getElementById("shoppingList");
+      shoppingEmptyMsgEl = document.getElementById("shoppingEmptyMsg");
+  
+      if (!shoppingListSelect) return;
+  
+      if (
+        !appState.shopping.lists ||
+        appState.shopping.lists.length === 0
+      ) {
+        appState.shopping.lists = defaultState().shopping.lists;
+      }
+  
+      shoppingNewListBtn.addEventListener("click", () => {
+        const name = shoppingListName.value.trim();
+        if (!name) return;
+        const id = newId("shopList");
+        appState.shopping.lists.push({ id, name });
+        saveState();
+        shoppingListName.value = "";
+        populateShoppingListSelector(id);
+        renderShoppingItems();
+      });
+  
+      shoppingListSelect.addEventListener(
+        "change",
+        renderShoppingItems
+      );
+  
+      addShoppingBtn.addEventListener("click", () => {
+        addShoppingItemFromForm();
+      });
+  
+      shoppingItemInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addShoppingItemFromForm();
+        }
+      });
+  
+      populateShoppingListSelector();
+      renderShoppingItems();
+    }
+  
+    function populateShoppingListSelector(selectedId) {
       if (!shoppingListSelect) return;
       shoppingListSelect.innerHTML = "";
-      state.shoppingLists.forEach((list) => {
+      appState.shopping.lists.forEach(list => {
         const opt = document.createElement("option");
         opt.value = list.id;
         opt.textContent = list.name;
         shoppingListSelect.appendChild(opt);
       });
-      if (!state.shoppingLists.length) return;
-      if (!shoppingListSelect.value) {
-        shoppingListSelect.value = state.shoppingLists[0].id;
-      }
+      if (selectedId) shoppingListSelect.value = selectedId;
     }
-
-    function addShoppingList() {
-      const name = shoppingListNameInput.value.trim();
-      if (!name) return;
-      const id = "shop-" + Date.now();
-      state.shoppingLists.push({ id, name, createdAt: new Date().toISOString() });
-      saveState();
-      shoppingListNameInput.value = "";
-      renderShoppingListOptions();
-      if (shoppingListSelect) shoppingListSelect.value = id;
-      renderShopping();
-    }
-
-    shoppingNewListBtn?.addEventListener("click", addShoppingList);
-
-    function addShoppingItem() {
-      const title = shoppingItemInput.value.trim();
-      if (!title) return;
-      const listId = getActiveShoppingListId();
-      const item = {
-        id: "shop-item-" + Date.now(),
-        listId,
-        title,
+  
+    function addShoppingItemFromForm() {
+      const text = shoppingItemInput.value.trim();
+      if (!text) return;
+      const listId =
+        shoppingListSelect.value ||
+        appState.shopping.lists[0]?.id;
+      const now = Date.now();
+      appState.shopping.items.push({
+        id: newId("shop"),
+        title: text,
+        notes: "",
         checked: false,
-        note: "",
-        createdAt: new Date().toISOString()
-      };
-      state.shoppingItems.push(item);
+        listId,
+        createdAt: now
+      });
       saveState();
       shoppingItemInput.value = "";
-      renderShopping();
+      renderShoppingItems();
     }
-
-    shoppingItemInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addShoppingItem();
-      }
-    });
-    $("addShoppingBtn")?.addEventListener("click", addShoppingItem);
-
-    function deleteShoppingItem(listId, itemId) {
-      if (!confirmDelete()) return;
-      state.shoppingItems = state.shoppingItems.filter(
-        (i) => i.id !== itemId
-      );
-      saveState();
-      renderShopping();
-    }
-
-    function toggleShoppingItem(id) {
-      const item = state.shoppingItems.find((i) => i.id === id);
-      if (!item) return;
-      item.checked = !item.checked;
-      saveState();
-      renderShopping();
-    }
-
-    function openModalShoppingNote(item) {
-      const newNote = prompt("Note for this item:", item.note || "");
-      if (newNote === null) return;
-      item.note = newNote.trim();
-      saveState();
-      renderShopping();
-    }
-
-    function reorderShopping(listId, fromId, toId) {
-      if (!fromId || !toId || fromId === toId) return;
-      const arr = state.shoppingItems;
-      const fromIdx = arr.findIndex(
-        (i) => i.id === fromId && i.listId === listId
-      );
-      const toIdx = arr.findIndex(
-        (i) => i.id === toId && i.listId === listId
-      );
-      if (fromIdx === -1 || toIdx === -1) return;
-      const [moved] = arr.splice(fromIdx, 1);
-      arr.splice(toIdx, 0, moved);
-      saveState();
-      renderShopping();
-    }
-
-    function renderShopping() {
+  
+    function renderShoppingItems() {
       if (!shoppingListEl) return;
-      const listId = getActiveShoppingListId();
-      const items = state.shoppingItems.filter((i) => i.listId === listId);
-
-      if (!items.length) {
-        shoppingListEl.innerHTML = "";
-        if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "block";
+      const activeListId =
+        shoppingListSelect.value ||
+        appState.shopping.lists[0]?.id;
+      const items = appState.shopping.items.filter(
+        i => i.listId === activeListId
+      );
+  
+      shoppingListEl.innerHTML = "";
+      if (items.length === 0) {
+        if (shoppingEmptyMsgEl)
+          shoppingEmptyMsgEl.style.display = "block";
         return;
       }
-      if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "none";
-
-      shoppingListEl.innerHTML = "";
-      items.forEach((item) => {
+      if (shoppingEmptyMsgEl)
+        shoppingEmptyMsgEl.style.display = "none";
+  
+      items.forEach(item => {
         const row = document.createElement("div");
         row.className = "item";
-        row.dataset.itemId = item.id;
         row.draggable = true;
-
-        row.addEventListener("dragstart", () => {
-          draggingShoppingId = item.id;
+        row.dataset.id = item.id;
+  
+        row.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", item.id);
         });
-        row.addEventListener("dragover", (e) => {
+        row.addEventListener("dragover", e => {
           e.preventDefault();
         });
-        row.addEventListener("drop", (e) => {
+        row.addEventListener("drop", e => {
           e.preventDefault();
-          const targetId = row.dataset.itemId;
-          reorderShopping(listId, draggingShoppingId, targetId);
-          draggingShoppingId = null;
+          const draggedId = e.dataTransfer.getData("text/plain");
+          if (!draggedId || draggedId === item.id) return;
+          reorderShoppingItems(draggedId, item.id, activeListId);
         });
-
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
-        const left = document.createElement("div");
-        left.className = "item-checkbox";
+  
+        const cbWrap = document.createElement("div");
+        cbWrap.className = "item-checkbox";
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = item.checked;
-        cb.addEventListener("change", () => toggleShoppingItem(item.id));
-        left.appendChild(cb);
-
+        cb.addEventListener("change", () => {
+          item.checked = cb.checked;
+          saveState();
+        });
+        cbWrap.appendChild(cb);
+        main.appendChild(cbWrap);
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
-        const title = document.createElement("div");
-        title.className = "item-title";
-        title.textContent = item.title;
+  
+        const titleEl = document.createElement("div");
+        titleEl.className = "item-title";
+        titleEl.textContent = item.title;
         if (item.checked) {
-          title.style.textDecoration = "line-through";
-          title.style.opacity = "0.7";
+          titleEl.style.textDecoration = "line-through";
+          titleEl.style.opacity = "0.7";
         }
-
-        const meta = document.createElement("div");
-        meta.className = "item-meta";
-        if (item.note) {
-          const noteTag = document.createElement("span");
-          noteTag.className = "tag";
-          noteTag.textContent = "Note";
-          meta.appendChild(noteTag);
+        textWrap.appendChild(titleEl);
+  
+        if (item.notes) {
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = item.notes;
+          meta.appendChild(tag);
+          textWrap.appendChild(meta);
         }
-
-        textWrap.appendChild(title);
-        textWrap.appendChild(meta);
-
-        main.appendChild(left);
+  
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
         const noteBtn = document.createElement("button");
         noteBtn.className = "icon-btn";
-        noteBtn.textContent = "📝";
+        noteBtn.textContent = "💬";
         noteBtn.title = "Add / edit note";
-        noteBtn.addEventListener("click", () =>
-          openModalShoppingNote(item)
-        );
-
+        noteBtn.addEventListener("click", () => {
+          const newNote =
+            prompt(
+              "Note for this item:",
+              item.notes || ""
+            ) || "";
+          item.notes = newNote.trim();
+          saveState();
+          renderShoppingItems();
+        });
+        actions.appendChild(noteBtn);
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete item";
-        delBtn.addEventListener("click", () =>
-          deleteShoppingItem(listId, item.id)
-        );
-
-        actions.appendChild(noteBtn);
+        delBtn.addEventListener("click", () => {
+          if (!confirm("Delete this shopping item?")) return;
+          appState.shopping.items = appState.shopping.items.filter(
+            i => i.id !== item.id
+          );
+          saveState();
+          renderShoppingItems();
+        });
         actions.appendChild(delBtn);
-
+  
         row.appendChild(main);
         row.appendChild(actions);
-
         shoppingListEl.appendChild(row);
       });
     }
-
-    shoppingListSelect?.addEventListener("change", renderShopping);
-
-    // ---------- Workouts ----------
-    const workoutListEl = $("workoutList");
-    const noWorkoutMsg = $("noWorkoutMsg");
-    const workoutNameInput = $("workoutName");
-    const workoutNotesInput = $("workoutNotes");
-    const workoutExercisesEl = $("workoutExercises");
-    const workoutStartLabel = $("workoutStartLabel");
-    const workoutDurationLabel = $("workoutDurationLabel");
-    const startWorkoutBtn = $("startWorkoutBtn");
-    const saveWorkoutBtn = $("saveWorkoutBtn");
-    const addExerciseRowBtn = $("addExerciseRowBtn");
-    const workoutFavoritesEl = $("workoutFavorites");
-    const workoutFavoritesEmptyEl = $("workoutFavoritesEmpty");
-
-    let currentWorkoutStartTime = null;
-
-    function createExerciseRow(data) {
+  
+    function reorderShoppingItems(
+      draggedId,
+      targetId,
+      listId
+    ) {
+      const arr = appState.shopping.items.filter(
+        i => i.listId === listId
+      );
+      const others = appState.shopping.items.filter(
+        i => i.listId !== listId
+      );
+      const draggedIndex = arr.findIndex(i => i.id === draggedId);
+      const targetIndex = arr.findIndex(i => i.id === targetId);
+      if (draggedIndex < 0 || targetIndex < 0) return;
+      const [dragged] = arr.splice(draggedIndex, 1);
+      arr.splice(targetIndex, 0, dragged);
+      appState.shopping.items = [...others, ...arr];
+      saveState();
+      renderShoppingItems();
+    }
+  
+    // --------- WORKOUTS ----------
+    let workoutNameInput,
+      workoutStartLabel,
+      workoutDurationLabel,
+      startWorkoutBtn,
+      saveWorkoutBtn,
+      addExerciseRowBtn,
+      workoutExercisesEl,
+      workoutNotesEl,
+      workoutFavoritesEl,
+      workoutFavoritesEmptyEl,
+      workoutListEl,
+      noWorkoutMsgEl;
+  
+    let workoutStartTime = null;
+    let workoutTimer = null;
+  
+    function initWorkouts() {
+      workoutNameInput = document.getElementById("workoutName");
+      workoutStartLabel = document.getElementById(
+        "workoutStartLabel"
+      );
+      workoutDurationLabel = document.getElementById(
+        "workoutDurationLabel"
+      );
+      startWorkoutBtn = document.getElementById("startWorkoutBtn");
+      saveWorkoutBtn = document.getElementById("saveWorkoutBtn");
+      addExerciseRowBtn = document.getElementById(
+        "addExerciseRowBtn"
+      );
+      workoutExercisesEl = document.getElementById(
+        "workoutExercises"
+      );
+      workoutNotesEl = document.getElementById("workoutNotes");
+      workoutFavoritesEl = document.getElementById(
+        "workoutFavorites"
+      );
+      workoutFavoritesEmptyEl = document.getElementById(
+        "workoutFavoritesEmpty"
+      );
+      workoutListEl = document.getElementById("workoutList");
+      noWorkoutMsgEl = document.getElementById("noWorkoutMsg");
+  
       if (!workoutExercisesEl) return;
+  
+      if (!appState.workouts.logs)
+        appState.workouts.logs = [];
+      if (!appState.workouts.favorites)
+        appState.workouts.favorites = [];
+  
+      startWorkoutBtn.addEventListener("click", () => {
+        if (!workoutStartTime) {
+          workoutStartTime = Date.now();
+          if (workoutStartLabel) {
+            workoutStartLabel.textContent = new Date(
+              workoutStartTime
+            ).toLocaleTimeString();
+          }
+          if (workoutTimer) clearInterval(workoutTimer);
+          workoutTimer = setInterval(updateWorkoutDuration, 30 * 1000);
+          updateWorkoutDuration();
+        }
+      });
+  
+      saveWorkoutBtn.addEventListener("click", () => {
+        saveCurrentWorkout();
+      });
+  
+      addExerciseRowBtn.addEventListener("click", () => {
+        addWorkoutRow();
+      });
+  
+      // start with 8 rows
+      for (let i = 0; i < 8; i++) addWorkoutRow();
+  
+      renderWorkoutFavorites();
+      renderWorkoutLogs();
+    }
+  
+    function updateWorkoutDuration() {
+      if (!workoutStartTime || !workoutDurationLabel) return;
+      const diffMs = Date.now() - workoutStartTime;
+      const mins = Math.round(diffMs / 60000);
+      if (mins <= 0) {
+        workoutDurationLabel.textContent = "0 min";
+      } else {
+        workoutDurationLabel.textContent = `${mins} min`;
+      }
+    }
+  
+    function addWorkoutRow(exercise = null) {
       const row = document.createElement("div");
       row.className = "workout-row";
-      row.dataset.note = "";
-
+  
       const top = document.createElement("div");
       top.className = "workout-row-top";
-
-      const bottom = document.createElement("div");
-      bottom.className = "workout-row-bottom";
-
       const nameInput = document.createElement("input");
       nameInput.type = "text";
-      nameInput.placeholder = "Exercise";
-      nameInput.className = "ex-name";
-
+      nameInput.placeholder = "Exercise name";
+      top.appendChild(nameInput);
+  
+      const bottom = document.createElement("div");
+      bottom.className = "workout-row-bottom";
+  
       const setsInput = document.createElement("input");
       setsInput.type = "number";
-      setsInput.placeholder = "Sets";
       setsInput.min = "0";
-      setsInput.className = "ex-sets";
-
+      setsInput.placeholder = "Sets";
+  
       const repsInput = document.createElement("input");
       repsInput.type = "number";
-      repsInput.placeholder = "Reps";
       repsInput.min = "0";
-      repsInput.className = "ex-reps";
-
+      repsInput.placeholder = "Reps";
+  
       const weightInput = document.createElement("input");
       weightInput.type = "number";
-      weightInput.placeholder = "Weight";
       weightInput.min = "0";
-      weightInput.className = "ex-weight";
-
+      weightInput.step = "0.5";
+      weightInput.placeholder = "Weight";
+  
       const doneCb = document.createElement("input");
       doneCb.type = "checkbox";
       doneCb.className = "workout-done";
-
-      const noteBtn = document.createElement("button");
-      noteBtn.className = "icon-btn";
-      noteBtn.textContent = "📝";
-      noteBtn.title = "Add note";
-
-      noteBtn.addEventListener("click", () => {
-        const currentNote = row.dataset.note || "";
-        const newNote = prompt("Note for this exercise:", currentNote);
-        if (newNote === null) return;
-        row.dataset.note = newNote.trim();
-        noteBtn.textContent = newNote.trim() ? "📝*" : "📝";
+      doneCb.title = "Done";
+  
+      const delBtn = document.createElement("button");
+      delBtn.className = "icon-btn danger";
+      delBtn.textContent = "🗑";
+      delBtn.title = "Remove row";
+      delBtn.addEventListener("click", () => {
+        row.remove();
       });
-
-      if (data) {
-        if (data.name) nameInput.value = data.name;
-        if (data.sets != null) setsInput.value = data.sets;
-        if (data.reps != null) repsInput.value = data.reps;
-        if (data.weight != null) weightInput.value = data.weight;
-        if (data.done) doneCb.checked = true;
-        if (data.note) {
-          row.dataset.note = data.note;
-          noteBtn.textContent = "📝*";
-        }
-      }
-
-      top.appendChild(nameInput);
-
+  
       bottom.appendChild(setsInput);
       bottom.appendChild(repsInput);
       bottom.appendChild(weightInput);
       bottom.appendChild(doneCb);
-      bottom.appendChild(noteBtn);
-
+      bottom.appendChild(delBtn);
+  
       row.appendChild(top);
       row.appendChild(bottom);
-
       workoutExercisesEl.appendChild(row);
-    }
-
-    function resetCurrentWorkoutUI() {
-      if (workoutNameInput) workoutNameInput.value = "";
-      if (workoutNotesInput) workoutNotesInput.value = "";
-      if (workoutExercisesEl) workoutExercisesEl.innerHTML = "";
-      currentWorkoutStartTime = null;
-      if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
-      if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
-
-      // default 8 rows
-      for (let i = 0; i < 8; i++) {
-        createExerciseRow();
+  
+      if (exercise) {
+        nameInput.value = exercise.name || "";
+        setsInput.value =
+          exercise.sets != null ? exercise.sets : "";
+        repsInput.value =
+          exercise.reps != null ? exercise.reps : "";
+        weightInput.value =
+          exercise.weight != null ? exercise.weight : "";
+        doneCb.checked = !!exercise.done;
       }
     }
-
-    startWorkoutBtn?.addEventListener("click", () => {
-      const now = new Date();
-      currentWorkoutStartTime = now.toISOString();
-      if (workoutStartLabel) {
-        workoutStartLabel.textContent = now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-      }
-      if (workoutDurationLabel) workoutDurationLabel.textContent = "Running…";
-    });
-
+  
+    function getCurrentWorkoutExercises() {
+      const rows = workoutExercisesEl.querySelectorAll(
+        ".workout-row"
+      );
+      const list = [];
+      rows.forEach(row => {
+        const [nameInput] = row.querySelectorAll(
+          ".workout-row-top input"
+        );
+        const [
+          setsInput,
+          repsInput,
+          weightInput,
+          doneCb
+        ] = row.querySelectorAll(
+          ".workout-row-bottom input"
+        );
+        const name = nameInput.value.trim();
+        const sets = setsInput.value
+          ? parseInt(setsInput.value, 10)
+          : null;
+        const reps = repsInput.value
+          ? parseInt(repsInput.value, 10)
+          : null;
+        const weight = weightInput.value
+          ? parseFloat(weightInput.value)
+          : null;
+        const done = doneCb.checked;
+        if (!name && sets == null && reps == null && weight == null)
+          return;
+        list.push({ name, sets, reps, weight, done });
+      });
+      return list;
+    }
+  
     function saveCurrentWorkout() {
-      const name = workoutNameInput?.value.trim();
-      if (!name) {
-        alert("Please enter the workout name.");
+      const name =
+        workoutNameInput.value.trim() ||
+        "Workout";
+      const exercises = getCurrentWorkoutExercises();
+      if (exercises.length === 0) {
+        alert("Add at least one exercise row to save.");
         return;
       }
-      const notes = workoutNotesInput?.value.trim() || "";
-
-      const rows = Array.from(
-        workoutExercisesEl?.querySelectorAll(".workout-row") || []
-      );
-      const exercises = [];
-      rows.forEach((row) => {
-        const n = row.querySelector(".ex-name")?.value.trim() || "";
-        const setsVal = row.querySelector(".ex-sets")?.value;
-        const repsVal = row.querySelector(".ex-reps")?.value;
-        const weightVal = row.querySelector(".ex-weight")?.value;
-        const done = row.querySelector(".workout-done")?.checked || false;
-        const note = row.dataset.note || "";
-
-        if (!n && !setsVal && !repsVal && !weightVal && !note) return;
-
-        exercises.push({
-          name: n,
-          sets: setsVal ? parseInt(setsVal, 10) : null,
-          reps: repsVal ? parseInt(repsVal, 10) : null,
-          weight: weightVal ? parseFloat(weightVal) : null,
-          done,
-          note
-        });
-      });
-
-      const nowIso = new Date().toISOString();
-      const start = currentWorkoutStartTime || nowIso;
-      const end = nowIso;
-
-      const workout = {
-        id: "w-" + Date.now(),
+      const end = Date.now();
+      const start = workoutStartTime || end;
+      const diffMs = end - start;
+      const mins = Math.round(diffMs / 60000);
+      const notes = workoutNotesEl.value.trim();
+      const log = {
+        id: newId("wlog"),
         name,
+        start,
+        end,
+        durationMinutes: mins,
         notes,
-        date: new Date().toISOString(),
-        startTime: start,
-        endTime: end,
         exercises
       };
-
-      state.workouts.unshift(workout);
+      appState.workouts.logs.unshift(log);
       saveState();
-      renderWorkouts();
-      renderWorkoutFavorites();
-      resetCurrentWorkoutUI();
-    }
-
-    saveWorkoutBtn?.addEventListener("click", saveCurrentWorkout);
-    addExerciseRowBtn?.addEventListener("click", () => createExerciseRow());
-
-    function isWorkoutFavorite(id) {
-      return state.favoriteWorkouts.some((fw) => fw.templateId === id);
-    }
-
-    function toggleFavoriteWorkout(workout) {
-      const idx = state.favoriteWorkouts.findIndex(
-        (fw) => fw.templateId === workout.id
-      );
-      if (idx >= 0) {
-        state.favoriteWorkouts.splice(idx, 1);
-      } else {
-        const template = {
-          templateId: workout.id,
-          name: workout.name,
-          exercises: workout.exercises || []
-        };
-        state.favoriteWorkouts.unshift(template);
-        if (state.favoriteWorkouts.length > 6) {
-          state.favoriteWorkouts.length = 6;
-        }
-      }
-      saveState();
-      renderWorkouts();
+      resetCurrentWorkout();
+      renderWorkoutLogs();
       renderWorkoutFavorites();
     }
-
-    function loadWorkoutTemplate(template) {
-      if (!template) return;
-      if (workoutNameInput) workoutNameInput.value = template.name || "";
-      if (workoutExercisesEl) {
-        workoutExercisesEl.innerHTML = "";
-        const exs = template.exercises || [];
-        if (exs.length) {
-          exs.forEach((ex) => createExerciseRow(ex));
-        } else {
-          for (let i = 0; i < 8; i++) createExerciseRow();
-        }
-      }
-      currentWorkoutStartTime = null;
+  
+    function resetCurrentWorkout() {
+      if (workoutNameInput) workoutNameInput.value = "";
+      if (workoutNotesEl) workoutNotesEl.value = "";
       if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
       if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
-      if (workoutNotesInput) workoutNotesInput.value = "";
-    }
-
-    function renderWorkoutFavorites() {
-      if (!workoutFavoritesEl || !workoutFavoritesEmptyEl) return;
-      const favs = state.favoriteWorkouts || [];
-
-      workoutFavoritesEl.innerHTML = "";
-
-      if (!favs.length) {
-        workoutFavoritesEmptyEl.style.display = "block";
-        return;
+      workoutStartTime = null;
+      if (workoutTimer) {
+        clearInterval(workoutTimer);
+        workoutTimer = null;
       }
-      workoutFavoritesEmptyEl.style.display = "none";
-
-      favs.forEach((fw) => {
-        const card = document.createElement("div");
-        card.className = "favorite-card";
-        card.textContent = fw.name || "Unnamed workout";
-        card.addEventListener("click", () => loadWorkoutTemplate(fw));
-        workoutFavoritesEl.appendChild(card);
-      });
+      workoutExercisesEl.innerHTML = "";
+      for (let i = 0; i < 8; i++) addWorkoutRow();
     }
-
-    function deleteWorkout(id) {
-      if (!confirmDelete()) return;
-      state.workouts = state.workouts.filter((w) => w.id !== id);
-      state.favoriteWorkouts = state.favoriteWorkouts.filter(
-        (fw) => fw.templateId !== id
-      );
-      saveState();
-      renderWorkouts();
-      renderWorkoutFavorites();
-    }
-
-    function renderWorkouts() {
+  
+    function renderWorkoutLogs() {
       if (!workoutListEl) return;
-      if (!state.workouts.length) {
-        workoutListEl.innerHTML = "";
-        if (noWorkoutMsg) noWorkoutMsg.style.display = "block";
+      const logs = appState.workouts.logs || [];
+      workoutListEl.innerHTML = "";
+      if (logs.length === 0) {
+        if (noWorkoutMsgEl)
+          noWorkoutMsgEl.style.display = "block";
         return;
       }
-      if (noWorkoutMsg) noWorkoutMsg.style.display = "none";
-
-      workoutListEl.innerHTML = "";
-      state.workouts.forEach((w) => {
-        const item = document.createElement("div");
-        item.className = "item";
-
+      if (noWorkoutMsgEl)
+        noWorkoutMsgEl.style.display = "none";
+  
+      logs.forEach(log => {
+        const card = document.createElement("div");
+        card.className = "item";
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
         title.className = "item-title";
-        title.textContent = w.name;
-
+        title.textContent = log.name;
+        textWrap.appendChild(title);
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
-
-        const d = document.createElement("span");
-        d.className = "tag";
-        d.textContent = formatDate(w.date);
-        meta.appendChild(d);
-
-        const durationMin = calcDurationMinutes(w.startTime, w.endTime);
-        if (durationMin != null) {
-          const durTag = document.createElement("span");
-          durTag.className = "tag";
-          durTag.textContent = `Duration: ${durationMin} min`;
-          meta.appendChild(durTag);
+  
+        const dateTag = document.createElement("span");
+        dateTag.className = "tag";
+        dateTag.textContent = new Date(
+          log.start
+        ).toLocaleDateString();
+        meta.appendChild(dateTag);
+  
+        const dTag = document.createElement("span");
+        dTag.className = "tag";
+        dTag.textContent = `${log.durationMinutes || 0} min`;
+        meta.appendChild(dTag);
+  
+        const exTag = document.createElement("span");
+        exTag.className = "tag";
+        exTag.textContent = `${log.exercises.length} exercises`;
+        meta.appendChild(exTag);
+  
+        if (log.notes) {
+          const nTag = document.createElement("span");
+          nTag.className = "tag";
+          nTag.textContent = "Notes";
+          meta.appendChild(nTag);
         }
-
-        const exCount = w.exercises ? w.exercises.length : 0;
-        if (exCount > 0) {
-          const exTag = document.createElement("span");
-          exTag.className = "tag";
-          exTag.textContent = `Exercises: ${exCount}`;
-          meta.appendChild(exTag);
-        }
-
-        if (w.notes) {
-          const n = document.createElement("span");
-          n.className = "tag";
-          n.textContent = "Notes";
-          meta.appendChild(n);
-        }
-
-        textWrap.appendChild(title);
+  
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
+        const loadBtn = document.createElement("button");
+        loadBtn.className = "icon-btn";
+        loadBtn.textContent = "↺";
+        loadBtn.title = "Load as current workout";
+        loadBtn.addEventListener("click", () => {
+          loadWorkoutToCurrent(log);
+        });
+        actions.appendChild(loadBtn);
+  
         const favBtn = document.createElement("button");
         favBtn.className = "icon-btn";
-        favBtn.textContent = isWorkoutFavorite(w.id) ? "★" : "☆";
-        favBtn.title = "Toggle favorite template";
-        favBtn.addEventListener("click", () => toggleFavoriteWorkout(w));
-
+        favBtn.textContent = "★";
+        favBtn.title = "Save as favorite";
+        favBtn.addEventListener("click", () => {
+          addFavoriteFromLog(log);
+        });
+        actions.appendChild(favBtn);
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete workout";
-        delBtn.addEventListener("click", () => deleteWorkout(w.id));
-
-        actions.appendChild(favBtn);
-        actions.appendChild(delBtn);
-
-        item.appendChild(main);
-        item.appendChild(actions);
-        workoutListEl.appendChild(item);
-      });
-    }
-
-    // ---------- Finance ----------
-    const accountsListEl = $("accountsList");
-    const noAccountsMsg = $("noAccountsMsg");
-    const financeListEl = $("financeList");
-    const noFinanceMsg = $("noFinanceMsg");
-    const financeAccountSelect = $("financeAccount");
-    const financeSummaryEl = $("financeSummary");
-    const financeFilterCategory = $("financeFilterCategory");
-
-    function renderAccounts() {
-      if (!accountsListEl || !financeAccountSelect) return;
-
-      const accounts = state.accounts;
-      accountsListEl.innerHTML = "";
-      financeAccountSelect.innerHTML = "";
-
-      if (!accounts.length) {
-        if (noAccountsMsg) noAccountsMsg.style.display = "block";
-        state.activeFinanceAccountId = null;
-      } else {
-        if (noAccountsMsg) noAccountsMsg.style.display = "none";
-        if (!state.activeFinanceAccountId) {
-          state.activeFinanceAccountId = accounts[0].id;
-        }
-      }
-
-      accounts.forEach((acc) => {
-        const balance = state.finance
-          .filter((tx) => tx.accountId === acc.id)
-          .reduce((sum, tx) => {
-            return sum + (tx.type === "income" ? tx.amount : -tx.amount);
-          }, 0);
-
-        const row = document.createElement("div");
-        row.className = "item";
-        if (state.activeFinanceAccountId === acc.id) {
-          row.classList.add("selected-account");
-        }
-
-        const main = document.createElement("div");
-        main.className = "item-main";
-
-        const textWrap = document.createElement("div");
-        textWrap.className = "item-text";
-
-        const title = document.createElement("div");
-        title.className = "item-title";
-        title.textContent = acc.name;
-
-        const meta = document.createElement("div");
-        meta.className = "item-meta";
-
-        const balTag = document.createElement("span");
-        balTag.className = "tag";
-        balTag.textContent = `Balance: ${balance.toFixed(2)}`;
-        meta.appendChild(balTag);
-
-        textWrap.appendChild(title);
-        textWrap.appendChild(meta);
-        main.appendChild(textWrap);
-
-        const actions = document.createElement("div");
-        actions.className = "item-actions";
-
-        const delBtn = document.createElement("button");
-        delBtn.className = "icon-btn danger";
-        delBtn.textContent = "🗑";
-        delBtn.title = "Delete account";
-        delBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          deleteAccount(acc.id);
-        });
-
-        actions.appendChild(delBtn);
-
-        row.appendChild(main);
-        row.appendChild(actions);
-
-        row.addEventListener("click", () => {
-          state.activeFinanceAccountId = acc.id;
+        delBtn.addEventListener("click", () => {
+          if (!confirm("Delete this logged workout?")) return;
+          appState.workouts.logs = appState.workouts.logs.filter(
+            w => w.id !== log.id
+          );
           saveState();
-          renderAccounts();
-          renderFinance();
+          renderWorkoutLogs();
+          renderWorkoutFavorites();
         });
-
-        accountsListEl.appendChild(row);
-
-        const opt = document.createElement("option");
-        opt.value = acc.id;
-        opt.textContent = acc.name;
-        financeAccountSelect.appendChild(opt);
+        actions.appendChild(delBtn);
+  
+        card.appendChild(main);
+        card.appendChild(actions);
+        workoutListEl.appendChild(card);
       });
-
-      if (accounts.length) {
-        financeAccountSelect.value =
-          state.activeFinanceAccountId || accounts[0].id;
-      }
     }
-
-    function addAccount() {
-      const name = prompt("Account name (e.g. THB main, BRL savings):");
-      if (!name) return;
-      const acc = {
-        id: "acc-" + Date.now(),
-        name: name.trim()
-      };
-      state.accounts.push(acc);
-      saveState();
-      renderAccounts();
-    }
-
-    $("addAccountBtn")?.addEventListener("click", addAccount);
-
-    function deleteAccount(id) {
-      const used = state.finance.some((tx) => tx.accountId === id);
-      if (used) {
-        alert("This account has transactions and can't be deleted yet.");
+  
+    function renderWorkoutFavorites() {
+      if (!workoutFavoritesEl || !workoutFavoritesEmptyEl) return;
+      const favs = appState.workouts.favorites || [];
+      workoutFavoritesEl.innerHTML = "";
+      if (favs.length === 0) {
+        workoutFavoritesEmptyEl.style.display = "block";
         return;
       }
-      if (!confirmDelete()) return;
-      state.accounts = state.accounts.filter((a) => a.id !== id);
-      if (state.activeFinanceAccountId === id) {
-        state.activeFinanceAccountId =
-          state.accounts[0]?.id || null;
-      }
-      saveState();
-      renderAccounts();
-      renderFinance();
+      workoutFavoritesEmptyEl.style.display = "none";
+  
+      favs.slice(0, 6).forEach(fav => {
+        const card = document.createElement("div");
+        card.className = "favorite-card";
+        card.textContent = fav.name || "Workout";
+        card.title = "Tap to load in current workout";
+        card.addEventListener("click", () => {
+          loadFavoriteToCurrent(fav);
+        });
+        workoutFavoritesEl.appendChild(card);
+      });
     }
-
-    function addFinance() {
-      const type = $("financeType")?.value || "expense";
-      const amountVal = $("financeAmount")?.value;
-      const amount = parseFloat(amountVal);
-      if (!amount || Number.isNaN(amount)) return;
-
-      const accountId =
-        $("financeAccount")?.value ||
-        state.activeFinanceAccountId ||
-        (state.accounts[0] && state.accounts[0].id);
-
-      if (!accountId) {
-        alert("Please create an account first.");
-        return;
-      }
-
-      const category = $("financeCategory")?.value.trim() || "";
-      const method = $("financeMethod")?.value.trim() || "";
-
-      let dateIso;
-      const dateStr = $("financeDate")?.value;
-      if (!dateStr) {
-        dateIso = new Date().toISOString();
-      } else {
-        dateIso = new Date(dateStr + "T00:00:00").toISOString();
-      }
-
-      const note = $("financeNote")?.value.trim() || "";
-
-      const tx = {
-        id: "tx-" + Date.now(),
-        type,
-        amount,
-        accountId,
-        category,
-        method,
-        date: dateIso,
-        note
+  
+    function addFavoriteFromLog(log) {
+      const template = {
+        id: newId("wfav"),
+        name: log.name,
+        exercises: log.exercises.map(e => ({ ...e }))
       };
-
-      state.finance.unshift(tx);
-
-      $("financeAmount").value = "";
-      $("financeCategory").value = "";
-      $("financeMethod").value = "";
-      $("financeDate").value = "";
-      $("financeNote").value = "";
-
+      appState.workouts.favorites.unshift(template);
+      // keep at most 8
+      appState.workouts.favorites =
+        appState.workouts.favorites.slice(0, 8);
       saveState();
-      renderAccounts();
-      renderFinance();
+      renderWorkoutFavorites();
     }
-
-    $("addFinanceBtn")?.addEventListener("click", addFinance);
-    $("financeAmount")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addFinance();
+  
+    function loadFavoriteToCurrent(fav) {
+      resetCurrentWorkout();
+      if (workoutNameInput) workoutNameInput.value = fav.name;
+      workoutExercisesEl.innerHTML = "";
+      fav.exercises.forEach(ex => addWorkoutRow(ex));
+      // ensure at least 8 rows
+      const needed = Math.max(0, 8 - fav.exercises.length);
+      for (let i = 0; i < needed; i++) addWorkoutRow();
+    }
+  
+    function loadWorkoutToCurrent(log) {
+      resetCurrentWorkout();
+      if (workoutNameInput) workoutNameInput.value = log.name;
+      workoutExercisesEl.innerHTML = "";
+      log.exercises.forEach(ex => addWorkoutRow(ex));
+      const needed = Math.max(0, 8 - log.exercises.length);
+      for (let i = 0; i < needed; i++) addWorkoutRow();
+      if (workoutNotesEl) workoutNotesEl.value = log.notes || "";
+    }
+  
+    // --------- FINANCE ----------
+    let financeAccountSelect,
+      financeTypeSelect,
+      financeAmountInput,
+      financeDateInput,
+      financeCategoryInput,
+      financeMethodInput,
+      financeNoteInput,
+      addFinanceBtn,
+      financeFilterCategorySelect,
+      financeSummaryEl,
+      financeListEl,
+      noFinanceMsgEl,
+      addAccountBtn,
+      accountsListEl,
+      noAccountsMsgEl;
+  
+    let activeFinanceAccountId = null;
+  
+    function initFinance() {
+      financeAccountSelect = document.getElementById(
+        "financeAccount"
+      );
+      financeTypeSelect = document.getElementById("financeType");
+      financeAmountInput = document.getElementById(
+        "financeAmount"
+      );
+      financeDateInput = document.getElementById("financeDate");
+      financeCategoryInput = document.getElementById(
+        "financeCategory"
+      );
+      financeMethodInput = document.getElementById(
+        "financeMethod"
+      );
+      financeNoteInput = document.getElementById("financeNote");
+      addFinanceBtn = document.getElementById("addFinanceBtn");
+      financeFilterCategorySelect = document.getElementById(
+        "financeFilterCategory"
+      );
+      financeSummaryEl = document.getElementById("financeSummary");
+      financeListEl = document.getElementById("financeList");
+      noFinanceMsgEl = document.getElementById("noFinanceMsg");
+      addAccountBtn = document.getElementById("addAccountBtn");
+      accountsListEl = document.getElementById("accountsList");
+      noAccountsMsgEl = document.getElementById("noAccountsMsg");
+  
+      if (!financeAccountSelect) return;
+  
+      if (
+        !appState.finance.accounts ||
+        appState.finance.accounts.length === 0
+      ) {
+        appState.finance.accounts =
+          defaultState().finance.accounts;
       }
-    });
-
-    financeAccountSelect?.addEventListener("change", () => {
-      state.activeFinanceAccountId = financeAccountSelect.value;
-      saveState();
-      renderAccounts();
-      renderFinance();
-    });
-
-    financeFilterCategory?.addEventListener("change", renderFinance);
-
-    function deleteFinance(id) {
-      if (!confirmDelete()) return;
-      state.finance = state.finance.filter((tx) => tx.id !== id);
-      saveState();
-      renderAccounts();
-      renderFinance();
-    }
-
-    function getMonthlySummary(accountId) {
-      const now = new Date();
-      const m = now.getMonth();
-      const y = now.getFullYear();
-      let income = 0;
-      let expense = 0;
-
-      state.finance.forEach((tx) => {
-        if (accountId && tx.accountId !== accountId) return;
-        const d = new Date(tx.date);
-        if (d.getMonth() === m && d.getFullYear() === y) {
-          if (tx.type === "income") income += tx.amount;
-          else expense += tx.amount;
+      if (!appState.finance.transactions)
+        appState.finance.transactions = [];
+  
+      addFinanceBtn.addEventListener("click", () => {
+        addFinanceTransaction();
+      });
+  
+      financeAmountInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addFinanceTransaction();
         }
       });
-
-      return {
-        income,
-        expense,
-        balance: income - expense
-      };
-    }
-
-    function renderFinance() {
-      if (!financeListEl) return;
-
-      let txs = state.finance;
-      if (state.activeFinanceAccountId) {
-        txs = txs.filter(
-          (tx) => tx.accountId === state.activeFinanceAccountId
+  
+      if (financeFilterCategorySelect) {
+        financeFilterCategorySelect.addEventListener(
+          "change",
+          renderFinance
         );
       }
-
-      const catFilter = financeFilterCategory?.value || "all";
-      if (catFilter !== "all") {
-        txs = txs.filter((tx) => (tx.category || "") === catFilter);
+  
+      addAccountBtn.addEventListener("click", () => {
+        const name = prompt(
+          "Account name (e.g. THB main, BRL savings, USD)",
+          ""
+        );
+        if (!name) return;
+        const currency =
+          prompt("Currency (THB, BRL, USD…)", "THB") ||
+          "THB";
+        const id = newId("acc");
+        appState.finance.accounts.push({
+          id,
+          name: name.trim(),
+          currency: currency.trim().toUpperCase()
+        });
+        saveState();
+        activeFinanceAccountId = id;
+        populateFinanceAccountSelect();
+        renderAccounts();
+        renderFinance();
+      });
+  
+      financeAccountSelect.addEventListener("change", () => {
+        activeFinanceAccountId = financeAccountSelect.value;
+      });
+  
+      populateFinanceAccountSelect();
+      renderAccounts();
+      renderFinance();
+    }
+  
+    function populateFinanceAccountSelect() {
+      financeAccountSelect.innerHTML = "";
+      appState.finance.accounts.forEach(acc => {
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = `${acc.name} (${acc.currency})`;
+        financeAccountSelect.appendChild(opt);
+      });
+      if (!activeFinanceAccountId) {
+        activeFinanceAccountId =
+          appState.finance.accounts[0]?.id || null;
       }
-
-      if (financeSummaryEl) {
-        const summary = getMonthlySummary(state.activeFinanceAccountId);
-        if (state.activeFinanceAccountId && (summary.income || summary.expense)) {
-          financeSummaryEl.textContent =
-            `This month – Income: +${summary.income.toFixed(2)} ` +
-            `/ Expenses: -${summary.expense.toFixed(2)} ` +
-            `/ Balance: ${(summary.balance >= 0 ? "+" : "")}${summary.balance.toFixed(2)}`;
-        } else if (state.activeFinanceAccountId) {
-          financeSummaryEl.textContent = "This month – no transactions yet.";
-        } else {
-          financeSummaryEl.textContent = "Create an account to see the monthly summary.";
-        }
-      }
-
-      if (!txs.length) {
-        financeListEl.innerHTML = "";
-        if (noFinanceMsg) noFinanceMsg.style.display = "block";
+      if (activeFinanceAccountId)
+        financeAccountSelect.value = activeFinanceAccountId;
+    }
+  
+    function addFinanceTransaction() {
+      const accountId =
+        financeAccountSelect.value ||
+        appState.finance.accounts[0]?.id;
+      if (!accountId) {
+        alert("Add an account first.");
         return;
       }
-      if (noFinanceMsg) noFinanceMsg.style.display = "none";
-
-      const accountMap = {};
-      state.accounts.forEach((a) => {
-        accountMap[a.id] = a.name;
-      });
-
+      const type = financeTypeSelect.value || "expense";
+      const amountVal = parseFloat(
+        financeAmountInput.value || "0"
+      );
+      if (!amountVal || amountVal <= 0) return;
+      const dateStr =
+        financeDateInput.value ||
+        new Date().toISOString().slice(0, 10);
+      const category = financeCategoryInput.value.trim() || "Other";
+      const method = financeMethodInput.value.trim() || "";
+      const note = financeNoteInput.value.trim() || "";
+      const tx = {
+        id: newId("tx"),
+        accountId,
+        type,
+        amount: amountVal,
+        date: dateStr,
+        category,
+        method,
+        note
+      };
+      appState.finance.transactions.unshift(tx);
+      saveState();
+  
+      financeAmountInput.value = "";
+      financeNoteInput.value = "";
+      renderFinance();
+    }
+  
+    function renderFinance() {
+      if (!financeListEl) return;
+      const txs = appState.finance.transactions || [];
+      const filterCategory =
+        financeFilterCategorySelect?.value || "all";
+  
+      let filtered = txs;
+      if (filterCategory !== "all") {
+        filtered = filtered.filter(
+          t => t.category === filterCategory
+        );
+      }
+      if (activeFinanceAccountId) {
+        filtered = filtered.filter(
+          t => t.accountId === activeFinanceAccountId
+        );
+      }
+  
       financeListEl.innerHTML = "";
-
-      txs.forEach((tx) => {
-        const item = document.createElement("div");
-        item.className = "item";
-
+      if (filtered.length === 0) {
+        if (noFinanceMsgEl)
+          noFinanceMsgEl.style.display = "block";
+      } else {
+        if (noFinanceMsgEl)
+          noFinanceMsgEl.style.display = "none";
+      }
+  
+      filtered.forEach(tx => {
+        const card = document.createElement("div");
+        card.className = "item";
+  
         const main = document.createElement("div");
         main.className = "item-main";
-
+  
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
-
+  
         const title = document.createElement("div");
         title.className = "item-title";
+        const acc = appState.finance.accounts.find(
+          a => a.id === tx.accountId
+        );
         const sign = tx.type === "income" ? "+" : "-";
-        title.textContent = `${sign}${tx.amount.toFixed(2)} (${tx.category || "No category"})`;
-
+        title.textContent = `${sign}${tx.amount.toFixed(2)} ${
+          acc?.currency || ""
+        }`;
+        textWrap.appendChild(title);
+  
         const meta = document.createElement("div");
         meta.className = "item-meta";
-
+  
         const typeTag = document.createElement("span");
         typeTag.className =
-          "tag " + (tx.type === "income" ? "tag-income" : "tag-expense");
-        typeTag.textContent = tx.type === "income" ? "Income" : "Expense";
+          "tag " +
+          (tx.type === "income"
+            ? "tag-income"
+            : "tag-expense");
+        typeTag.textContent =
+          tx.type === "income" ? "Income" : "Expense";
         meta.appendChild(typeTag);
-
-        const accTag = document.createElement("span");
-        accTag.className = "tag";
-        accTag.textContent = accountMap[tx.accountId] || "Unknown account";
-        meta.appendChild(accTag);
-
-        const methodTag = document.createElement("span");
-        methodTag.className = "tag";
-        methodTag.textContent = tx.method || "Method ?";
-        meta.appendChild(methodTag);
-
+  
+        const catTag = document.createElement("span");
+        catTag.className = "tag";
+        catTag.textContent = tx.category;
+        meta.appendChild(catTag);
+  
         const dateTag = document.createElement("span");
         dateTag.className = "tag";
-        dateTag.textContent = formatDate(tx.date);
+        dateTag.textContent = tx.date;
         meta.appendChild(dateTag);
-
-        if (tx.note) {
-          const noteTag = document.createElement("span");
-          noteTag.className = "tag";
-          noteTag.textContent = "Note";
-          meta.appendChild(noteTag);
+  
+        if (tx.method) {
+          const mTag = document.createElement("span");
+          mTag.className = "tag";
+          mTag.textContent = tx.method;
+          meta.appendChild(mTag);
         }
-
-        textWrap.appendChild(title);
+  
+        if (tx.note) {
+          const nTag = document.createElement("span");
+          nTag.className = "tag";
+          nTag.textContent = "Note";
+          meta.appendChild(nTag);
+        }
+  
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
-
+  
         const actions = document.createElement("div");
         actions.className = "item-actions";
-
+  
+        const editBtn = document.createElement("button");
+        editBtn.className = "icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit transaction";
+        editBtn.addEventListener("click", () => {
+          editTransaction(tx.id);
+        });
+        actions.appendChild(editBtn);
+  
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
         delBtn.title = "Delete transaction";
-        delBtn.addEventListener("click", () => deleteFinance(tx.id));
-
+        delBtn.addEventListener("click", () => {
+          if (!confirm("Delete this transaction?")) return;
+          appState.finance.transactions =
+            appState.finance.transactions.filter(
+              t => t.id !== tx.id
+            );
+          saveState();
+          renderFinance();
+          renderAccounts();
+        });
         actions.appendChild(delBtn);
-
-        item.appendChild(main);
-        item.appendChild(actions);
-        financeListEl.appendChild(item);
+  
+        card.appendChild(main);
+        card.appendChild(actions);
+        financeListEl.appendChild(card);
+      });
+  
+      renderFinanceSummary();
+      renderAccounts();
+    }
+  
+    function renderFinanceSummary() {
+      if (!financeSummaryEl) return;
+      const now = new Date();
+      const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+      let txs = appState.finance.transactions || [];
+      txs = txs.filter(t => t.date && t.date.startsWith(monthStr));
+      if (activeFinanceAccountId) {
+        txs = txs.filter(t => t.accountId === activeFinanceAccountId);
+      }
+      let income = 0;
+      let expense = 0;
+      txs.forEach(t => {
+        if (t.type === "income") income += t.amount;
+        else expense += t.amount;
+      });
+      const net = income - expense;
+      const acc = appState.finance.accounts.find(
+        a => a.id === activeFinanceAccountId
+      );
+      const currency =
+        acc?.currency || appState.finance.accounts[0]?.currency || "";
+      financeSummaryEl.textContent =
+        txs.length === 0
+          ? "No transactions this month yet."
+          : `This month • Income: +${income.toFixed(
+              2
+            )} ${currency} • Expense: -${expense.toFixed(
+              2
+            )} ${currency} • Net: ${net.toFixed(2)} ${currency}`;
+    }
+  
+    function renderAccounts() {
+      if (!accountsListEl) return;
+      const accounts = appState.finance.accounts || [];
+      accountsListEl.innerHTML = "";
+      if (accounts.length === 0) {
+        if (noAccountsMsgEl)
+          noAccountsMsgEl.style.display = "block";
+        return;
+      }
+      if (noAccountsMsgEl)
+        noAccountsMsgEl.style.display = "none";
+  
+      accounts.forEach(acc => {
+        const bal = computeAccountBalance(acc.id);
+        const row = document.createElement("div");
+        row.className = "item";
+        if (acc.id === activeFinanceAccountId) {
+          row.classList.add("selected-account");
+        }
+  
+        const main = document.createElement("div");
+        main.className = "item-main";
+  
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+  
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = `${acc.name}`;
+        textWrap.appendChild(title);
+  
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+  
+        const curTag = document.createElement("span");
+        curTag.className = "tag";
+        curTag.textContent = acc.currency;
+        meta.appendChild(curTag);
+  
+        const balTag = document.createElement("span");
+        balTag.className = "tag";
+        balTag.textContent = `Bal: ${bal.toFixed(
+          2
+        )} ${acc.currency}`;
+        meta.appendChild(balTag);
+  
+        textWrap.appendChild(meta);
+        main.appendChild(textWrap);
+  
+        row.appendChild(main);
+  
+        row.addEventListener("click", () => {
+          activeFinanceAccountId = acc.id;
+          populateFinanceAccountSelect();
+          renderAccounts();
+          renderFinance();
+        });
+  
+        accountsListEl.appendChild(row);
       });
     }
-
-    // ---------- Init ----------
-    function init() {
-      loadState();
-
-      const verEl = $("appVersion");
-      if (verEl) verEl.textContent = "0.7.2";
-
-      setupNav();
-
-      renderTodoListOptions();
-      renderTodos();
-
-      renderShoppingListOptions();
-      renderShopping();
-
-      renderWorkouts();
-      renderWorkoutFavorites();
-      renderAccounts();
-      renderFinance();
-
-      resetCurrentWorkoutUI();
-
-      setPage(state.currentPage || "home");
+  
+    function computeAccountBalance(accountId) {
+      let bal = 0;
+      (appState.finance.transactions || []).forEach(tx => {
+        if (tx.accountId !== accountId) return;
+        if (tx.type === "income") bal += tx.amount;
+        else bal -= tx.amount;
+      });
+      return bal;
     }
-
-    window.addEventListener("load", init);
+  
+    function editTransaction(id) {
+      const tx = appState.finance.transactions.find(
+        t => t.id === id
+      );
+      if (!tx) return;
+      const amountStr =
+        prompt(
+          "Amount",
+          tx.amount.toString()
+        ) || tx.amount.toString();
+      const amount = parseFloat(amountStr);
+      if (!isNaN(amount) && amount > 0) {
+        tx.amount = amount;
+      }
+      const cat =
+        prompt("Category", tx.category) || tx.category;
+      tx.category = cat.trim() || tx.category;
+      const method =
+        prompt("Method", tx.method) || tx.method;
+      tx.method = method.trim();
+      const note =
+        prompt("Note", tx.note || "") || tx.note || "";
+      tx.note = note.trim();
+      saveState();
+      renderFinance();
+      renderAccounts();
+    }
+  
+    // --------- INIT ALL ----------
+    initHomeQuickTask();
+    initTodo();
+    initShopping();
+    initWorkouts();
+    initFinance();
+  });
   </script>
 </body>
 </html>
