@@ -982,18 +982,18 @@
     </main>
   </div>
   <script>
+  // MyHub v0.9.0
   document.addEventListener("DOMContentLoaded", () => {
-    const STORAGE_KEY = "myhub_state_v0_8";
+    const STORAGE_KEY = "myhub_state_v0_9";
   
     let appState = loadState();
     const versionEl = document.getElementById("appVersion");
-    if (versionEl) versionEl.textContent = "0.8.0";
+    if (versionEl) versionEl.textContent = "0.9.0";
   
     // --------- STATE LOAD / SAVE ----------
     function defaultState() {
-      const now = Date.now();
       return {
-        version: "0.8.0",
+        version: "0.9.0",
         todos: {
           lists: [
             { id: "todo_personal", name: "Personal" },
@@ -1014,6 +1014,9 @@
             { id: "acc_thb_main", name: "THB main", currency: "THB" }
           ],
           transactions: []
+        },
+        notes: {
+          items: []
         }
       };
     }
@@ -1023,11 +1026,15 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return defaultState();
         const parsed = JSON.parse(raw);
-        // very light migrations
-        if (!parsed.todos) parsed.todos = defaultState().todos;
-        if (!parsed.shopping) parsed.shopping = defaultState().shopping;
-        if (!parsed.workouts) parsed.workouts = defaultState().workouts;
-        if (!parsed.finance) parsed.finance = defaultState().finance;
+  
+        // Very light migrations
+        const base = defaultState();
+        if (!parsed.todos) parsed.todos = base.todos;
+        if (!parsed.shopping) parsed.shopping = base.shopping;
+        if (!parsed.workouts) parsed.workouts = base.workouts;
+        if (!parsed.finance) parsed.finance = base.finance;
+        if (!parsed.notes) parsed.notes = base.notes;
+  
         return parsed;
       } catch (e) {
         console.warn("Failed to load state, using defaults", e);
@@ -1104,7 +1111,6 @@
       showPage(page, false);
     });
   
-    // initial route
     const initialHash = location.hash.replace("#", "");
     const initialPage = initialHash || "home";
     showPage(initialPage, false);
@@ -1121,11 +1127,7 @@
       btn.addEventListener("click", () => {
         const text = input.value.trim();
         if (!text) return;
-        // default to first todo list
-        const list =
-          appState.todos.lists[0] ||
-          appState.todos.lists[0] ||
-          null;
+        const list = appState.todos.lists[0] || null;
         const listId = list ? list.id : "todo_personal";
         const now = Date.now();
         appState.todos.items.push({
@@ -1137,7 +1139,8 @@
           listId,
           createdAt: now,
           updatedAt: now,
-          doneAt: null
+          doneAt: null,
+          link: ""
         });
         saveState();
         input.value = "";
@@ -1193,6 +1196,11 @@
       if (!appState.todos.lists || appState.todos.lists.length === 0) {
         appState.todos.lists = defaultState().todos.lists;
       }
+  
+      // Make sure items have link field
+      appState.todos.items.forEach(i => {
+        if (typeof i.link === "undefined") i.link = "";
+      });
   
       todoNewListBtn.addEventListener("click", () => {
         const name = todoListName.value.trim();
@@ -1275,8 +1283,7 @@
     function addTodoFromForm() {
       const title = todoTitleInput.value.trim();
       if (!title) return;
-      const listId =
-        todoListSelect.value || appState.todos.lists[0]?.id;
+      const listId = todoListSelect.value || appState.todos.lists[0]?.id;
       const priority = todoPrioritySelect.value || "medium";
       const dueDateVal = todoDueDate.value || null;
       const now = Date.now();
@@ -1289,7 +1296,8 @@
         listId,
         createdAt: now,
         updatedAt: now,
-        doneAt: null
+        doneAt: null,
+        link: ""
       });
       saveState();
       todoTitleInput.value = "";
@@ -1318,26 +1326,20 @@
       const filterPriority = todoFilterPriority?.value || "all";
       const filterStatus = todoFilterStatus?.value || "all";
       const filterList = todoFilterList?.value || "all";
-      const activeListId =
-        todoListSelect?.value || appState.todos.lists[0]?.id;
   
       let items = [...appState.todos.items];
   
       items = items.filter(item => {
-        if (filterList !== "all" && item.listId !== filterList)
-          return false;
+        if (filterList !== "all" && item.listId !== filterList) return false;
         if (filterPriority !== "all" && item.priority !== filterPriority)
           return false;
         if (filterStatus !== "all" && item.status !== filterStatus)
           return false;
         if (searchText) {
-          if (
-            !item.title.toLowerCase().includes(searchText)
-          ) {
+          if (!item.title.toLowerCase().includes(searchText)) {
             return false;
           }
         }
-        // always keep
         return true;
       });
   
@@ -1472,11 +1474,35 @@
           metaRow.appendChild(st);
         }
   
+        if (item.link) {
+          const linkTag = document.createElement("span");
+          linkTag.className = "tag";
+          linkTag.textContent = `🔗 ${item.link}`;
+          metaRow.appendChild(linkTag);
+        }
+  
         textWrap.appendChild(metaRow);
         main.appendChild(textWrap);
   
         const actions = document.createElement("div");
         actions.className = "item-actions";
+  
+        const linkBtn = document.createElement("button");
+        linkBtn.className = "icon-btn";
+        linkBtn.textContent = "🔗";
+        linkBtn.title = "Add / edit link or reference";
+        linkBtn.addEventListener("click", () => {
+          const val =
+            prompt(
+              "Link / reference (e.g. 'Shopping: Weekly list', 'Finance: THB main')",
+              item.link || ""
+            ) || "";
+          item.link = val.trim();
+          item.updatedAt = Date.now();
+          saveState();
+          renderTodoLists();
+        });
+        actions.appendChild(linkBtn);
   
         const editBtn = document.createElement("button");
         editBtn.className = "icon-btn";
@@ -1554,10 +1580,8 @@
       item.dueDate = newDue.trim() || null;
   
       const newPrio =
-        prompt(
-          "Priority (high / medium / low)",
-          item.priority
-        ) || item.priority;
+        prompt("Priority (high / medium / low)", item.priority) ||
+        item.priority;
       const p = newPrio.toLowerCase();
       if (["high", "medium", "low"].includes(p)) {
         item.priority = p;
@@ -1578,13 +1602,9 @@
       shoppingEmptyMsgEl;
   
     function initShopping() {
-      shoppingListSelect = document.getElementById(
-        "shoppingListSelect"
-      );
+      shoppingListSelect = document.getElementById("shoppingListSelect");
       shoppingListName = document.getElementById("shoppingListName");
-      shoppingNewListBtn = document.getElementById(
-        "shoppingNewListBtn"
-      );
+      shoppingNewListBtn = document.getElementById("shoppingNewListBtn");
       shoppingItemInput = document.getElementById("shoppingItemInput");
       addShoppingBtn = document.getElementById("addShoppingBtn");
       shoppingListEl = document.getElementById("shoppingList");
@@ -1592,12 +1612,13 @@
   
       if (!shoppingListSelect) return;
   
-      if (
-        !appState.shopping.lists ||
-        appState.shopping.lists.length === 0
-      ) {
+      if (!appState.shopping.lists || appState.shopping.lists.length === 0) {
         appState.shopping.lists = defaultState().shopping.lists;
       }
+  
+      appState.shopping.items.forEach(i => {
+        if (typeof i.link === "undefined") i.link = "";
+      });
   
       shoppingNewListBtn.addEventListener("click", () => {
         const name = shoppingListName.value.trim();
@@ -1610,10 +1631,7 @@
         renderShoppingItems();
       });
   
-      shoppingListSelect.addEventListener(
-        "change",
-        renderShoppingItems
-      );
+      shoppingListSelect.addEventListener("change", renderShoppingItems);
   
       addShoppingBtn.addEventListener("click", () => {
         addShoppingItemFromForm();
@@ -1646,8 +1664,7 @@
       const text = shoppingItemInput.value.trim();
       if (!text) return;
       const listId =
-        shoppingListSelect.value ||
-        appState.shopping.lists[0]?.id;
+        shoppingListSelect.value || appState.shopping.lists[0]?.id;
       const now = Date.now();
       appState.shopping.items.push({
         id: newId("shop"),
@@ -1655,7 +1672,8 @@
         notes: "",
         checked: false,
         listId,
-        createdAt: now
+        createdAt: now,
+        link: ""
       });
       saveState();
       shoppingItemInput.value = "";
@@ -1665,20 +1683,17 @@
     function renderShoppingItems() {
       if (!shoppingListEl) return;
       const activeListId =
-        shoppingListSelect.value ||
-        appState.shopping.lists[0]?.id;
+        shoppingListSelect.value || appState.shopping.lists[0]?.id;
       const items = appState.shopping.items.filter(
         i => i.listId === activeListId
       );
   
       shoppingListEl.innerHTML = "";
       if (items.length === 0) {
-        if (shoppingEmptyMsgEl)
-          shoppingEmptyMsgEl.style.display = "block";
+        if (shoppingEmptyMsgEl) shoppingEmptyMsgEl.style.display = "block";
         return;
       }
-      if (shoppingEmptyMsgEl)
-        shoppingEmptyMsgEl.style.display = "none";
+      if (shoppingEmptyMsgEl) shoppingEmptyMsgEl.style.display = "none";
   
       items.forEach(item => {
         const row = document.createElement("div");
@@ -1724,22 +1739,55 @@
           titleEl.style.textDecoration = "line-through";
           titleEl.style.opacity = "0.7";
         }
+        titleEl.addEventListener("click", () => {
+          const newTitle =
+            prompt("Edit item", item.title) || item.title;
+          const trimmed = newTitle.trim();
+          if (!trimmed) return;
+          item.title = trimmed;
+          saveState();
+          renderShoppingItems();
+        });
         textWrap.appendChild(titleEl);
   
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+  
         if (item.notes) {
-          const meta = document.createElement("div");
-          meta.className = "item-meta";
-          const tag = document.createElement("span");
-          tag.className = "tag";
-          tag.textContent = item.notes;
-          meta.appendChild(tag);
-          textWrap.appendChild(meta);
+          const noteTag = document.createElement("span");
+          noteTag.className = "tag";
+          noteTag.textContent = item.notes;
+          meta.appendChild(noteTag);
         }
   
+        if (item.link) {
+          const linkTag = document.createElement("span");
+          linkTag.className = "tag";
+          linkTag.textContent = `🔗 ${item.link}`;
+          meta.appendChild(linkTag);
+        }
+  
+        textWrap.appendChild(meta);
         main.appendChild(textWrap);
   
         const actions = document.createElement("div");
         actions.className = "item-actions";
+  
+        const linkBtn = document.createElement("button");
+        linkBtn.className = "icon-btn";
+        linkBtn.textContent = "🔗";
+        linkBtn.title = "Add / edit link or reference";
+        linkBtn.addEventListener("click", () => {
+          const val =
+            prompt(
+              "Link / reference (e.g. 'Finance: THB main', 'To-do: pay bill')",
+              item.link || ""
+            ) || "";
+          item.link = val.trim();
+          saveState();
+          renderShoppingItems();
+        });
+        actions.appendChild(linkBtn);
   
         const noteBtn = document.createElement("button");
         noteBtn.className = "icon-btn";
@@ -1777,11 +1825,7 @@
       });
     }
   
-    function reorderShoppingItems(
-      draggedId,
-      targetId,
-      listId
-    ) {
+    function reorderShoppingItems(draggedId, targetId, listId) {
       const arr = appState.shopping.items.filter(
         i => i.listId === listId
       );
@@ -1817,36 +1861,26 @@
   
     function initWorkouts() {
       workoutNameInput = document.getElementById("workoutName");
-      workoutStartLabel = document.getElementById(
-        "workoutStartLabel"
-      );
-      workoutDurationLabel = document.getElementById(
-        "workoutDurationLabel"
-      );
+      workoutStartLabel = document.getElementById("workoutStartLabel");
+      workoutDurationLabel = document.getElementElementById
+        ? document.getElementById("workoutDurationLabel")
+        : document.getElementById("workoutDurationLabel");
+      workoutDurationLabel = document.getElementById("workoutDurationLabel");
+  
       startWorkoutBtn = document.getElementById("startWorkoutBtn");
       saveWorkoutBtn = document.getElementById("saveWorkoutBtn");
-      addExerciseRowBtn = document.getElementById(
-        "addExerciseRowBtn"
-      );
-      workoutExercisesEl = document.getElementById(
-        "workoutExercises"
-      );
+      addExerciseRowBtn = document.getElementById("addExerciseRowBtn");
+      workoutExercisesEl = document.getElementById("workoutExercises");
       workoutNotesEl = document.getElementById("workoutNotes");
-      workoutFavoritesEl = document.getElementById(
-        "workoutFavorites"
-      );
-      workoutFavoritesEmptyEl = document.getElementById(
-        "workoutFavoritesEmpty"
-      );
+      workoutFavoritesEl = document.getElementById("workoutFavorites");
+      workoutFavoritesEmptyEl = document.getElementById("workoutFavoritesEmpty");
       workoutListEl = document.getElementById("workoutList");
       noWorkoutMsgEl = document.getElementById("noWorkoutMsg");
   
       if (!workoutExercisesEl) return;
   
-      if (!appState.workouts.logs)
-        appState.workouts.logs = [];
-      if (!appState.workouts.favorites)
-        appState.workouts.favorites = [];
+      if (!appState.workouts.logs) appState.workouts.logs = [];
+      if (!appState.workouts.favorites) appState.workouts.favorites = [];
   
       startWorkoutBtn.addEventListener("click", () => {
         if (!workoutStartTime) {
@@ -1954,22 +1988,16 @@
     }
   
     function getCurrentWorkoutExercises() {
-      const rows = workoutExercisesEl.querySelectorAll(
-        ".workout-row"
-      );
+      const rows = workoutExercisesEl.querySelectorAll(".workout-row");
       const list = [];
       rows.forEach(row => {
-        const [nameInput] = row.querySelectorAll(
-          ".workout-row-top input"
-        );
+        const [nameInput] = row.querySelectorAll(".workout-row-top input");
         const [
           setsInput,
           repsInput,
           weightInput,
           doneCb
-        ] = row.querySelectorAll(
-          ".workout-row-bottom input"
-        );
+        ] = row.querySelectorAll(".workout-row-bottom input");
         const name = nameInput.value.trim();
         const sets = setsInput.value
           ? parseInt(setsInput.value, 10)
@@ -1981,8 +2009,7 @@
           ? parseFloat(weightInput.value)
           : null;
         const done = doneCb.checked;
-        if (!name && sets == null && reps == null && weight == null)
-          return;
+        if (!name && sets == null && reps == null && weight == null) return;
         list.push({ name, sets, reps, weight, done });
       });
       return list;
@@ -1990,8 +2017,7 @@
   
     function saveCurrentWorkout() {
       const name =
-        workoutNameInput.value.trim() ||
-        "Workout";
+        workoutNameInput.value.trim() || "Workout";
       const exercises = getCurrentWorkoutExercises();
       if (exercises.length === 0) {
         alert("Add at least one exercise row to save.");
@@ -2037,12 +2063,10 @@
       const logs = appState.workouts.logs || [];
       workoutListEl.innerHTML = "";
       if (logs.length === 0) {
-        if (noWorkoutMsgEl)
-          noWorkoutMsgEl.style.display = "block";
+        if (noWorkoutMsgEl) noWorkoutMsgEl.style.display = "block";
         return;
       }
-      if (noWorkoutMsgEl)
-        noWorkoutMsgEl.style.display = "none";
+      if (noWorkoutMsgEl) noWorkoutMsgEl.style.display = "none";
   
       logs.forEach(log => {
         const card = document.createElement("div");
@@ -2160,7 +2184,6 @@
         exercises: log.exercises.map(e => ({ ...e }))
       };
       appState.workouts.favorites.unshift(template);
-      // keep at most 8
       appState.workouts.favorites =
         appState.workouts.favorites.slice(0, 8);
       saveState();
@@ -2172,7 +2195,6 @@
       if (workoutNameInput) workoutNameInput.value = fav.name;
       workoutExercisesEl.innerHTML = "";
       fav.exercises.forEach(ex => addWorkoutRow(ex));
-      // ensure at least 8 rows
       const needed = Math.max(0, 8 - fav.exercises.length);
       for (let i = 0; i < needed; i++) addWorkoutRow();
     }
@@ -2207,20 +2229,12 @@
     let activeFinanceAccountId = null;
   
     function initFinance() {
-      financeAccountSelect = document.getElementById(
-        "financeAccount"
-      );
+      financeAccountSelect = document.getElementById("financeAccount");
       financeTypeSelect = document.getElementById("financeType");
-      financeAmountInput = document.getElementById(
-        "financeAmount"
-      );
+      financeAmountInput = document.getElementById("financeAmount");
       financeDateInput = document.getElementById("financeDate");
-      financeCategoryInput = document.getElementById(
-        "financeCategory"
-      );
-      financeMethodInput = document.getElementById(
-        "financeMethod"
-      );
+      financeCategoryInput = document.getElementById("financeCategory");
+      financeMethodInput = document.getElementById("financeMethod");
       financeNoteInput = document.getElementById("financeNote");
       addFinanceBtn = document.getElementById("addFinanceBtn");
       financeFilterCategorySelect = document.getElementById(
@@ -2235,15 +2249,15 @@
   
       if (!financeAccountSelect) return;
   
-      if (
-        !appState.finance.accounts ||
-        appState.finance.accounts.length === 0
-      ) {
-        appState.finance.accounts =
-          defaultState().finance.accounts;
+      if (!appState.finance.accounts || appState.finance.accounts.length === 0) {
+        appState.finance.accounts = defaultState().finance.accounts;
       }
       if (!appState.finance.transactions)
         appState.finance.transactions = [];
+  
+      appState.finance.transactions.forEach(t => {
+        if (typeof t.link === "undefined") t.link = "";
+      });
   
       addFinanceBtn.addEventListener("click", () => {
         addFinanceTransaction();
@@ -2270,8 +2284,7 @@
         );
         if (!name) return;
         const currency =
-          prompt("Currency (THB, BRL, USD…)", "THB") ||
-          "THB";
+          prompt("Currency (THB, BRL, USD…)", "THB") || "THB";
         const id = newId("acc");
         appState.finance.accounts.push({
           id,
@@ -2287,6 +2300,8 @@
   
       financeAccountSelect.addEventListener("change", () => {
         activeFinanceAccountId = financeAccountSelect.value;
+        renderFinance();
+        renderAccounts();
       });
   
       populateFinanceAccountSelect();
@@ -2337,7 +2352,8 @@
         date: dateStr,
         category,
         method,
-        note
+        note,
+        link: ""
       };
       appState.finance.transactions.unshift(tx);
       saveState();
@@ -2367,11 +2383,9 @@
   
       financeListEl.innerHTML = "";
       if (filtered.length === 0) {
-        if (noFinanceMsgEl)
-          noFinanceMsgEl.style.display = "block";
+        if (noFinanceMsgEl) noFinanceMsgEl.style.display = "block";
       } else {
-        if (noFinanceMsgEl)
-          noFinanceMsgEl.style.display = "none";
+        if (noFinanceMsgEl) noFinanceMsgEl.style.display = "none";
       }
   
       filtered.forEach(tx => {
@@ -2432,11 +2446,34 @@
           meta.appendChild(nTag);
         }
   
+        if (tx.link) {
+          const linkTag = document.createElement("span");
+          linkTag.className = "tag";
+          linkTag.textContent = `🔗 ${tx.link}`;
+          meta.appendChild(linkTag);
+        }
+  
         textWrap.appendChild(meta);
         main.appendChild(textWrap);
   
         const actions = document.createElement("div");
         actions.className = "item-actions";
+  
+        const linkBtn = document.createElement("button");
+        linkBtn.className = "icon-btn";
+        linkBtn.textContent = "🔗";
+        linkBtn.title = "Add / edit link or reference";
+        linkBtn.addEventListener("click", () => {
+          const val =
+            prompt(
+              "Link / reference (e.g. 'To-do: pay bill', 'Shopping: weekly groceries')",
+              tx.link || ""
+            ) || "";
+          tx.link = val.trim();
+          saveState();
+          renderFinance();
+        });
+        actions.appendChild(linkBtn);
   
         const editBtn = document.createElement("button");
         editBtn.className = "icon-btn";
@@ -2508,12 +2545,10 @@
       const accounts = appState.finance.accounts || [];
       accountsListEl.innerHTML = "";
       if (accounts.length === 0) {
-        if (noAccountsMsgEl)
-          noAccountsMsgEl.style.display = "block";
+        if (noAccountsMsgEl) noAccountsMsgEl.style.display = "block";
         return;
       }
-      if (noAccountsMsgEl)
-        noAccountsMsgEl.style.display = "none";
+      if (noAccountsMsgEl) noAccountsMsgEl.style.display = "none";
   
       accounts.forEach(acc => {
         const bal = computeAccountBalance(acc.id);
@@ -2581,10 +2616,8 @@
       );
       if (!tx) return;
       const amountStr =
-        prompt(
-          "Amount",
-          tx.amount.toString()
-        ) || tx.amount.toString();
+        prompt("Amount", tx.amount.toString()) ||
+        tx.amount.toString();
       const amount = parseFloat(amountStr);
       if (!isNaN(amount) && amount > 0) {
         tx.amount = amount;
@@ -2603,13 +2636,194 @@
       renderAccounts();
     }
   
+    // --------- NOTES ----------
+    function initNotes() {
+      const notesPage = document.querySelector('.page[data-page="notes"]');
+      if (!notesPage) return;
+  
+      if (!appState.notes) appState.notes = { items: [] };
+  
+      // Build UI dynamically
+      notesPage.innerHTML = `
+        <h2 class="section-title">Notes</h2>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Quick note</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row">
+              <label for="noteTitleInput">Title</label>
+              <input id="noteTitleInput" type="text" placeholder="Title (optional)" />
+            </div>
+            <div class="input-row">
+              <label for="noteContentInput">Note</label>
+              <textarea id="noteContentInput" placeholder="Type your note…"></textarea>
+            </div>
+            <div class="input-row" style="align-items:flex-end;">
+              <button id="addNoteBtn" class="btn">➕ Add note</button>
+            </div>
+          </div>
+          <div id="noNotesMsg" class="empty-msg">No notes yet.</div>
+          <div id="notesList" class="list"></div>
+        </div>
+      `;
+  
+      const titleInput = document.getElementById("noteTitleInput");
+      const contentInput = document.getElementById("noteContentInput");
+      const addBtn = document.getElementById("addNoteBtn");
+  
+      addBtn.addEventListener("click", () => {
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+        if (!content) return;
+        const now = Date.now();
+        appState.notes.items.unshift({
+          id: newId("note"),
+          title,
+          content,
+          pinned: false,
+          createdAt: now,
+          updatedAt: now
+        });
+        saveState();
+        titleInput.value = "";
+        contentInput.value = "";
+        renderNotes();
+      });
+  
+      contentInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          addBtn.click();
+        }
+      });
+  
+      renderNotes();
+    }
+  
+    function renderNotes() {
+      const listEl = document.getElementById("notesList");
+      const emptyEl = document.getElementById("noNotesMsg");
+      if (!listEl) return;
+  
+      const notes = appState.notes?.items || [];
+      listEl.innerHTML = "";
+      if (notes.length === 0) {
+        if (emptyEl) emptyEl.style.display = "block";
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = "none";
+  
+      const sorted = [...notes].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+  
+      sorted.forEach(note => {
+        const card = document.createElement("div");
+        card.className = "item";
+  
+        const main = document.createElement("div");
+        main.className = "item-main";
+  
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+  
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = note.title || "(no title)";
+        textWrap.appendChild(title);
+  
+        const content = document.createElement("div");
+        content.style.fontSize = "12px";
+        content.style.whiteSpace = "pre-wrap";
+        content.textContent = note.content;
+        textWrap.appendChild(content);
+  
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+  
+        const dateTag = document.createElement("span");
+        dateTag.className = "tag";
+        dateTag.textContent = new Date(
+          note.updatedAt || note.createdAt
+        ).toLocaleString();
+        meta.appendChild(dateTag);
+  
+        if (note.pinned) {
+          const pTag = document.createElement("span");
+          pTag.className = "tag";
+          pTag.textContent = "Pinned";
+          meta.appendChild(pTag);
+        }
+  
+        textWrap.appendChild(meta);
+        main.appendChild(textWrap);
+  
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+  
+        const pinBtn = document.createElement("button");
+        pinBtn.className = "icon-btn";
+        pinBtn.textContent = note.pinned ? "📌" : "📍";
+        pinBtn.title = note.pinned ? "Unpin" : "Pin";
+        pinBtn.addEventListener("click", () => {
+          note.pinned = !note.pinned;
+          note.updatedAt = Date.now();
+          saveState();
+          renderNotes();
+        });
+        actions.appendChild(pinBtn);
+  
+        const editBtn = document.createElement("button");
+        editBtn.className = "icon-btn";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Edit note";
+        editBtn.addEventListener("click", () => {
+          const newTitle =
+            prompt("Edit title", note.title || "") || note.title || "";
+          const newContent =
+            prompt("Edit content", note.content || "") ||
+            note.content ||
+            "";
+          note.title = newTitle.trim();
+          note.content = newContent;
+          note.updatedAt = Date.now();
+          saveState();
+          renderNotes();
+        });
+        actions.appendChild(editBtn);
+  
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete note";
+        delBtn.addEventListener("click", () => {
+          if (!confirm("Delete this note?")) return;
+          appState.notes.items = appState.notes.items.filter(
+            n => n.id !== note.id
+          );
+          saveState();
+          renderNotes();
+        });
+        actions.appendChild(delBtn);
+  
+        card.appendChild(main);
+        card.appendChild(actions);
+        listEl.appendChild(card);
+      });
+    }
+  
     // --------- INIT ALL ----------
     initHomeQuickTask();
     initTodo();
     initShopping();
     initWorkouts();
     initFinance();
+    initNotes();
   });
   </script>
 </body>
 </html>
+
