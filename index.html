@@ -982,7 +982,7 @@
     </main>
   </div>
   <script>
-  // script.js – MyHub v0.9.2
+   // script.js – MyHub v0.9.3
   
   document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------
@@ -1014,7 +1014,6 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return structuredClone(defaultState);
         const parsed = JSON.parse(raw);
-        // Merge defaults to avoid missing arrays
         return {
           ...structuredClone(defaultState),
           ...parsed,
@@ -1039,7 +1038,6 @@
   
     let state = loadState();
   
-    // Ensure at least one list
     if (!state.todoLists || state.todoLists.length === 0) {
       state.todoLists = structuredClone(defaultState.todoLists);
     }
@@ -1049,10 +1047,10 @@
   
     // Bump version label
     const appVersionSpan = document.getElementById("appVersion");
-    if (appVersionSpan) appVersionSpan.textContent = "0.9.2";
+    if (appVersionSpan) appVersionSpan.textContent = "0.9.3";
   
     // -----------------------------
-    // NAVIGATION
+    // BASIC ELEMENTS & EXTRA STYLES
     // -----------------------------
     const sidebar = document.querySelector(".sidebar");
     const navToggle = document.getElementById("navToggle");
@@ -1060,9 +1058,100 @@
     const pages = document.querySelectorAll(".page");
     const pageTitle = document.getElementById("pageTitle");
   
+    // Extra styles for collapsed sidebar & handle
+    const extraStyle = document.createElement("style");
+    extraStyle.textContent = `
+      .sidebar.collapsed {
+        width: 8px;
+        padding: 6px 2px;
+        overflow: hidden;
+      }
+      .sidebar.collapsed .logo,
+      .sidebar.collapsed .nav-toggle,
+      .sidebar.collapsed .nav,
+      .sidebar.collapsed .version {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #sidebarHandle {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 70px;
+        border-radius: 0 10px 10px 0;
+        background: rgba(0, 188, 212, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 999;
+        font-size: 10px;
+        color: #020308;
+        box-shadow: 0 0 12px rgba(0, 188, 212, 0.7);
+      }
+    `;
+    document.head.appendChild(extraStyle);
+  
+    const sidebarHandle = document.createElement("div");
+    sidebarHandle.id = "sidebarHandle";
+    sidebarHandle.textContent = "▶";
+    document.body.appendChild(sidebarHandle);
+  
+    let canvasSidebarModeActive = false;
+    let navExpandTimer = null;
+  
+    function setSidebarCollapsed(collapsed) {
+      if (!sidebar) return;
+      if (collapsed) {
+        sidebar.classList.add("collapsed");
+        sidebar.classList.remove("expanded");
+      } else {
+        sidebar.classList.remove("collapsed");
+      }
+    }
+  
+    function enableCanvasSidebarMode() {
+      canvasSidebarModeActive = true;
+      setSidebarCollapsed(true);
+      sidebarHandle.style.display = "flex";
+    }
+  
+    function disableCanvasSidebarMode() {
+      canvasSidebarModeActive = false;
+      setSidebarCollapsed(false);
+      sidebarHandle.style.display = "none";
+    }
+  
+    sidebarHandle.addEventListener("click", () => {
+      setSidebarCollapsed(false);
+      // auto-collapse again after a few seconds in canvas mode
+      if (canvasSidebarModeActive) {
+        setTimeout(() => {
+          if (canvasSidebarModeActive) {
+            setSidebarCollapsed(true);
+          }
+        }, 4000);
+      }
+    });
+  
+    // -----------------------------
+    // NAVIGATION
+    // -----------------------------
     if (navToggle) {
       navToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("expanded");
+        if (sidebar.classList.contains("expanded")) {
+          sidebar.classList.remove("expanded");
+          if (navExpandTimer) clearTimeout(navExpandTimer);
+        } else {
+          sidebar.classList.add("expanded");
+          if (navExpandTimer) clearTimeout(navExpandTimer);
+          // auto-collapse name expansion after a few seconds
+          navExpandTimer = setTimeout(() => {
+            sidebar.classList.remove("expanded");
+          }, 3500);
+        }
       });
     }
   
@@ -1088,6 +1177,11 @@
       if (pageTitle) {
         const item = [...navItems].find((b) => b.dataset.page === pageId);
         pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
+      }
+  
+      // Leaving notes canvas mode
+      if (pageId !== "notes") {
+        disableCanvasSidebarMode();
       }
     }
   
@@ -1123,7 +1217,7 @@
           title: text,
           priority: "medium",
           dueDate: "",
-          status: "open", // open, inprogress, done
+          status: "open",
           listId,
           createdAt: Date.now(),
           link: "",
@@ -1131,7 +1225,6 @@
         state.todos.push(newTodo);
         saveState();
         homeQuickTaskInput.value = "";
-        // If user goes to To-do page later, they'll see it
         if (currentTodoListId === listId) {
           renderTodos();
         }
@@ -1158,10 +1251,9 @@
   
     let currentTodoListId = getDefaultTodoListId();
   
-    // Hide old "New list" row & create inline + button with popup
+    // Layout tweaks: remove direct "new list" field, add + button with popup
     (function adaptTodoListRow() {
       if (!todoListSelect) return;
-      // Hide old row
       if (todoListNameInput) {
         const rowInline = todoListNameInput.closest(".input-row-inline");
         if (rowInline) rowInline.style.display = "none";
@@ -1202,7 +1294,6 @@
   
     function refreshTodoListsUI() {
       if (!todoListSelect || !todoFilterList) return;
-      // Populate main select
       todoListSelect.innerHTML = "";
       state.todoLists.forEach((list) => {
         const opt = document.createElement("option");
@@ -1215,7 +1306,6 @@
       }
       todoListSelect.value = currentTodoListId;
   
-      // Filter list dropdown
       todoFilterList.innerHTML = "";
       const allOpt = document.createElement("option");
       allOpt.value = "all";
@@ -1258,7 +1348,6 @@
       const sa = statusRank[a.status] ?? 1;
       const sb = statusRank[b.status] ?? 1;
       if (sa !== sb) return sa - sb;
-  
       const pa = prRank[a.priority] ?? 1;
       const pb = prRank[b.priority] ?? 1;
       if (pa !== pb) return pa - pb;
@@ -1268,7 +1357,6 @@
       if (da && db && da !== db) return da.localeCompare(db);
       if (da && !db) return -1;
       if (!da && db) return 1;
-  
       return (a.createdAt || 0) - (b.createdAt || 0);
     }
   
@@ -1296,12 +1384,8 @@
         const cb = document.createElement("input");
         cb.type = "checkbox";
   
-        // tri-state visual
-        if (task.status === "done") {
-          cb.checked = true;
-        } else {
-          cb.checked = false;
-        }
+        if (task.status === "done") cb.checked = true;
+        else cb.checked = false;
         cb.indeterminate = task.status === "inprogress";
   
         cb.addEventListener("click", (e) => {
@@ -1328,7 +1412,6 @@
         }
   
         title.addEventListener("click", () => {
-          // Edit task
           const newTitle = prompt("Edit task title:", task.title || "");
           if (newTitle === null) return;
           task.title = newTitle.trim() || task.title;
@@ -1404,7 +1487,7 @@
         const linkBtn = document.createElement("button");
         linkBtn.className = "icon-btn";
         linkBtn.textContent = "🔗";
-        linkBtn.title = "Set / edit link (e.g. Shopping: Weekly list)";
+        linkBtn.title = "Set / edit link";
   
         linkBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1438,7 +1521,6 @@
         item.appendChild(main);
         item.appendChild(actions);
   
-        // simple drag & drop
         item.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", task.id);
         });
@@ -1510,6 +1592,28 @@
   
     refreshTodoListsUI();
   
+    // *** To-do small Filters button on same line as Add task ***
+    (function compactTodoFiltersButton() {
+      if (!todoFiltersToggle || !addTodoBtn) return;
+      const filterRow = todoFiltersToggle.closest(".input-row");
+      const addRow = addTodoBtn.closest(".input-row");
+      if (!filterRow || !addRow) return;
+  
+      // Only icon for filters to make it small
+      todoFiltersToggle.textContent = "⚙️";
+      todoFiltersToggle.title = "Filters";
+      // Move filter button into same row as Add task
+      filterRow.style.display = "none";
+      addRow.style.display = "flex";
+      addRow.style.alignItems = "flex-end";
+      addRow.style.gap = "8px";
+  
+      // Put filter button before Add task
+      addRow.insertBefore(todoFiltersToggle, addTodoBtn);
+      todoFiltersToggle.style.flex = "0 0 auto";
+      addTodoBtn.style.flex = "1 1 auto";
+    })();
+  
     // -----------------------------
     // SHOPPING
     // -----------------------------
@@ -1524,7 +1628,6 @@
     let currentShoppingListId =
       state.shoppingLists.length > 0 ? state.shoppingLists[0].id : "default";
   
-    // Adapt Shopping layout like To-do
     (function adaptShoppingListRow() {
       if (!shoppingListSelect) return;
       if (shoppingListNameInput) {
@@ -1744,6 +1847,7 @@
     }
   
     refreshShoppingListsUI();
+    renderShopping();
   
     // -----------------------------
     // WORKOUTS
@@ -1756,9 +1860,6 @@
     const addExerciseRowBtn = document.getElementById("addExerciseRowBtn");
     const workoutExercisesContainer = document.getElementById("workoutExercises");
     const workoutNotesInput = document.getElementById("workoutNotes");
-    const workoutFavoritesContainer = document.getElementById(
-      "workoutFavoritesContainer"
-    );
     const workoutFavoritesEmpty = document.getElementById("workoutFavoritesEmpty");
     const workoutFavoritesGrid = document.getElementById("workoutFavorites");
     const noWorkoutMsg = document.getElementById("noWorkoutMsg");
@@ -1769,7 +1870,7 @@
       startTime: null,
       durationMs: 0,
       notes: "",
-      exercises: [], // {id, name, sets, reps, weight, done}
+      exercises: [],
     };
     let workoutTimer = null;
   
@@ -1861,7 +1962,6 @@
   
       row.appendChild(top);
       row.appendChild(bottom);
-  
       workoutExercisesContainer.appendChild(row);
   
       const updateData = () => {
@@ -2055,7 +2155,6 @@
           }
           startWorkoutTimer();
         }
-        // Automatically add first exercise row if none
         if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
           createExerciseRow();
         }
@@ -2104,7 +2203,6 @@
         saveState();
         clearCurrentWorkoutUI();
         renderWorkoutsList();
-        // Favorites handled by star in list
       });
     }
   
@@ -2113,6 +2211,86 @@
         currentWorkout.notes = workoutNotesInput.value;
       });
     }
+  
+    // *** Workout: manual start/end time editing ***
+    function parseDateTimeLocal(str) {
+      if (!str) return null;
+      const parts = str.trim().split(" ");
+      const datePart = parts[0];
+      if (!datePart) return null;
+      const [y, m, d] = datePart.split("-").map(Number);
+      let hh = 0,
+        mm = 0;
+      if (parts[1]) {
+        const [hStr, mStr] = parts[1].split(":");
+        hh = parseInt(hStr || "0", 10) || 0;
+        mm = parseInt(mStr || "0", 10) || 0;
+      }
+      const dt = new Date(y, (m || 1) - 1, d || 1, hh, mm);
+      if (isNaN(dt.getTime())) return null;
+      return dt;
+    }
+  
+    (function addManualWorkoutTimeButton() {
+      if (!workoutStartLabel) return;
+      const startRow = workoutStartLabel.closest(".input-row");
+      if (!startRow) return;
+      const btn = document.createElement("button");
+      btn.className = "btn btn-secondary btn-icon";
+      btn.textContent = "🕒";
+      btn.title = "Set start/end time manually";
+      startRow.appendChild(btn);
+  
+      btn.addEventListener("click", () => {
+        const currentStart =
+          currentWorkout.startTime || Date.now();
+        const defStart = new Date(currentStart)
+          .toISOString()
+          .slice(0, 16)
+          .replace("T", " ");
+  
+        const startStr = prompt(
+          "Start (YYYY-MM-DD HH:MM):",
+          defStart
+        );
+        if (!startStr) return;
+        const startDt = parseDateTimeLocal(startStr);
+        if (!startDt) {
+          alert("Invalid start date/time.");
+          return;
+        }
+  
+        const defEndDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+        const defEnd = defEndDt
+          .toISOString()
+          .slice(0, 16)
+          .replace("T", " ");
+  
+        const endStr = prompt(
+          "End (YYYY-MM-DD HH:MM):",
+          defEnd
+        );
+        if (!endStr) return;
+        const endDt = parseDateTimeLocal(endStr);
+        if (!endDt || endDt <= startDt) {
+          alert("End must be after start.");
+          return;
+        }
+  
+        currentWorkout.startTime = startDt.getTime();
+        currentWorkout.durationMs = endDt.getTime() - startDt.getTime();
+        stopWorkoutTimer();
+  
+        if (workoutStartLabel) {
+          workoutStartLabel.textContent = startDt.toLocaleString();
+        }
+        if (workoutDurationLabel) {
+          workoutDurationLabel.textContent = formatDuration(
+            currentWorkout.durationMs
+          );
+        }
+      });
+    })();
   
     renderWorkoutFavorites();
     renderWorkoutsList();
@@ -2453,17 +2631,21 @@
     renderFinance();
   
     // -----------------------------
-    // NOTES (text + canvas)
+    // NOTES (tabs: Text + Canvas)
     // -----------------------------
     const notesPage = document.querySelector('.page[data-page="notes"]');
     if (notesPage) {
       notesPage.innerHTML = `
         <h2 class="section-title">Notes</h2>
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">Quick text notes</div>
+          <div class="card-header" style="justify-content:space-between; align-items:center;">
+            <div class="card-title">Notes</div>
+            <div style="display:flex; gap:6px;">
+              <button id="notesTabText" class="btn btn-secondary btn-icon" title="Text notes">📝</button>
+              <button id="notesTabCanvas" class="btn btn-secondary btn-icon" title="Canvas">✏️</button>
+            </div>
           </div>
-          <div class="input-grid">
+          <div id="notesTextSection" class="input-grid">
             <div class="input-row">
               <textarea id="notesText" placeholder="Write anything you don't want to forget..."></textarea>
             </div>
@@ -2471,12 +2653,7 @@
               <button id="saveNotesTextBtn" class="btn">💾 Save notes</button>
             </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Freehand canvas</div>
-          </div>
-          <div class="input-grid">
+          <div id="notesCanvasSection" class="input-grid" style="display:none;">
             <div class="input-row-inline">
               <div class="input-row">
                 <label>Color</label>
@@ -2504,6 +2681,11 @@
         </div>
       `;
   
+      const notesTabText = document.getElementById("notesTabText");
+      const notesTabCanvas = document.getElementById("notesTabCanvas");
+      const notesTextSection = document.getElementById("notesTextSection");
+      const notesCanvasSection = document.getElementById("notesCanvasSection");
+  
       const notesText = document.getElementById("notesText");
       const saveNotesTextBtn = document.getElementById("saveNotesTextBtn");
       const notesCanvas = document.getElementById("notesCanvas");
@@ -2524,6 +2706,28 @@
         });
       }
   
+      function activateNotesTab(tab) {
+        if (tab === "text") {
+          notesTextSection.style.display = "block";
+          notesCanvasSection.style.display = "none";
+          disableCanvasSidebarMode();
+        } else {
+          notesTextSection.style.display = "none";
+          notesCanvasSection.style.display = "block";
+          enableCanvasSidebarMode();
+        }
+      }
+  
+      if (notesTabText) {
+        notesTabText.addEventListener("click", () => activateNotesTab("text"));
+      }
+      if (notesTabCanvas) {
+        notesTabCanvas.addEventListener("click", () => activateNotesTab("canvas"));
+      }
+  
+      // Default tab: text
+      activateNotesTab("text");
+  
       if (notesCanvas && notesCanvasWrapper) {
         const ctx = notesCanvas.getContext("2d");
         let drawing = false;
@@ -2535,7 +2739,10 @@
         function resizeCanvas() {
           const rect = notesCanvasWrapper.getBoundingClientRect();
           notesCanvas.width = Math.floor(rect.width - 4);
-          notesCanvas.height = expanded ? 380 : 240;
+          const maxHeight = Math.min(380, window.innerHeight - 200);
+          notesCanvas.height = expanded
+            ? Math.min(380, maxHeight)
+            : Math.min(240, maxHeight);
         }
   
         resizeCanvas();
@@ -2618,7 +2825,6 @@
               ? "⤡ Shrink canvas"
               : "⤢ Expand canvas";
             resizeCanvas();
-            // when expanded, we could auto-collapse sidebar to give you space
             sidebar.classList.remove("expanded");
           });
         }
@@ -2858,9 +3064,9 @@
   
         mealsTotals.textContent = `Totals – Protein: ${totals.protein.toFixed(
           1
-        )}g | Carbs: ${totals.carbs.toFixed(1)}g | Fat: ${totals.fat.toFixed(
+        )}g | Carbs: ${totals.carbs.toFixed(
           1
-        )}g | ~${kcal.toFixed(0)} kcal`;
+        )}g | Fat: ${totals.fat.toFixed(1)}g | ~${kcal.toFixed(0)} kcal`;
       }
   
       if (addMealBtn) {
@@ -2899,7 +3105,6 @@
           if (mealCarbsInput) mealCarbsInput.value = "";
           if (mealFatInput) mealFatInput.value = "";
   
-          // Set view date to that date so you see it immediately
           if (mealViewDateInput) mealViewDateInput.value = date;
           renderMeals();
         });
@@ -2941,8 +3146,7 @@
       const calMonthLabel = document.getElementById("calMonthLabel");
       const calendarGrid = document.getElementById("calendarGrid");
   
-      let calYear, calMonth; // month 0–11
-  
+      let calYear, calMonth;
       const today = new Date();
       calYear = today.getFullYear();
       calMonth = today.getMonth();
@@ -3095,4 +3299,5 @@
   </script>
 </body>
 </html>
+
 
