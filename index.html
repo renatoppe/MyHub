@@ -40,6 +40,7 @@
       margin: 0 auto;
     }
 
+    /*linha ref*/
     .sidebar {
       width: 70px;
       background: linear-gradient(180deg, #11131b 0%, #050608 100%);
@@ -50,6 +51,10 @@
       align-items: center;
       gap: 10px;
       transition: width 0.2s ease;
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      height: 100vh;
     }
 
     /* Slight expansion only, not huge */
@@ -563,6 +568,63 @@
       transition: 0.16s ease;
     }
 
+    .notes-tabs {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .notes-tab {
+      border-radius: 999px;
+      border: 1px solid #26293a;
+      background: #101320;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: 0.16s ease;
+    }
+    
+    .notes-tab-active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(76, 175, 80, 0.6);
+    }
+    
+    #notesTextArea {
+      width: 100%;
+      min-height: 200px;
+      border-radius: 10px;
+      border: 1px solid #26293a;
+      background: #101320;
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 9px;
+      resize: vertical;
+    }
+    
+    .notes-toolbar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    
+    .notes-canvas-wrapper {
+      border-radius: 12px;
+      border: 1px solid #26293a;
+      background: #000;
+      overflow: hidden;
+      position: relative;
+      height: 260px; /* fits on mobile; canvas will auto-resize */
+    }
+    
+    #notesCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none; /* important for drawing on mobile */
+    }
+
+    
     .favorite-card:hover {
       transform: translateY(-2px) scale(1.02);
       box-shadow: 0 0 18px rgba(0, 188, 212, 0.6);
@@ -706,17 +768,16 @@
               </div>
             </div>
 
-            <!-- Row 5: Add button -->
-            <div class="input-row" style="align-items: flex-end;">
+          <!-- Row 5: Filters + Add button on same line -->
+          <div class="input-row-inline" style="align-items: flex-end; margin-bottom: 8px;">
+            <div class="input-row" style="flex: 0 0 auto;">
+              <button id="todoFiltersToggle" class="btn btn-secondary btn-icon" title="Filters">
+                ⚙️
+              </button>
+            </div>
+            <div class="input-row" style="flex: 1; display: flex; justify-content: flex-end;">
               <button id="addTodoBtn" class="btn">➕ Add task</button>
             </div>
-          </div>
-
-          <!-- Filters toggle -->
-          <div class="input-row" style="margin-bottom: 8px;">
-            <button id="todoFiltersToggle" class="btn btn-secondary btn-icon">
-              ⚙️ Filters
-            </button>
           </div>
 
           <!-- Filters panel (hidden by default) -->
@@ -963,7 +1024,44 @@
       <!-- NOTES (placeholder) -->
       <section class="page hidden" data-page="notes">
         <h2 class="section-title">Notes</h2>
+      
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Notes</div>
+            <div class="notes-tabs">
+              <button id="notesTabText" class="notes-tab notes-tab-active">Text</button>
+              <button id="notesTabCanvas" class="notes-tab">Canvas</button>
+            </div>
+          </div>
+      
+          <!-- TEXT MODE -->
+          <div id="notesTextPane">
+            <textarea id="notesTextArea" placeholder="Write your notes here…"></textarea>
+          </div>
+      
+          <!-- CANVAS MODE -->
+          <div id="notesCanvasPane" class="hidden">
+            <div class="notes-toolbar">
+              <button id="notesBoardDark" class="btn btn-secondary btn-icon" title="Dark board">
+                ⬛
+              </button>
+              <button id="notesBoardLight" class="btn btn-secondary btn-icon" title="Light board">
+                ⬜
+              </button>
+              <button id="notesCanvasClear" class="btn btn-secondary btn-icon" title="Clear">
+                🧹
+              </button>
+              <button id="notesCanvasSave" class="btn btn-secondary btn-icon" title="Save image">
+                💾
+              </button>
+            </div>
+            <div class="notes-canvas-wrapper">
+              <canvas id="notesCanvas"></canvas>
+            </div>
+          </div>
+        </div>
       </section>
+
 
       <!-- MEALS (placeholder) -->
       <section class="page hidden" data-page="meals">
@@ -2631,6 +2729,7 @@
     renderFinance();
   
     // -----------------------------
+    // -----------------------------
     // NOTES (tabs: Text + Canvas)
     // -----------------------------
     const notesPage = document.querySelector('.page[data-page="notes"]');
@@ -2639,37 +2738,34 @@
         <h2 class="section-title">Notes</h2>
         <div class="card">
           <div class="card-header" style="justify-content:space-between; align-items:center;">
-            <div class="card-title">Notes</div>
+            <div></div>
             <div style="display:flex; gap:6px;">
               <button id="notesTabText" class="btn btn-secondary btn-icon" title="Text notes">📝</button>
               <button id="notesTabCanvas" class="btn btn-secondary btn-icon" title="Canvas">✏️</button>
             </div>
           </div>
+    
+          <!-- TEXT NOTES -->
           <div id="notesTextSection" class="input-grid">
             <div class="input-row">
               <textarea id="notesText" placeholder="Write anything you don't want to forget..."></textarea>
             </div>
-            <div class="input-row" style="align-items:flex-end;">
-              <button id="saveNotesTextBtn" class="btn">💾 Save notes</button>
-            </div>
           </div>
+    
+          <!-- CANVAS NOTES -->
           <div id="notesCanvasSection" class="input-grid" style="display:none;">
             <div class="input-row-inline">
               <div class="input-row">
-                <label>Color</label>
-                <div id="notesColorPalette" style="display:flex; gap:6px; flex-wrap:wrap;">
-                  <button data-color="#ffffff" class="icon-btn" title="White">⬜</button>
-                  <button data-color="#000000" class="icon-btn" title="Black">⬛</button>
-                  <button data-color="#f44336" class="icon-btn" title="Red">🟥</button>
-                  <button data-color="#2196f3" class="icon-btn" title="Blue">🟦</button>
-                  <button data-color="#4caf50" class="icon-btn" title="Green">🟩</button>
-                  <button data-color="erase" class="icon-btn" title="Eraser">🧽</button>
+                <label>Board</label>
+                <div style="display:flex; gap:6px;">
+                  <button id="notesBoardDark" class="btn btn-secondary btn-icon" title="Black board">⬛</button>
+                  <button id="notesBoardLight" class="btn btn-secondary btn-icon" title="White board">⬜</button>
                 </div>
               </div>
-              <div class="input-row" style="align-items:flex-end;">
-                <button id="notesToggleCanvasSize" class="btn btn-secondary">
-                  ⤢ Expand canvas
-                </button>
+              <div class="input-row" style="align-items:flex-end; display:flex; gap:6px; justify-content:flex-end;">
+                <button id="notesCanvasClear" class="btn btn-secondary btn-icon" title="Clear canvas">🧹</button>
+                <button id="notesCanvasSave" class="btn btn-secondary btn-icon" title="Save as image">💾</button>
+                <button id="notesToggleCanvasSize" class="btn btn-secondary btn-icon" title="Expand / shrink canvas">⤢</button>
               </div>
             </div>
             <div class="input-row">
@@ -2680,93 +2776,99 @@
           </div>
         </div>
       `;
-  
+    
+      // --- grab elements
       const notesTabText = document.getElementById("notesTabText");
       const notesTabCanvas = document.getElementById("notesTabCanvas");
       const notesTextSection = document.getElementById("notesTextSection");
       const notesCanvasSection = document.getElementById("notesCanvasSection");
-  
+    
       const notesText = document.getElementById("notesText");
-      const saveNotesTextBtn = document.getElementById("saveNotesTextBtn");
       const notesCanvas = document.getElementById("notesCanvas");
       const notesCanvasWrapper = document.getElementById("notesCanvasWrapper");
-      const notesColorPalette = document.getElementById("notesColorPalette");
-      const notesToggleCanvasSize = document.getElementById(
-        "notesToggleCanvasSize"
-      );
-  
+    
+      const notesBoardDark = document.getElementById("notesBoardDark");
+      const notesBoardLight = document.getElementById("notesBoardLight");
+      const notesCanvasClear = document.getElementById("notesCanvasClear");
+      const notesCanvasSave = document.getElementById("notesCanvasSave");
+      const notesToggleCanvasSize = document.getElementById("notesToggleCanvasSize");
+    
+      // --- load saved text from state
       if (notesText) {
         notesText.value = state.notesText || "";
-      }
-  
-      if (saveNotesTextBtn && notesText) {
-        saveNotesTextBtn.addEventListener("click", () => {
+        notesText.addEventListener("input", () => {
           state.notesText = notesText.value;
           saveState();
         });
       }
-  
+    
+      // --- tab switching (and sidebar behavior)
       function activateNotesTab(tab) {
         if (tab === "text") {
           notesTextSection.style.display = "block";
           notesCanvasSection.style.display = "none";
-          disableCanvasSidebarMode();
+          if (typeof disableCanvasSidebarMode === "function") {
+            disableCanvasSidebarMode();
+          }
         } else {
           notesTextSection.style.display = "none";
           notesCanvasSection.style.display = "block";
-          enableCanvasSidebarMode();
+          if (typeof enableCanvasSidebarMode === "function") {
+            enableCanvasSidebarMode();
+          }
+          resizeNotesCanvas();
         }
       }
-  
+    
       if (notesTabText) {
         notesTabText.addEventListener("click", () => activateNotesTab("text"));
       }
       if (notesTabCanvas) {
         notesTabCanvas.addEventListener("click", () => activateNotesTab("canvas"));
       }
-  
-      // Default tab: text
+    
+      // default: text tab
       activateNotesTab("text");
-  
+    
+      // --- canvas drawing logic
       if (notesCanvas && notesCanvasWrapper) {
         const ctx = notesCanvas.getContext("2d");
         let drawing = false;
         let lastX = 0;
         let lastY = 0;
-        let strokeColor = "#ffffff";
         let expanded = false;
-  
-        function resizeCanvas() {
+    
+        let boardColor = "#000000";
+        let strokeColor = "#ffffff";
+    
+        function resizeNotesCanvas() {
           const rect = notesCanvasWrapper.getBoundingClientRect();
-          notesCanvas.width = Math.floor(rect.width - 4);
           const maxHeight = Math.min(380, window.innerHeight - 200);
+          notesCanvas.width = Math.floor(rect.width - 4);
           notesCanvas.height = expanded
             ? Math.min(380, maxHeight)
             : Math.min(240, maxHeight);
+    
+          // repaint background
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.fillStyle = boardColor;
+          ctx.fillRect(0, 0, notesCanvas.width, notesCanvas.height);
         }
-  
-        resizeCanvas();
-        window.addEventListener("resize", resizeCanvas);
-  
+    
         function startDraw(x, y) {
           drawing = true;
           lastX = x;
           lastY = y;
         }
-  
+    
         function drawTo(x, y) {
           if (!drawing) return;
           ctx.lineWidth = 2.5;
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
-          if (strokeColor === "erase") {
-            ctx.globalCompositeOperation = "destination-out";
-            ctx.strokeStyle = "rgba(0,0,0,1)";
-            ctx.lineWidth = 10;
-          } else {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = strokeColor;
-          }
+          ctx.globalCompositeOperation = "source-over";
+          ctx.strokeStyle = strokeColor;
+    
           ctx.beginPath();
           ctx.moveTo(lastX, lastY);
           ctx.lineTo(x, y);
@@ -2774,63 +2876,100 @@
           lastX = x;
           lastY = y;
         }
-  
+    
         function endDraw() {
           drawing = false;
         }
-  
+    
+        // mouse events
         notesCanvas.addEventListener("mousedown", (e) => {
           const rect = notesCanvas.getBoundingClientRect();
           startDraw(e.clientX - rect.left, e.clientY - rect.top);
         });
-  
+    
         notesCanvas.addEventListener("mousemove", (e) => {
           const rect = notesCanvas.getBoundingClientRect();
           drawTo(e.clientX - rect.left, e.clientY - rect.top);
         });
-  
+    
         notesCanvas.addEventListener("mouseup", endDraw);
         notesCanvas.addEventListener("mouseleave", endDraw);
-  
+    
+        // touch events
         notesCanvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           const t = e.touches[0];
           const rect = notesCanvas.getBoundingClientRect();
           startDraw(t.clientX - rect.left, t.clientY - rect.top);
         });
-  
+    
         notesCanvas.addEventListener("touchmove", (e) => {
           e.preventDefault();
           const t = e.touches[0];
           const rect = notesCanvas.getBoundingClientRect();
           drawTo(t.clientX - rect.left, t.clientY - rect.top);
         });
-  
+    
         notesCanvas.addEventListener("touchend", endDraw);
         notesCanvas.addEventListener("touchcancel", endDraw);
-  
-        if (notesColorPalette) {
-          notesColorPalette.querySelectorAll("button").forEach((btn) => {
-            btn.addEventListener("click", () => {
-              const color = btn.getAttribute("data-color");
-              strokeColor = color;
-            });
+    
+        // board color buttons
+        function setDarkBoard() {
+          boardColor = "#000000";
+          strokeColor = "#ffffff";
+          resizeNotesCanvas();
+        }
+        function setLightBoard() {
+          boardColor = "#ffffff";
+          strokeColor = "#000000";
+          resizeNotesCanvas();
+        }
+    
+        if (notesBoardDark) {
+          notesBoardDark.addEventListener("click", setDarkBoard);
+        }
+        if (notesBoardLight) {
+          notesBoardLight.addEventListener("click", setLightBoard);
+        }
+    
+        // clear button
+        if (notesCanvasClear) {
+          notesCanvasClear.addEventListener("click", () => {
+            ctx.fillStyle = boardColor;
+            ctx.fillRect(0, 0, notesCanvas.width, notesCanvas.height);
           });
         }
-  
+    
+        // save image button
+        if (notesCanvasSave) {
+          notesCanvasSave.addEventListener("click", () => {
+            const link = document.createElement("a");
+            link.download = "myhub-notes.png";
+            link.href = notesCanvas.toDataURL("image/png");
+            link.click();
+          });
+        }
+    
+        // expand / shrink canvas
         if (notesToggleCanvasSize) {
           notesToggleCanvasSize.addEventListener("click", () => {
             expanded = !expanded;
-            notesToggleCanvasSize.textContent = expanded
-              ? "⤡ Shrink canvas"
-              : "⤢ Expand canvas";
-            resizeCanvas();
-            sidebar.classList.remove("expanded");
+            notesToggleCanvasSize.textContent = expanded ? "⤡" : "⤢";
+            resizeNotesCanvas();
+            // collapse sidebar if available (optional)
+            if (typeof sidebar !== "undefined" && sidebar) {
+              sidebar.classList.remove("expanded");
+            }
           });
         }
+    
+        // initial setup
+        window.addEventListener("resize", resizeNotesCanvas);
+        setDarkBoard();
       }
     }
-  
+    // ---
+    
     // -----------------------------
     // MEALS – basic macros per day
     // -----------------------------
@@ -3299,5 +3438,6 @@
   </script>
 </body>
 </html>
+
 
 
