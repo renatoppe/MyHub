@@ -982,28 +982,98 @@
     </main>
   </div>
   <script>
-  // MyHub App - v0.9.1
-  window.addEventListener("DOMContentLoaded", () => {
-    // ==============================
-    // NAVIGATION & LAYOUT
-    // ==============================
+  // script.js – MyHub v0.9.2
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    // -----------------------------
+    // GLOBAL STATE & STORAGE
+    // -----------------------------
+    const STORAGE_KEY = "myhub_state_v1";
+  
+    const defaultState = {
+      todos: [], // {id, title, priority, dueDate, status, listId, createdAt, link}
+      todoLists: [{ id: "default", name: "Personal" }],
+      shoppingLists: [
+        {
+          id: "default",
+          name: "General",
+          items: [], // {id, text, checked, note}
+        },
+      ],
+      workouts: [], // logged workouts
+      workoutFavorites: [], // {id, name, exercises}
+      financeAccounts: [], // {id, name}
+      financeTransactions: [], // {id, accountId, type, amount, date, category, method, note}
+      notesText: "",
+      meals: [], // {id, date, food, amount, unit, protein, carbs, fat}
+      calendarEvents: [], // {id, date, text}
+    };
+  
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultState);
+        const parsed = JSON.parse(raw);
+        // Merge defaults to avoid missing arrays
+        return {
+          ...structuredClone(defaultState),
+          ...parsed,
+        };
+      } catch (e) {
+        console.error("Error loading state", e);
+        return structuredClone(defaultState);
+      }
+    }
+  
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("Error saving state", e);
+      }
+    }
+  
+    function makeId(prefix) {
+      return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+  
+    let state = loadState();
+  
+    // Ensure at least one list
+    if (!state.todoLists || state.todoLists.length === 0) {
+      state.todoLists = structuredClone(defaultState.todoLists);
+    }
+    if (!state.shoppingLists || state.shoppingLists.length === 0) {
+      state.shoppingLists = structuredClone(defaultState.shoppingLists);
+    }
+  
+    // Bump version label
+    const appVersionSpan = document.getElementById("appVersion");
+    if (appVersionSpan) appVersionSpan.textContent = "0.9.2";
+  
+    // -----------------------------
+    // NAVIGATION
+    // -----------------------------
     const sidebar = document.querySelector(".sidebar");
     const navToggle = document.getElementById("navToggle");
     const navItems = document.querySelectorAll(".nav-item");
     const pages = document.querySelectorAll(".page");
-    const pageTitleEl = document.getElementById("pageTitle");
-    const versionEl = document.getElementById("appVersion");
+    const pageTitle = document.getElementById("pageTitle");
   
-    if (versionEl) versionEl.textContent = "0.9.1";
+    if (navToggle) {
+      navToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("expanded");
+      });
+    }
   
     function showPage(pageId) {
       pages.forEach((p) => {
         if (p.dataset.page === pageId) {
-          p.classList.add("active");
           p.classList.remove("hidden");
+          p.classList.add("active");
         } else {
-          p.classList.remove("active");
           p.classList.add("hidden");
+          p.classList.remove("active");
         }
       });
   
@@ -1015,62 +1085,64 @@
         }
       });
   
-      if (pageTitleEl) {
-        const activeItem = Array.from(navItems).find((btn) => btn.dataset.page === pageId);
-        if (activeItem && activeItem.title) {
-          pageTitleEl.textContent = activeItem.title;
-        } else {
-          pageTitleEl.textContent = pageId.charAt(0).toUpperCase() + pageId.slice(1);
-        }
+      if (pageTitle) {
+        const item = [...navItems].find((b) => b.dataset.page === pageId);
+        pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
       }
     }
   
     navItems.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const pageId = btn.dataset.page;
-        if (pageId) showPage(pageId);
+        showPage(btn.dataset.page);
       });
     });
   
-    if (navToggle && sidebar) {
-      navToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("expanded");
-      });
-    }
-  
-    // ==============================
-    // HOME QUICK TASK
-    // ==============================
+    // -----------------------------
+    // HOME – QUICK TASK
+    // -----------------------------
     const homeQuickTaskInput = document.getElementById("homeQuickTaskInput");
     const homeQuickTaskBtn = document.getElementById("homeQuickTaskBtn");
   
-    function addQuickTaskFromHome() {
-      if (!homeQuickTaskInput) return;
-      const text = homeQuickTaskInput.value.trim();
-      if (!text) return;
-      window.__myhubQuickTaskBuffer = text;
-      homeQuickTaskInput.value = "";
-      showPage("todo");
+    function getDefaultTodoListId() {
+      if (state.todoLists.length === 0) {
+        const def = { id: "default", name: "Personal" };
+        state.todoLists.push(def);
+        saveState();
+        return def.id;
+      }
+      return state.todoLists[0].id;
     }
   
     if (homeQuickTaskBtn && homeQuickTaskInput) {
-      homeQuickTaskBtn.addEventListener("click", addQuickTaskFromHome);
-      homeQuickTaskInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addQuickTaskFromHome();
+      homeQuickTaskBtn.addEventListener("click", () => {
+        const text = homeQuickTaskInput.value.trim();
+        if (!text) return;
+        const listId = getDefaultTodoListId();
+        const newTodo = {
+          id: makeId("todo"),
+          title: text,
+          priority: "medium",
+          dueDate: "",
+          status: "open", // open, inprogress, done
+          listId,
+          createdAt: Date.now(),
+          link: "",
+        };
+        state.todos.push(newTodo);
+        saveState();
+        homeQuickTaskInput.value = "";
+        // If user goes to To-do page later, they'll see it
+        if (currentTodoListId === listId) {
+          renderTodos();
         }
       });
     }
   
-    // ==============================
-    // TO-DO MODULE
-    // ==============================
-    const TODO_STORAGE_KEY = "myhub_todo_v2";
-  
+    // -----------------------------
+    // TO-DO
+    // -----------------------------
     const todoListSelect = document.getElementById("todoListSelect");
     const todoListNameInput = document.getElementById("todoListName");
-    const todoNewListBtn = document.getElementById("todoNewListBtn");
     const todoTitleInput = document.getElementById("todoTitleInput");
     const todoPrioritySelect = document.getElementById("todoPrioritySelect");
     const todoDueDateInput = document.getElementById("todoDueDate");
@@ -1082,1048 +1154,972 @@
     const todoFilterStatus = document.getElementById("todoFilterStatus");
     const todoFilterList = document.getElementById("todoFilterList");
     const noTodosMsg = document.getElementById("noTodosMsg");
-    const todoListEl = document.getElementById("todoList");
+    const todoListContainer = document.getElementById("todoList");
   
-    let todoState = {
-      lists: [],
-      tasks: []
-    };
+    let currentTodoListId = getDefaultTodoListId();
   
-    function loadTodoState() {
-      try {
-        const raw = localStorage.getItem(TODO_STORAGE_KEY);
-        if (raw) {
-          todoState = JSON.parse(raw);
-        }
-      } catch (err) {
-        console.error("Error loading todo state", err);
+    // Hide old "New list" row & create inline + button with popup
+    (function adaptTodoListRow() {
+      if (!todoListSelect) return;
+      // Hide old row
+      if (todoListNameInput) {
+        const rowInline = todoListNameInput.closest(".input-row-inline");
+        if (rowInline) rowInline.style.display = "none";
       }
-      if (!todoState || typeof todoState !== "object") {
-        todoState = { lists: [], tasks: [] };
-      }
-      if (!Array.isArray(todoState.lists)) todoState.lists = [];
-      if (!Array.isArray(todoState.tasks)) todoState.tasks = [];
+      const selectRow = todoListSelect.closest(".input-row");
+      if (!selectRow) return;
+      selectRow.style.display = "flex";
+      selectRow.style.flexDirection = "row";
+      selectRow.style.alignItems = "flex-end";
+      selectRow.style.gap = "8px";
   
-      if (!todoState.lists.length) {
-        const defaultList = { id: "default", name: "General" };
-        todoState.lists.push(defaultList);
+      const label = selectRow.querySelector("label");
+      if (label) {
+        label.style.marginRight = "4px";
+        label.style.whiteSpace = "nowrap";
       }
   
-      // Ensure linking fields exist
-      todoState.tasks.forEach((t) => {
-        if (typeof t.shoppingListId === "undefined") t.shoppingListId = "";
-        if (typeof t.financeTxId === "undefined") t.financeTxId = "";
+      const newListBtn = document.createElement("button");
+      newListBtn.className = "btn btn-secondary btn-icon";
+      newListBtn.textContent = "➕";
+      newListBtn.title = "New list";
+  
+      newListBtn.addEventListener("click", () => {
+        const name = prompt("New to-do list name:");
+        if (!name) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const id = makeId("tlist");
+        state.todoLists.push({ id, name: trimmed });
+        currentTodoListId = id;
+        saveState();
+        refreshTodoListsUI();
+        renderTodos();
       });
-    }
   
-    function saveTodoState() {
-      try {
-        localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todoState));
-      } catch (err) {
-        console.error("Error saving todo state", err);
-      }
-      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
-    }
+      selectRow.appendChild(newListBtn);
+    })();
   
-    function getTodoListNameById(id) {
-      const list = todoState.lists.find((l) => l.id === id);
-      return list ? list.name : "";
-    }
-  
-    function ensureTodoListOptions() {
+    function refreshTodoListsUI() {
       if (!todoListSelect || !todoFilterList) return;
+      // Populate main select
       todoListSelect.innerHTML = "";
-      todoFilterList.innerHTML = "";
-  
-      todoState.lists.forEach((list) => {
+      state.todoLists.forEach((list) => {
         const opt = document.createElement("option");
         opt.value = list.id;
         opt.textContent = list.name;
         todoListSelect.appendChild(opt);
       });
+      if (!state.todoLists.find((l) => l.id === currentTodoListId)) {
+        currentTodoListId = getDefaultTodoListId();
+      }
+      todoListSelect.value = currentTodoListId;
   
+      // Filter list dropdown
+      todoFilterList.innerHTML = "";
       const allOpt = document.createElement("option");
       allOpt.value = "all";
       allOpt.textContent = "All";
       todoFilterList.appendChild(allOpt);
-      todoState.lists.forEach((list) => {
+      state.todoLists.forEach((list) => {
         const opt = document.createElement("option");
         opt.value = list.id;
         opt.textContent = list.name;
         todoFilterList.appendChild(opt);
       });
+      todoFilterList.value = "all";
     }
   
-    function addTodoList(name) {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      const id = "list_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-      todoState.lists.push({ id, name: trimmed });
-      saveTodoState();
-      ensureTodoListOptions();
-      if (todoListSelect) todoListSelect.value = id;
+    function triStateNext(status) {
+      if (status === "open") return "inprogress";
+      if (status === "inprogress") return "done";
+      return "open";
     }
   
-    function addTodoTaskFromInputs(extraTitle) {
-      if (!todoListSelect || !todoTitleInput || !todoPrioritySelect) return;
-      const titleRaw = extraTitle != null ? extraTitle : todoTitleInput.value;
-      const title = titleRaw.trim();
-      if (!title) return;
-      const listId = todoListSelect.value || (todoState.lists[0] && todoState.lists[0].id) || "default";
-      const priority = todoPrioritySelect.value || "medium";
-      const dueDate = todoDueDateInput && todoDueDateInput.value ? todoDueDateInput.value : "";
-      const now = Date.now();
-  
-      const tasksInList = todoState.tasks.filter((t) => t.listId === listId);
-      const maxOrder = tasksInList.reduce((max, t) => (typeof t.order === "number" && t.order > max ? t.order : max), 0);
-  
-      const newTask = {
-        id: "todo_" + now + "_" + Math.floor(Math.random() * 100000),
-        title,
-        listId,
-        priority,
-        dueDate,
-        status: "open",
-        createdAt: now,
-        updatedAt: now,
-        order: maxOrder + 1,
-        shoppingListId: "",
-        financeTxId: ""
-      };
-  
-      todoState.tasks.push(newTask);
-      saveTodoState();
-      renderTodoList();
-  
-      if (extraTitle == null) {
-        todoTitleInput.value = "";
-        if (todoDueDateInput) todoDueDateInput.value = "";
-        if (todoPrioritySelect) todoPrioritySelect.value = "medium";
-      }
-    }
-  
-    function priorityWeight(p) {
-      if (p === "high") return 0;
-      if (p === "medium") return 1;
-      if (p === "low") return 2;
-      return 3;
-    }
-  
-    function statusWeight(s) {
-      if (s === "open") return 0;
-      if (s === "inprogress") return 1;
-      if (s === "done") return 2;
-      return 3;
-    }
-  
-    function getFilteredTodoTasks() {
-      const search = (todoSearchInput && todoSearchInput.value.trim().toLowerCase()) || "";
-      const filterPriority = todoFilterPriority ? todoFilterPriority.value : "all";
-      const filterStatus = todoFilterStatus ? todoFilterStatus.value : "all";
-      const filterListVal = todoFilterList ? todoFilterList.value : "all";
-  
-      let tasks = [...todoState.tasks];
-  
-      if (filterListVal && filterListVal !== "all") {
-        tasks = tasks.filter((t) => t.listId === filterListVal);
-      }
-  
-      if (filterPriority && filterPriority !== "all") {
-        tasks = tasks.filter((t) => t.priority === filterPriority);
-      }
-  
-      if (filterStatus && filterStatus !== "all") {
-        tasks = tasks.filter((t) => t.status === filterStatus);
-      }
+    function applyTodoFilters(task) {
+      const search = (todoSearchInput?.value || "").toLowerCase();
+      const fp = todoFilterPriority?.value || "all";
+      const fs = todoFilterStatus?.value || "all";
+      const fl = todoFilterList?.value || "all";
   
       if (search) {
-        tasks = tasks.filter((t) => t.title && t.title.toLowerCase().includes(search));
+        const hay = task.title.toLowerCase();
+        if (!hay.includes(search)) return false;
       }
-  
-      tasks.sort((a, b) => {
-        const sDiff = statusWeight(a.status) - statusWeight(b.status);
-        if (sDiff !== 0) return sDiff;
-  
-        const pDiff = priorityWeight(a.priority) - priorityWeight(b.priority);
-        if (pDiff !== 0) return pDiff;
-  
-        if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) {
-          return a.dueDate.localeCompare(b.dueDate);
-        } else if (a.dueDate && !b.dueDate) {
-          return -1;
-        } else if (!a.dueDate && b.dueDate) {
-          return 1;
-        }
-  
-        if (typeof a.order === "number" && typeof b.order === "number" && a.order !== b.order) {
-          return a.order - b.order;
-        }
-  
-        return (a.createdAt || 0) - (b.createdAt || 0);
-      });
-  
-      return tasks;
+      if (fp !== "all" && task.priority !== fp) return false;
+      if (fs !== "all" && task.status !== fs) return false;
+      if (fl !== "all" && task.listId !== fl) return false;
+      return true;
     }
   
-    let todoDragId = null;
+    function sortTodos(a, b) {
+      const statusRank = { open: 0, inprogress: 1, done: 2 };
+      const prRank = { high: 0, medium: 1, low: 2 };
+      const sa = statusRank[a.status] ?? 1;
+      const sb = statusRank[b.status] ?? 1;
+      if (sa !== sb) return sa - sb;
   
-    // Helpers for linking display (will use shoppingState / financeState later)
-    function getShoppingListNameByIdLink(id) {
-      try {
-        if (!id || !window.__myhubShoppingState) return "";
-        const list = window.__myhubShoppingState.lists.find((l) => l.id === id);
-        return list ? list.name : "";
-      } catch {
-        return "";
-      }
+      const pa = prRank[a.priority] ?? 1;
+      const pb = prRank[b.priority] ?? 1;
+      if (pa !== pb) return pa - pb;
+  
+      const da = a.dueDate || "";
+      const db = b.dueDate || "";
+      if (da && db && da !== db) return da.localeCompare(db);
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+  
+      return (a.createdAt || 0) - (b.createdAt || 0);
     }
   
-    function getFinanceTxShortLabel(id) {
-      try {
-        if (!id || !window.__myhubFinanceState) return "";
-        const tx = window.__myhubFinanceState.transactions.find((t) => t.id === id);
-        if (!tx) return "";
-        const acc = window.__myhubGetAccountById
-          ? window.__myhubGetAccountById(tx.accountId)
-          : null;
-        const currency = acc ? acc.currency || "" : "";
-        const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
-        return `${tx.category || ""} ${amount} ${currency}`.trim();
-      } catch {
-        return "";
-      }
-    }
+    function renderTodos() {
+      if (!todoListContainer || !noTodosMsg) return;
+      todoListContainer.innerHTML = "";
+      const tasks = state.todos.filter(applyTodoFilters).sort(sortTodos);
   
-    function renderTodoList() {
-      if (!todoListEl || !noTodosMsg) return;
-      todoListEl.innerHTML = "";
-      const tasks = getFilteredTodoTasks();
-  
-      if (!tasks.length) {
-        noTodosMsg.classList.remove("hidden");
+      if (tasks.length === 0) {
+        noTodosMsg.style.display = "block";
         return;
       }
-      noTodosMsg.classList.add("hidden");
+      noTodosMsg.style.display = "none";
   
-      for (const task of tasks) {
+      tasks.forEach((task) => {
         const item = document.createElement("div");
         item.className = "item";
-        item.dataset.id = task.id;
         item.draggable = true;
   
-        const listName = getTodoListNameById(task.listId);
-        const dueText = task.dueDate ? new Date(task.dueDate + "T00:00:00").toLocaleDateString() : "No date";
-        const statusLabel = task.status === "inprogress" ? "In progress" : task.status === "done" ? "Done" : "Open";
+        const main = document.createElement("div");
+        main.className = "item-main";
   
-        let priorityLabel = "";
-        if (task.priority === "high") priorityLabel = "🔥 High";
-        else if (task.priority === "medium") priorityLabel = "Medium";
-        else if (task.priority === "low") priorityLabel = "Low";
+        const checkboxWrap = document.createElement("div");
+        checkboxWrap.className = "item-checkbox";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
   
-        const linkedShopping = task.shoppingListId ? getShoppingListNameByIdLink(task.shoppingListId) : "";
-        const linkedFinance = task.financeTxId ? getFinanceTxShortLabel(task.financeTxId) : "";
+        // tri-state visual
+        if (task.status === "done") {
+          cb.checked = true;
+        } else {
+          cb.checked = false;
+        }
+        cb.indeterminate = task.status === "inprogress";
   
-        item.innerHTML = `
-          <div class="item-main">
-            <div class="item-checkbox">
-              <input type="checkbox" ${task.status === "done" ? "checked" : ""} />
-            </div>
-            <div class="item-text">
-              <div class="item-title">${task.title}</div>
-              <div class="item-meta">
-                <span class="tag">${priorityLabel || "No priority"}</span>
-                <span class="tag">${dueText}</span>
-                <span class="tag">${listName}</span>
-                <span class="tag">${statusLabel}</span>
-                ${linkedShopping ? `<span class="tag">🛒 ${linkedShopping}</span>` : ""}
-                ${linkedFinance ? `<span class="tag">💰 ${linkedFinance}</span>` : ""}
-              </div>
-            </div>
-          </div>
-          <div class="item-actions">
-            <button class="icon-btn" data-action="link-shopping" title="Link to shopping list">🛒</button>
-            <button class="icon-btn" data-action="link-finance" title="Link to transaction">💰</button>
-            <button class="icon-btn" data-action="status" title="Toggle in progress">⏳</button>
-            <button class="icon-btn" data-action="edit" title="Edit task">✏️</button>
-            <button class="icon-btn danger" data-action="delete" title="Delete task">🗑</button>
-          </div>
-        `;
+        cb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          task.status = triStateNext(task.status);
+          saveState();
+          renderTodos();
+        });
   
+        checkboxWrap.appendChild(cb);
+  
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+  
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = task.title || "(no title)";
+  
+        if (task.status === "done") {
+          title.style.textDecoration = "line-through";
+          title.style.color = "#777a90";
+        } else if (task.status === "inprogress") {
+          title.style.fontStyle = "italic";
+        }
+  
+        title.addEventListener("click", () => {
+          // Edit task
+          const newTitle = prompt("Edit task title:", task.title || "");
+          if (newTitle === null) return;
+          task.title = newTitle.trim() || task.title;
+  
+          const newDue = prompt(
+            "Edit due date (YYYY-MM-DD, leave blank to clear):",
+            task.dueDate || ""
+          );
+          if (newDue !== null) {
+            const trimmed = newDue.trim();
+            task.dueDate = trimmed || "";
+          }
+  
+          const newPriority = prompt(
+            "Priority (high / medium / low):",
+            task.priority || "medium"
+          );
+          if (newPriority) {
+            const p = newPriority.toLowerCase();
+            if (["high", "medium", "low"].includes(p)) {
+              task.priority = p;
+            }
+          }
+          saveState();
+          renderTodos();
+        });
+  
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+  
+        if (task.priority) {
+          const pTag = document.createElement("span");
+          pTag.className = "tag";
+          pTag.textContent =
+            task.priority === "high"
+              ? "High"
+              : task.priority === "low"
+              ? "Low"
+              : "Medium";
+          meta.appendChild(pTag);
+        }
+        if (task.dueDate) {
+          const dTag = document.createElement("span");
+          dTag.className = "tag";
+          dTag.textContent = `Due ${task.dueDate}`;
+          meta.appendChild(dTag);
+        }
+        if (task.listId) {
+          const list = state.todoLists.find((l) => l.id === task.listId);
+          if (list) {
+            const lTag = document.createElement("span");
+            lTag.className = "tag";
+            lTag.textContent = list.name;
+            meta.appendChild(lTag);
+          }
+        }
+        if (task.link) {
+          const linkTag = document.createElement("span");
+          linkTag.className = "tag";
+          linkTag.textContent = `🔗 ${task.link}`;
+          meta.appendChild(linkTag);
+        }
+  
+        textWrap.appendChild(title);
+        if (meta.childNodes.length > 0) textWrap.appendChild(meta);
+  
+        main.appendChild(checkboxWrap);
+        main.appendChild(textWrap);
+  
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+  
+        const linkBtn = document.createElement("button");
+        linkBtn.className = "icon-btn";
+        linkBtn.textContent = "🔗";
+        linkBtn.title = "Set / edit link (e.g. Shopping: Weekly list)";
+  
+        linkBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const current = task.link || "";
+          const newLink = prompt(
+            "Link this task to something (e.g. 'Shopping: Weekly list')",
+            current
+          );
+          if (newLink === null) return;
+          task.link = newLink.trim();
+          saveState();
+          renderTodos();
+        });
+  
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete task";
+  
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!confirm("Delete this task?")) return;
+          state.todos = state.todos.filter((t) => t.id !== task.id);
+          saveState();
+          renderTodos();
+        });
+  
+        actions.appendChild(linkBtn);
+        actions.appendChild(delBtn);
+  
+        item.appendChild(main);
+        item.appendChild(actions);
+  
+        // simple drag & drop
         item.addEventListener("dragstart", (e) => {
-          todoDragId = task.id;
-          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", task.id);
         });
-  
-        item.addEventListener("dragover", (e) => {
-          e.preventDefault();
-        });
-  
+        item.addEventListener("dragover", (e) => e.preventDefault());
         item.addEventListener("drop", (e) => {
           e.preventDefault();
-          const targetId = item.dataset.id;
-          if (!todoDragId || todoDragId === targetId) return;
-          reorderTodoTasks(todoDragId, targetId);
-          todoDragId = null;
+          const fromId = e.dataTransfer.getData("text/plain");
+          if (!fromId || fromId === task.id) return;
+          const arr = state.todos;
+          const fromIndex = arr.findIndex((t) => t.id === fromId);
+          const toIndex = arr.findIndex((t) => t.id === task.id);
+          if (fromIndex === -1 || toIndex === -1) return;
+          const [moved] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, moved);
+          saveState();
+          renderTodos();
         });
   
-        todoListEl.appendChild(item);
-      }
-  
-      // checkbox changes
-      todoListEl.addEventListener("change", (e) => {
-        const checkbox = e.target.closest("input[type='checkbox']");
-        if (!checkbox) return;
-        const itemEl = checkbox.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const task = todoState.tasks.find((t) => t.id === id);
-        if (!task) return;
-        task.status = checkbox.checked ? "done" : "open";
-        task.updatedAt = Date.now();
-        saveTodoState();
-        renderTodoList();
-      }, { once: true });
-  
-      // buttons (edit/delete/status/link)
-      todoListEl.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const itemEl = btn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const task = todoState.tasks.find((t) => t.id === id);
-        if (!task) return;
-  
-        if (action === "delete") {
-          if (!confirm("Delete this task?")) return;
-          todoState.tasks = todoState.tasks.filter((t) => t.id !== id);
-          saveTodoState();
-          renderTodoList();
-        } else if (action === "edit") {
-          const newTitle = prompt("Edit task title:", task.title || "") ?? task.title;
-          const newPriority = prompt("Priority (high, medium, low):", task.priority || "medium") ?? task.priority;
-          const newDue = prompt("Due date (YYYY-MM-DD or empty):", task.dueDate || "") ?? task.dueDate;
-          task.title = (newTitle || "").trim();
-          const p = (newPriority || "").toLowerCase();
-          if (p === "high" || p === "medium" || p === "low") {
-            task.priority = p;
-          }
-          task.dueDate = (newDue || "").trim();
-          task.updatedAt = Date.now();
-          saveTodoState();
-          renderTodoList();
-        } else if (action === "status") {
-          if (task.status === "open") task.status = "inprogress";
-          else if (task.status === "inprogress") task.status = "open";
-          else if (task.status === "done") task.status = "inprogress";
-          task.updatedAt = Date.now();
-          saveTodoState();
-          renderTodoList();
-        } else if (action === "link-shopping") {
-          linkTodoToShopping(task);
-        } else if (action === "link-finance") {
-          linkTodoToFinance(task);
-        }
-      }, { once: true });
-    }
-  
-    function reorderTodoTasks(dragId, targetId) {
-      const visible = getFilteredTodoTasks();
-      const fromIndex = visible.findIndex((t) => t.id === dragId);
-      const toIndex = visible.findIndex((t) => t.id === targetId);
-      if (fromIndex < 0 || toIndex < 0) return;
-      const [moved] = visible.splice(fromIndex, 1);
-      visible.splice(toIndex, 0, moved);
-      visible.forEach((t, index) => {
-        const original = todoState.tasks.find((x) => x.id === t.id);
-        if (original) original.order = index + 1;
+        todoListContainer.appendChild(item);
       });
-      saveTodoState();
-      renderTodoList();
     }
   
-    function linkTodoToShopping(task) {
-      if (!window.__myhubShoppingState || !window.__myhubShoppingState.lists.length) {
-        alert("No shopping lists yet. Create one in the Shopping tab first.");
-        return;
-      }
-      const lists = window.__myhubShoppingState.lists;
-      const lines = lists.map((l, i) => `${i + 1}) ${l.name}`);
-      const resp = prompt(
-        "Link to which shopping list?\n" +
-        lines.join("\n") +
-        "\n\nType the number, or leave empty to clear the link."
-      );
-      if (resp === null) return;
-      const trimmed = resp.trim();
-      if (!trimmed) {
-        task.shoppingListId = "";
-        task.updatedAt = Date.now();
-        saveTodoState();
-        renderTodoList();
-        return;
-      }
-      const num = parseInt(trimmed, 10);
-      if (isNaN(num) || num < 1 || num > lists.length) {
-        alert("Invalid choice.");
-        return;
-      }
-      task.shoppingListId = lists[num - 1].id;
-      task.updatedAt = Date.now();
-      saveTodoState();
-      renderTodoList();
-    }
-  
-    function linkTodoToFinance(task) {
-      if (!window.__myhubFinanceState || !window.__myhubFinanceState.transactions.length) {
-        alert("No finance transactions yet. Add one in the Finance tab first.");
-        return;
-      }
-      const txs = [...window.__myhubFinanceState.transactions]
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-        .slice(0, 10);
-      const lines = txs.map((tx, i) => {
-        const acc = window.__myhubGetAccountById ? window.__myhubGetAccountById(tx.accountId) : null;
-        const currency = acc ? acc.currency || "" : "";
-        const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
-        const cat = tx.category || "(no category)";
-        return `${i + 1}) ${cat} - ${amount} ${currency}`;
-      });
-      const resp = prompt(
-        "Link to which transaction? (last 10)\n" +
-        lines.join("\n") +
-        "\n\nType the number, or leave empty to clear the link."
-      );
-      if (resp === null) return;
-      const trimmed = resp.trim();
-      if (!trimmed) {
-        task.financeTxId = "";
-        task.updatedAt = Date.now();
-        saveTodoState();
-        renderTodoList();
-        return;
-      }
-      const num = parseInt(trimmed, 10);
-      if (isNaN(num) || num < 1 || num > txs.length) {
-        alert("Invalid choice.");
-        return;
-      }
-      task.financeTxId = txs[num - 1].id;
-      task.updatedAt = Date.now();
-      saveTodoState();
-      renderTodoList();
-    }
-  
-    if (todoNewListBtn) {
-      todoNewListBtn.addEventListener("click", () => {
-        if (!todoListNameInput) return;
-        if (!todoListNameInput.value.trim()) return;
-        addTodoList(todoListNameInput.value);
-        todoListNameInput.value = "";
+    if (todoListSelect) {
+      todoListSelect.addEventListener("change", () => {
+        currentTodoListId = todoListSelect.value;
+        renderTodos();
       });
     }
   
     if (addTodoBtn) {
       addTodoBtn.addEventListener("click", () => {
-        addTodoTaskFromInputs();
-      });
-    }
+        const title = (todoTitleInput?.value || "").trim();
+        if (!title) return;
+        const priority = todoPrioritySelect?.value || "medium";
+        const dueDate = todoDueDateInput?.value || "";
+        const newTodo = {
+          id: makeId("todo"),
+          title,
+          priority,
+          dueDate,
+          status: "open",
+          listId: currentTodoListId,
+          createdAt: Date.now(),
+          link: "",
+        };
+        state.todos.push(newTodo);
+        saveState();
   
-    if (todoTitleInput) {
-      todoTitleInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addTodoTaskFromInputs();
-        }
+        if (todoTitleInput) todoTitleInput.value = "";
+        if (todoDueDateInput) todoDueDateInput.value = "";
+        renderTodos();
       });
     }
   
     if (todoFiltersToggle && todoFiltersPanel) {
       todoFiltersToggle.addEventListener("click", () => {
-        const isHidden = todoFiltersPanel.style.display === "none" || !todoFiltersPanel.style.display;
-        todoFiltersPanel.style.display = isHidden ? "block" : "none";
+        const visible = todoFiltersPanel.style.display === "block";
+        todoFiltersPanel.style.display = visible ? "none" : "block";
       });
     }
   
-    [todoSearchInput, todoFilterPriority, todoFilterStatus, todoFilterList].forEach((el) => {
-      if (!el) return;
-      el.addEventListener("input", () => {
-        renderTodoList();
-      });
-      el.addEventListener("change", () => {
-        renderTodoList();
-      });
-    });
+    [todoSearchInput, todoFilterPriority, todoFilterStatus, todoFilterList].forEach(
+      (el) => {
+        if (!el) return;
+        el.addEventListener("input", renderTodos);
+        el.addEventListener("change", renderTodos);
+      }
+    );
   
-    loadTodoState();
-    ensureTodoListOptions();
+    refreshTodoListsUI();
   
-    if (window.__myhubQuickTaskBuffer) {
-      addTodoTaskFromInputs(window.__myhubQuickTaskBuffer);
-      window.__myhubQuickTaskBuffer = null;
-    }
-  
-    renderTodoList();
-  
-    // ==============================
-    // SHOPPING MODULE
-    // ==============================
-    const SHOPPING_STORAGE_KEY = "myhub_shopping_v2";
-  
+    // -----------------------------
+    // SHOPPING
+    // -----------------------------
     const shoppingListSelect = document.getElementById("shoppingListSelect");
     const shoppingListNameInput = document.getElementById("shoppingListName");
     const shoppingNewListBtn = document.getElementById("shoppingNewListBtn");
     const shoppingItemInput = document.getElementById("shoppingItemInput");
     const addShoppingBtn = document.getElementById("addShoppingBtn");
     const shoppingEmptyMsg = document.getElementById("shoppingEmptyMsg");
-    const shoppingListEl = document.getElementById("shoppingList");
+    const shoppingListContainer = document.getElementById("shoppingList");
   
-    let shoppingState = {
-      lists: [],
-      items: []
-    };
-    window.__myhubShoppingState = shoppingState; // expose for linking
+    let currentShoppingListId =
+      state.shoppingLists.length > 0 ? state.shoppingLists[0].id : "default";
   
-    function loadShoppingState() {
-      try {
-        const raw = localStorage.getItem(SHOPPING_STORAGE_KEY);
-        if (raw) shoppingState = JSON.parse(raw);
-      } catch (err) {
-        console.error("Error loading shopping state", err);
+    // Adapt Shopping layout like To-do
+    (function adaptShoppingListRow() {
+      if (!shoppingListSelect) return;
+      if (shoppingListNameInput) {
+        const rowInline = shoppingListNameInput.closest(".input-row-inline");
+        if (rowInline) rowInline.style.display = "none";
       }
-      if (!shoppingState || typeof shoppingState !== "object") {
-        shoppingState = { lists: [], items: [] };
+      const selectRow = shoppingListSelect.closest(".input-row");
+      if (!selectRow) return;
+  
+      selectRow.style.display = "flex";
+      selectRow.style.flexDirection = "row";
+      selectRow.style.alignItems = "flex-end";
+      selectRow.style.gap = "8px";
+  
+      const label = selectRow.querySelector("label");
+      if (label) {
+        label.style.marginRight = "4px";
+        label.style.whiteSpace = "nowrap";
       }
-      if (!Array.isArray(shoppingState.lists)) shoppingState.lists = [];
-      if (!Array.isArray(shoppingState.items)) shoppingState.items = [];
   
-      if (!shoppingState.lists.length) {
-        const defaultList = { id: "shop_default", name: "Regular" };
-        shoppingState.lists.push(defaultList);
-      }
+      const newListBtn = document.createElement("button");
+      newListBtn.className = "btn btn-secondary btn-icon";
+      newListBtn.textContent = "➕";
+      newListBtn.title = "New shopping list";
   
-      window.__myhubShoppingState = shoppingState;
-    }
+      newListBtn.addEventListener("click", () => {
+        const name = prompt("New shopping list name:");
+        if (!name) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const id = makeId("slist");
+        state.shoppingLists.push({ id, name: trimmed, items: [] });
+        currentShoppingListId = id;
+        saveState();
+        refreshShoppingListsUI();
+        renderShopping();
+      });
   
-    function saveShoppingState() {
-      try {
-        localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(shoppingState));
-      } catch (err) {
-        console.error("Error saving shopping state", err);
-      }
-    }
+      selectRow.appendChild(newListBtn);
+    })();
   
-    function ensureShoppingListOptions() {
+    function refreshShoppingListsUI() {
       if (!shoppingListSelect) return;
       shoppingListSelect.innerHTML = "";
-      shoppingState.lists.forEach((list) => {
+      state.shoppingLists.forEach((list) => {
         const opt = document.createElement("option");
         opt.value = list.id;
         opt.textContent = list.name;
         shoppingListSelect.appendChild(opt);
       });
-    }
-  
-    function addShoppingList(name) {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      const id = "shoplist_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-      shoppingState.lists.push({ id, name: trimmed });
-      saveShoppingState();
-      ensureShoppingListOptions();
-      if (shoppingListSelect) shoppingListSelect.value = id;
-    }
-  
-    function getCurrentShoppingListId() {
-      if (!shoppingListSelect || !shoppingListSelect.value) {
-        return shoppingState.lists[0] && shoppingState.lists[0].id;
+      if (!state.shoppingLists.find((l) => l.id === currentShoppingListId)) {
+        currentShoppingListId =
+          state.shoppingLists.length > 0 ? state.shoppingLists[0].id : "default";
       }
-      return shoppingListSelect.value;
+      shoppingListSelect.value = currentShoppingListId;
     }
   
-    function addShoppingItemFromInput() {
-      if (!shoppingItemInput) return;
-      const name = shoppingItemInput.value.trim();
-      if (!name) return;
-      const listId = getCurrentShoppingListId();
-      const now = Date.now();
-      const itemsInList = shoppingState.items.filter((it) => it.listId === listId);
-      const maxOrder = itemsInList.reduce((max, it) => (typeof it.order === "number" && it.order > max ? it.order : max), 0);
-  
-      const newItem = {
-        id: "shop_" + now + "_" + Math.floor(Math.random() * 100000),
-        name,
-        listId,
-        checked: false,
-        note: "",
-        createdAt: now,
-        order: maxOrder + 1
-      };
-  
-      shoppingState.items.push(newItem);
-      saveShoppingState();
-      renderShoppingItems();
-      shoppingItemInput.value = "";
+    function getCurrentShoppingList() {
+      let list = state.shoppingLists.find((l) => l.id === currentShoppingListId);
+      if (!list && state.shoppingLists.length > 0) {
+        list = state.shoppingLists[0];
+        currentShoppingListId = list.id;
+      }
+      if (!list) {
+        list = { id: "default", name: "General", items: [] };
+        state.shoppingLists.push(list);
+      }
+      return list;
     }
   
-    let shoppingDragId = null;
-  
-    function renderShoppingItems() {
-      if (!shoppingListEl || !shoppingEmptyMsg) return;
-      shoppingListEl.innerHTML = "";
-      const listId = getCurrentShoppingListId();
-      const items = shoppingState.items
-        .filter((it) => it.listId === listId)
-        .sort((a, b) => {
-          if (typeof a.order === "number" && typeof b.order === "number" && a.order !== b.order) {
-            return a.order - b.order;
-          }
-          return (a.createdAt || 0) - (b.createdAt || 0);
-        });
-  
-      if (!items.length) {
-        shoppingEmptyMsg.classList.remove("hidden");
+    function renderShopping() {
+      if (!shoppingListContainer || !shoppingEmptyMsg) return;
+      shoppingListContainer.innerHTML = "";
+      const list = getCurrentShoppingList();
+      if (!list.items || list.items.length === 0) {
+        shoppingEmptyMsg.style.display = "block";
         return;
       }
-      shoppingEmptyMsg.classList.add("hidden");
+      shoppingEmptyMsg.style.display = "none";
   
-      for (const it of items) {
+      list.items.forEach((itemObj) => {
         const item = document.createElement("div");
         item.className = "item";
-        item.dataset.id = it.id;
         item.draggable = true;
   
-        item.innerHTML = `
-          <div class="item-main">
-            <div class="item-checkbox">
-              <input type="checkbox" ${it.checked ? "checked" : ""} />
-            </div>
-            <div class="item-text">
-              <div class="item-title">${it.name}</div>
-              ${it.note ? `<div class="item-meta"><span class="tag">${it.note}</span></div>` : ""}
-            </div>
-          </div>
-          <div class="item-actions">
-            <button class="icon-btn" data-action="note" title="Add/edit note">📝</button>
-            <button class="icon-btn danger" data-action="delete" title="Delete item">🗑</button>
-          </div>
-        `;
+        const main = document.createElement("div");
+        main.className = "item-main";
+  
+        const checkboxWrap = document.createElement("div");
+        checkboxWrap.className = "item-checkbox";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = !!itemObj.checked;
+        cb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          itemObj.checked = cb.checked;
+          saveState();
+          renderShopping();
+        });
+        checkboxWrap.appendChild(cb);
+  
+        const textWrap = document.createElement("div");
+        textWrap.className = "item-text";
+  
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = itemObj.text || "(no name)";
+  
+        if (itemObj.checked) {
+          title.style.textDecoration = "line-through";
+          title.style.color = "#777a90";
+        }
+  
+        title.addEventListener("click", () => {
+          const newName = prompt("Edit item name:", itemObj.text || "");
+          if (newName === null) return;
+          itemObj.text = newName.trim() || itemObj.text;
+          saveState();
+          renderShopping();
+        });
+  
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        if (itemObj.note) {
+          const noteTag = document.createElement("span");
+          noteTag.className = "tag";
+          noteTag.textContent = `📝 ${itemObj.note}`;
+          meta.appendChild(noteTag);
+        }
+  
+        textWrap.appendChild(title);
+        if (meta.childNodes.length > 0) textWrap.appendChild(meta);
+  
+        main.appendChild(checkboxWrap);
+        main.appendChild(textWrap);
+  
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+  
+        const noteBtn = document.createElement("button");
+        noteBtn.className = "icon-btn";
+        noteBtn.textContent = "📝";
+        noteBtn.title = "Add note";
+  
+        noteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const newNote = prompt("Note for this item:", itemObj.note || "");
+          if (newNote === null) return;
+          itemObj.note = newNote.trim();
+          saveState();
+          renderShopping();
+        });
+  
+        const delBtn = document.createElement("button");
+        delBtn.className = "icon-btn danger";
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete item";
+  
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!confirm("Delete this item?")) return;
+          list.items = list.items.filter((i) => i.id !== itemObj.id);
+          saveState();
+          renderShopping();
+        });
+  
+        actions.appendChild(noteBtn);
+        actions.appendChild(delBtn);
+  
+        item.appendChild(main);
+        item.appendChild(actions);
   
         item.addEventListener("dragstart", (e) => {
-          shoppingDragId = it.id;
-          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", itemObj.id);
         });
-  
-        item.addEventListener("dragover", (e) => {
-          e.preventDefault();
-        });
-  
+        item.addEventListener("dragover", (e) => e.preventDefault());
         item.addEventListener("drop", (e) => {
           e.preventDefault();
-          const targetId = item.dataset.id;
-          if (!shoppingDragId || shoppingDragId === targetId) return;
-          reorderShoppingItems(shoppingDragId, targetId);
-          shoppingDragId = null;
+          const fromId = e.dataTransfer.getData("text/plain");
+          if (!fromId || fromId === itemObj.id) return;
+          const arr = list.items;
+          const fromIndex = arr.findIndex((i) => i.id === fromId);
+          const toIndex = arr.findIndex((i) => i.id === itemObj.id);
+          if (fromIndex === -1 || toIndex === -1) return;
+          const [moved] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, moved);
+          saveState();
+          renderShopping();
         });
   
-        shoppingListEl.appendChild(item);
-      }
-  
-      shoppingListEl.addEventListener("change", (e) => {
-        const checkbox = e.target.closest("input[type='checkbox']");
-        if (!checkbox) return;
-        const itemEl = checkbox.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const it = shoppingState.items.find((x) => x.id === id);
-        if (!it) return;
-        it.checked = checkbox.checked;
-        saveShoppingState();
-      }, { once: true });
-  
-      shoppingListEl.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const itemEl = btn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const it = shoppingState.items.find((x) => x.id === id);
-        if (!it) return;
-  
-        if (action === "delete") {
-          if (!confirm("Delete this item?")) return;
-          shoppingState.items = shoppingState.items.filter((x) => x.id !== id);
-          saveShoppingState();
-          renderShoppingItems();
-        } else if (action === "note") {
-          const newNote = prompt("Note for this item:", it.note || "") ?? it.note;
-          it.note = (newNote || "").trim();
-          saveShoppingState();
-          renderShoppingItems();
-        }
-      }, { once: true });
-    }
-  
-    function reorderShoppingItems(dragId, targetId) {
-      const listId = getCurrentShoppingListId();
-      const visible = shoppingState.items
-        .filter((it) => it.listId === listId)
-        .sort((a, b) => {
-          if (typeof a.order === "number" && typeof b.order === "number" && a.order !== b.order) {
-            return a.order - b.order;
-          }
-          return (a.createdAt || 0) - (b.createdAt || 0);
-        });
-  
-      const fromIndex = visible.findIndex((it) => it.id === dragId);
-      const toIndex = visible.findIndex((it) => it.id === targetId);
-      if (fromIndex < 0 || toIndex < 0) return;
-      const [moved] = visible.splice(fromIndex, 1);
-      visible.splice(toIndex, 0, moved);
-      visible.forEach((it, index) => {
-        const original = shoppingState.items.find((x) => x.id === it.id);
-        if (original) original.order = index + 1;
-      });
-      saveShoppingState();
-      renderShoppingItems();
-    }
-  
-    if (shoppingNewListBtn) {
-      shoppingNewListBtn.addEventListener("click", () => {
-        if (!shoppingListNameInput) return;
-        if (!shoppingListNameInput.value.trim()) return;
-        addShoppingList(shoppingListNameInput.value);
-        shoppingListNameInput.value = "";
-      });
-    }
-  
-    if (addShoppingBtn) {
-      addShoppingBtn.addEventListener("click", () => {
-        addShoppingItemFromInput();
-      });
-    }
-  
-    if (shoppingItemInput) {
-      shoppingItemInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addShoppingItemFromInput();
-        }
+        shoppingListContainer.appendChild(item);
       });
     }
   
     if (shoppingListSelect) {
       shoppingListSelect.addEventListener("change", () => {
-        renderShoppingItems();
+        currentShoppingListId = shoppingListSelect.value;
+        renderShopping();
       });
     }
   
-    loadShoppingState();
-    ensureShoppingListOptions();
-    renderShoppingItems();
+    if (addShoppingBtn) {
+      addShoppingBtn.addEventListener("click", () => {
+        const text = (shoppingItemInput?.value || "").trim();
+        if (!text) return;
+        const list = getCurrentShoppingList();
+        list.items.push({
+          id: makeId("sitem"),
+          text,
+          checked: false,
+          note: "",
+        });
+        saveState();
+        if (shoppingItemInput) shoppingItemInput.value = "";
+        renderShopping();
+      });
+    }
   
-    // ==============================
-    // WORKOUTS MODULE
-    // ==============================
-    const WORKOUT_STORAGE_KEY = "myhub_workouts_v1";
+    refreshShoppingListsUI();
   
-    const workoutFavoritesEmpty = document.getElementById("workoutFavoritesEmpty");
-    const workoutFavoritesEl = document.getElementById("workoutFavorites");
+    // -----------------------------
+    // WORKOUTS
+    // -----------------------------
     const workoutNameInput = document.getElementById("workoutName");
     const workoutStartLabel = document.getElementById("workoutStartLabel");
     const workoutDurationLabel = document.getElementById("workoutDurationLabel");
     const startWorkoutBtn = document.getElementById("startWorkoutBtn");
     const saveWorkoutBtn = document.getElementById("saveWorkoutBtn");
     const addExerciseRowBtn = document.getElementById("addExerciseRowBtn");
-    const workoutExercisesEl = document.getElementById("workoutExercises");
+    const workoutExercisesContainer = document.getElementById("workoutExercises");
     const workoutNotesInput = document.getElementById("workoutNotes");
+    const workoutFavoritesContainer = document.getElementById(
+      "workoutFavoritesContainer"
+    );
+    const workoutFavoritesEmpty = document.getElementById("workoutFavoritesEmpty");
+    const workoutFavoritesGrid = document.getElementById("workoutFavorites");
     const noWorkoutMsg = document.getElementById("noWorkoutMsg");
-    const workoutListEl = document.getElementById("workoutList");
+    const workoutListContainer = document.getElementById("workoutList");
   
-    let workoutState = {
-      workouts: []
+    let currentWorkout = {
+      name: "",
+      startTime: null,
+      durationMs: 0,
+      notes: "",
+      exercises: [], // {id, name, sets, reps, weight, done}
     };
-    window.__myhubWorkoutState = workoutState;
-  
-    let currentWorkoutStart = null;
-  
-    function loadWorkoutState() {
-      try {
-        const raw = localStorage.getItem(WORKOUT_STORAGE_KEY);
-        if (raw) workoutState = JSON.parse(raw);
-      } catch (err) {
-        console.error("Error loading workouts", err);
-      }
-      if (!workoutState || typeof workoutState !== "object") {
-        workoutState = { workouts: [] };
-      }
-      if (!Array.isArray(workoutState.workouts)) workoutState.workouts = [];
-      window.__myhubWorkoutState = workoutState;
-    }
-  
-    function saveWorkoutState() {
-      try {
-        localStorage.setItem(WORKOUT_STORAGE_KEY, JSON.stringify(workoutState));
-      } catch (err) {
-        console.error("Error saving workouts", err);
-      }
-      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
-    }
+    let workoutTimer = null;
   
     function formatDuration(ms) {
       if (!ms || ms <= 0) return "–";
-      const totalSeconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      if (minutes >= 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        return `${hours}h ${mins}m`;
-      }
-      return `${minutes}m ${seconds}s`;
+      const totalSec = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      if (mins === 0) return `${secs}s`;
+      return `${mins}m ${secs}s`;
     }
   
-    function formatDateTime(ts) {
-      if (!ts) return "";
-      try {
-        const d = new Date(ts);
-        return d.toLocaleString();
-      } catch {
-        return "";
+    function updateWorkoutDurationLabel() {
+      if (!currentWorkout.startTime) return;
+      const now = Date.now();
+      const ms = now - currentWorkout.startTime;
+      currentWorkout.durationMs = ms;
+      if (workoutDurationLabel) {
+        workoutDurationLabel.textContent = formatDuration(ms);
       }
     }
   
-    function addExerciseRow(prefill) {
-      if (!workoutExercisesEl) return;
+    function startWorkoutTimer() {
+      if (workoutTimer) clearInterval(workoutTimer);
+      workoutTimer = setInterval(updateWorkoutDurationLabel, 1000);
+    }
+  
+    function stopWorkoutTimer() {
+      if (workoutTimer) clearInterval(workoutTimer);
+      workoutTimer = null;
+    }
+  
+    function createExerciseRow(data) {
       const row = document.createElement("div");
       row.className = "workout-row";
+      const id = data?.id || makeId("ex");
   
-      const exerciseName = prefill && prefill.name ? prefill.name : "";
-      const sets = prefill && prefill.sets ? prefill.sets : "";
-      const reps = prefill && prefill.reps ? prefill.reps : "";
-      const weight = prefill && prefill.weight ? prefill.weight : "";
-      const done = prefill && prefill.done ? true : false;
+      const top = document.createElement("div");
+      top.className = "workout-row-top";
+      const exNameInput = document.createElement("input");
+      exNameInput.type = "text";
+      exNameInput.placeholder = "Exercise name";
+      exNameInput.value = data?.name || "";
+      top.appendChild(exNameInput);
   
-      row.innerHTML = `
-        <div class="workout-row-top">
-          <input type="text" class="workout-ex-name" placeholder="Exercise name" value="${exerciseName}" />
-        </div>
-        <div class="workout-row-bottom">
-          <input type="number" class="workout-ex-sets" placeholder="Sets" min="0" value="${sets}" />
-          <input type="number" class="workout-ex-reps" placeholder="Reps" min="0" value="${reps}" />
-          <input type="number" class="workout-ex-weight" placeholder="Weight" min="0" value="${weight}" />
-          <input type="checkbox" class="workout-done" ${done ? "checked" : ""} />
-          <button class="icon-btn danger workout-remove" title="Remove exercise">🗑</button>
-        </div>
-      `;
+      const bottom = document.createElement("div");
+      bottom.className = "workout-row-bottom";
   
-      workoutExercisesEl.appendChild(row);
+      const setsInput = document.createElement("input");
+      setsInput.type = "number";
+      setsInput.min = "0";
+      setsInput.placeholder = "Sets";
+      setsInput.value = data?.sets ?? "";
   
-      const removeBtn = row.querySelector(".workout-remove");
-      if (removeBtn) {
-        removeBtn.addEventListener("click", () => {
-          if (!confirm("Remove this exercise row?")) return;
-          row.remove();
-        });
-      }
-    }
+      const repsInput = document.createElement("input");
+      repsInput.type = "number";
+      repsInput.min = "0";
+      repsInput.placeholder = "Reps";
+      repsInput.value = data?.reps ?? "";
   
-    function gatherCurrentWorkoutExercises() {
-      if (!workoutExercisesEl) return [];
-      const rows = workoutExercisesEl.querySelectorAll(".workout-row");
-      const exercises = [];
-      rows.forEach((row, index) => {
-        const nameInput = row.querySelector(".workout-ex-name");
-        const setsInput = row.querySelector(".workout-ex-sets");
-        const repsInput = row.querySelector(".workout-ex-reps");
-        const weightInput = row.querySelector(".workout-ex-weight");
-        const doneCheckbox = row.querySelector(".workout-done");
+      const weightInput = document.createElement("input");
+      weightInput.type = "number";
+      weightInput.min = "0";
+      weightInput.placeholder = "Weight";
+      weightInput.value = data?.weight ?? "";
   
-        const name = nameInput && nameInput.value.trim();
-        if (!name) return;
+      const doneCheckbox = document.createElement("input");
+      doneCheckbox.type = "checkbox";
+      doneCheckbox.className = "workout-done";
+      doneCheckbox.checked = !!data?.done;
   
-        exercises.push({
-          id: "ex_" + Date.now() + "_" + index,
-          name,
-          sets: setsInput && setsInput.value ? Number(setsInput.value) : null,
-          reps: repsInput && repsInput.value ? Number(repsInput.value) : null,
-          weight: weightInput && weightInput.value ? Number(weightInput.value) : null,
-          done: !!(doneCheckbox && doneCheckbox.checked)
-        });
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "icon-btn danger";
+      deleteBtn.textContent = "🗑";
+      deleteBtn.title = "Remove exercise";
+  
+      deleteBtn.addEventListener("click", () => {
+        row.remove();
+        currentWorkout.exercises = currentWorkout.exercises.filter(
+          (e) => e.id !== id
+        );
       });
-      return exercises;
+  
+      bottom.appendChild(setsInput);
+      bottom.appendChild(repsInput);
+      bottom.appendChild(weightInput);
+      bottom.appendChild(doneCheckbox);
+      bottom.appendChild(deleteBtn);
+  
+      row.appendChild(top);
+      row.appendChild(bottom);
+  
+      workoutExercisesContainer.appendChild(row);
+  
+      const updateData = () => {
+        const ex = currentWorkout.exercises.find((e) => e.id === id);
+        if (!ex) return;
+        ex.name = exNameInput.value.trim();
+        ex.sets = setsInput.value ? parseInt(setsInput.value, 10) : null;
+        ex.reps = repsInput.value ? parseInt(repsInput.value, 10) : null;
+        ex.weight = weightInput.value ? parseFloat(weightInput.value) : null;
+        ex.done = doneCheckbox.checked;
+      };
+  
+      currentWorkout.exercises.push({
+        id,
+        name: data?.name || "",
+        sets: data?.sets ?? null,
+        reps: data?.reps ?? null,
+        weight: data?.weight ?? null,
+        done: !!data?.done,
+      });
+  
+      [exNameInput, setsInput, repsInput, weightInput, doneCheckbox].forEach(
+        (el) => {
+          el.addEventListener("input", updateData);
+          el.addEventListener("change", updateData);
+        }
+      );
     }
   
-    function clearCurrentWorkoutForm() {
+    function clearCurrentWorkoutUI() {
+      currentWorkout = {
+        name: "",
+        startTime: null,
+        durationMs: 0,
+        notes: "",
+        exercises: [],
+      };
       if (workoutNameInput) workoutNameInput.value = "";
-      if (workoutExercisesEl) workoutExercisesEl.innerHTML = "";
-      if (workoutNotesInput) workoutNotesInput.value = "";
-      currentWorkoutStart = null;
       if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
       if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
+      if (workoutNotesInput) workoutNotesInput.value = "";
+      if (workoutExercisesContainer) workoutExercisesContainer.innerHTML = "";
+      stopWorkoutTimer();
     }
   
     function renderWorkoutFavorites() {
-      if (!workoutFavoritesEl || !workoutFavoritesEmpty) return;
-      workoutFavoritesEl.innerHTML = "";
-  
-      const favorites = workoutState.workouts.filter((w) => w.favorite);
-      if (!favorites.length) {
-        workoutFavoritesEmpty.classList.remove("hidden");
+      if (!workoutFavoritesGrid || !workoutFavoritesEmpty) return;
+      workoutFavoritesGrid.innerHTML = "";
+      const favs = state.workoutFavorites || [];
+      if (favs.length === 0) {
+        workoutFavoritesEmpty.style.display = "block";
         return;
       }
-      workoutFavoritesEmpty.classList.add("hidden");
-  
-      favorites.slice(-6).forEach((w) => {
+      workoutFavoritesEmpty.style.display = "none";
+      favs.slice(0, 6).forEach((fav) => {
         const card = document.createElement("div");
         card.className = "favorite-card";
-        card.dataset.id = w.id;
-        card.textContent = w.name || "(no name)";
-        card.title = "Tap to load this workout as template";
-  
+        card.textContent = fav.name || "Workout";
         card.addEventListener("click", () => {
-          if (workoutNameInput) workoutNameInput.value = w.name || "";
-          if (workoutExercisesEl) workoutExercisesEl.innerHTML = "";
-          if (Array.isArray(w.exercises)) {
-            w.exercises.forEach((ex) => {
-              addExerciseRow(ex);
+          clearCurrentWorkoutUI();
+          currentWorkout.name = fav.name || "";
+          if (workoutNameInput) workoutNameInput.value = currentWorkout.name;
+          fav.exercises.forEach((ex) => {
+            createExerciseRow({
+              name: ex.name,
+              sets: ex.sets,
+              reps: ex.reps,
+              weight: ex.weight,
+              done: false,
             });
-          }
-          if (workoutNotesInput) workoutNotesInput.value = w.notes || "";
-          currentWorkoutStart = null;
-          if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
-          if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
+          });
         });
-  
-        workoutFavoritesEl.appendChild(card);
+        workoutFavoritesGrid.appendChild(card);
       });
     }
   
-    function renderWorkoutList() {
-      if (!workoutListEl || !noWorkoutMsg) return;
-      workoutListEl.innerHTML = "";
-  
-      const workouts = [...workoutState.workouts].sort((a, b) => (b.startTime || b.createdAt || 0) - (a.startTime || a.createdAt || 0));
-      if (!workouts.length) {
-        noWorkoutMsg.classList.remove("hidden");
+    function renderWorkoutsList() {
+      if (!workoutListContainer || !noWorkoutMsg) return;
+      workoutListContainer.innerHTML = "";
+      const ws = state.workouts || [];
+      if (ws.length === 0) {
+        noWorkoutMsg.style.display = "block";
         return;
       }
-      noWorkoutMsg.classList.add("hidden");
+      noWorkoutMsg.style.display = "none";
   
-      workouts.forEach((w) => {
-        const item = document.createElement("div");
-        item.className = "item";
-        item.dataset.id = w.id;
+      ws
+        .slice()
+        .sort((a, b) => (b.startTime || 0) - (a.startTime || 0))
+        .forEach((w) => {
+          const item = document.createElement("div");
+          item.className = "item";
   
-        const duration = formatDuration(w.durationMs);
-        const dateLabel = formatDateTime(w.startTime || w.createdAt);
-        const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
+          const main = document.createElement("div");
+          main.className = "item-main";
   
-        item.innerHTML = `
-          <div class="item-main">
-            <div class="item-text">
-              <div class="item-title">${w.name || "(no name)"}</div>
-              <div class="item-meta">
-                <span class="tag">${dateLabel}</span>
-                <span class="tag">${duration}</span>
-                <span class="tag">${exCount} exercises</span>
-              </div>
-            </div>
-          </div>
-          <div class="item-actions">
-            <button class="icon-btn" data-action="favorite" title="Toggle favorite">${w.favorite ? "⭐" : "☆"}</button>
-            <button class="icon-btn danger" data-action="delete" title="Delete workout">🗑</button>
-          </div>
-        `;
+          const titleWrap = document.createElement("div");
+          titleWrap.className = "item-text";
   
-        workoutListEl.appendChild(item);
-      });
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = w.name || "Workout";
   
-      workoutListEl.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const itemEl = btn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const w = workoutState.workouts.find((x) => x.id === id);
-        if (!w) return;
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
   
-        if (action === "delete") {
-          if (!confirm("Delete this workout?")) return;
-          workoutState.workouts = workoutState.workouts.filter((x) => x.id !== id);
-          saveWorkoutState();
-          renderWorkoutList();
-          renderWorkoutFavorites();
-        } else if (action === "favorite") {
-          w.favorite = !w.favorite;
-          saveWorkoutState();
-          renderWorkoutList();
-          renderWorkoutFavorites();
-        }
-      }, { once: true });
+          const date = new Date(w.startTime || Date.now());
+          const dTag = document.createElement("span");
+          dTag.className = "tag";
+          dTag.textContent = date.toLocaleString();
+          meta.appendChild(dTag);
+  
+          const durTag = document.createElement("span");
+          durTag.className = "tag";
+          durTag.textContent = formatDuration(w.durationMs || 0);
+          meta.appendChild(durTag);
+  
+          const exTag = document.createElement("span");
+          exTag.className = "tag";
+          exTag.textContent = `${(w.exercises || []).length} exercises`;
+          meta.appendChild(exTag);
+  
+          titleWrap.appendChild(title);
+          titleWrap.appendChild(meta);
+          main.appendChild(titleWrap);
+  
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+  
+          const favBtn = document.createElement("button");
+          favBtn.className = "icon-btn";
+          const isFav = state.workoutFavorites?.some((f) => f.id === w.id);
+          favBtn.textContent = isFav ? "★" : "☆";
+          favBtn.title = "Toggle favorite (max 6)";
+  
+          favBtn.addEventListener("click", () => {
+            const favIndex = state.workoutFavorites.findIndex(
+              (f) => f.id === w.id
+            );
+            if (favIndex >= 0) {
+              state.workoutFavorites.splice(favIndex, 1);
+            } else {
+              if ((state.workoutFavorites || []).length >= 6) {
+                alert("You already have 6 favorite workouts.");
+                return;
+              }
+              state.workoutFavorites.push({
+                id: w.id,
+                name: w.name,
+                exercises: w.exercises || [],
+              });
+            }
+            saveState();
+            renderWorkoutFavorites();
+            renderWorkoutsList();
+          });
+  
+          const delBtn = document.createElement("button");
+          delBtn.className = "icon-btn danger";
+          delBtn.textContent = "🗑";
+          delBtn.title = "Delete workout";
+  
+          delBtn.addEventListener("click", () => {
+            if (!confirm("Delete this workout?")) return;
+            state.workouts = state.workouts.filter((wk) => wk.id !== w.id);
+            state.workoutFavorites = state.workoutFavorites.filter(
+              (f) => f.id !== w.id
+            );
+            saveState();
+            renderWorkoutFavorites();
+            renderWorkoutsList();
+          });
+  
+          actions.appendChild(favBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          workoutListContainer.appendChild(item);
+        });
     }
   
     if (startWorkoutBtn) {
       startWorkoutBtn.addEventListener("click", () => {
-        const now = Date.now();
-        currentWorkoutStart = now;
-        if (workoutStartLabel) workoutStartLabel.textContent = formatDateTime(now);
-        if (workoutDurationLabel) workoutDurationLabel.textContent = "0m 0s";
+        if (!currentWorkout.startTime) {
+          currentWorkout.startTime = Date.now();
+          if (workoutStartLabel) {
+            const d = new Date(currentWorkout.startTime);
+            workoutStartLabel.textContent = d.toLocaleTimeString();
+          }
+          startWorkoutTimer();
+        }
+        // Automatically add first exercise row if none
+        if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
+          createExerciseRow();
+        }
+      });
+    }
+  
+    if (addExerciseRowBtn && workoutExercisesContainer) {
+      addExerciseRowBtn.addEventListener("click", () => {
+        createExerciseRow();
       });
     }
   
     if (saveWorkoutBtn) {
       saveWorkoutBtn.addEventListener("click", () => {
-        const name = workoutNameInput && workoutNameInput.value.trim();
-        const exercises = gatherCurrentWorkoutExercises();
-        const notes = workoutNotesInput ? workoutNotesInput.value.trim() : "";
-  
-        if (!name && !exercises.length) {
-          alert("Add at least a workout name or one exercise.");
-          return;
+        const name = (workoutNameInput?.value || "").trim();
+        const notes = workoutNotesInput?.value || "";
+        const exs = currentWorkout.exercises || [];
+        if (exs.length === 0) {
+          if (!confirm("No exercises added. Save anyway?")) return;
         }
   
         const now = Date.now();
-        const startTime = currentWorkoutStart || now;
-        const durationMs = currentWorkoutStart ? now - currentWorkoutStart : 0;
+        let startTime = currentWorkout.startTime || now;
+        let durationMs = currentWorkout.durationMs || 0;
+        if (!durationMs && currentWorkout.startTime) {
+          durationMs = now - currentWorkout.startTime;
+        }
   
         const workout = {
-          id: "wo_" + now + "_" + Math.floor(Math.random() * 100000),
-          name: name || "(no name)",
-          exercises,
+          id: makeId("workout"),
+          name: name || "Workout",
           notes,
+          exercises: exs.map((e) => ({
+            id: e.id,
+            name: e.name,
+            sets: e.sets,
+            reps: e.reps,
+            weight: e.weight,
+            done: e.done,
+          })),
           startTime,
           durationMs,
-          createdAt: now,
-          favorite: false
         };
   
-        workoutState.workouts.push(workout);
-        saveWorkoutState();
-        clearCurrentWorkoutForm();
-        renderWorkoutList();
-        renderWorkoutFavorites();
+        state.workouts.push(workout);
+        saveState();
+        clearCurrentWorkoutUI();
+        renderWorkoutsList();
+        // Favorites handled by star in list
       });
     }
   
-    if (addExerciseRowBtn) {
-      addExerciseRowBtn.addEventListener("click", () => {
-        addExerciseRow();
+    if (workoutNotesInput) {
+      workoutNotesInput.addEventListener("input", () => {
+        currentWorkout.notes = workoutNotesInput.value;
       });
     }
   
-    loadWorkoutState();
-    renderWorkoutList();
     renderWorkoutFavorites();
+    renderWorkoutsList();
   
-    // ==============================
-    // FINANCE MODULE
-    // ==============================
-    const FINANCE_STORAGE_KEY = "myhub_finance_v1";
-  
+    // -----------------------------
+    // FINANCE
+    // -----------------------------
     const financeAccountSelect = document.getElementById("financeAccount");
     const financeTypeSelect = document.getElementById("financeType");
     const financeAmountInput = document.getElementById("financeAmount");
@@ -2132,779 +2128,971 @@
     const financeMethodInput = document.getElementById("financeMethod");
     const financeNoteInput = document.getElementById("financeNote");
     const addFinanceBtn = document.getElementById("addFinanceBtn");
-    const financeFilterCategorySelect = document.getElementById("financeFilterCategory");
-    const financeSummaryEl = document.getElementById("financeSummary");
+    const financeFilterCategory = document.getElementById(
+      "financeFilterCategory"
+    );
+    const financeSummary = document.getElementById("financeSummary");
     const noFinanceMsg = document.getElementById("noFinanceMsg");
-    const financeListEl = document.getElementById("financeList");
+    const financeListContainer = document.getElementById("financeList");
+  
     const addAccountBtn = document.getElementById("addAccountBtn");
     const noAccountsMsg = document.getElementById("noAccountsMsg");
-    const accountsListEl = document.getElementById("accountsList");
+    const accountsListContainer = document.getElementById("accountsList");
   
-    let financeState = {
-      accounts: [],
-      transactions: []
-    };
-    window.__myhubFinanceState = financeState;
+    function refreshAccountsUI() {
+      if (!financeAccountSelect || !accountsListContainer || !noAccountsMsg)
+        return;
   
-    function loadFinanceState() {
-      try {
-        const raw = localStorage.getItem(FINANCE_STORAGE_KEY);
-        if (raw) financeState = JSON.parse(raw);
-      } catch (err) {
-        console.error("Error loading finance state", err);
-      }
-  
-      if (!financeState || typeof financeState !== "object") {
-        financeState = { accounts: [], transactions: [] };
-      }
-      if (!Array.isArray(financeState.accounts)) financeState.accounts = [];
-      if (!Array.isArray(financeState.transactions)) financeState.transactions = [];
-  
-      if (!financeState.accounts.length) {
-        financeState.accounts.push({ id: "acc_main", name: "Main (THB)", currency: "THB" });
-      }
-  
-      window.__myhubFinanceState = financeState;
-    }
-  
-    function saveFinanceState() {
-      try {
-        localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(financeState));
-      } catch (err) {
-        console.error("Error saving finance state", err);
-      }
-      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
-    }
-  
-    function ensureFinanceAccountOptions() {
-      if (!financeAccountSelect) return;
       financeAccountSelect.innerHTML = "";
-      financeState.accounts.forEach((acc) => {
+      state.financeAccounts.forEach((acc, idx) => {
         const opt = document.createElement("option");
         opt.value = acc.id;
-        opt.textContent = acc.name;
+        opt.textContent = acc.name || `Account ${idx + 1}`;
         financeAccountSelect.appendChild(opt);
       });
-    }
   
-    function addFinanceAccount() {
-      const name = prompt("Account name (e.g. THB main, BRL savings, USD):");
-      if (!name) return;
-      const currency = prompt("Currency (e.g. THB, BRL, USD):", "THB") || "THB";
-      const id = "acc_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-      financeState.accounts.push({ id, name: name.trim(), currency: currency.trim() });
-      saveFinanceState();
-      ensureFinanceAccountOptions();
-      renderAccounts();
-    }
+      accountsListContainer.innerHTML = "";
+      if (state.financeAccounts.length === 0) {
+        noAccountsMsg.style.display = "block";
+      } else {
+        noAccountsMsg.style.display = "none";
+        state.financeAccounts.forEach((acc) => {
+          const item = document.createElement("div");
+          item.className = "item";
   
-    function getAccountById(id) {
-      return financeState.accounts.find((a) => a.id === id) || null;
-    }
-    window.__myhubGetAccountById = getAccountById;
+          const main = document.createElement("div");
+          main.className = "item-main";
   
-    function addFinanceTransaction() {
-      if (!financeAccountSelect || !financeAmountInput || !financeTypeSelect) return;
-      const accountId = financeAccountSelect.value;
-      const type = financeTypeSelect.value === "income" ? "income" : "expense";
-      const amountVal = parseFloat(financeAmountInput.value);
-      if (!accountId || isNaN(amountVal) || amountVal <= 0) return;
+          const titleWrap = document.createElement("div");
+          titleWrap.className = "item-text";
   
-      const date = financeDateInput && financeDateInput.value ? financeDateInput.value : "";
-      const category = financeCategoryInput && financeCategoryInput.value.trim();
-      const method = financeMethodInput && financeMethodInput.value.trim();
-      const note = financeNoteInput && financeNoteInput.value.trim();
-      const now = Date.now();
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = acc.name;
   
-      const tx = {
-        id: "tx_" + now + "_" + Math.floor(Math.random() * 100000),
-        accountId,
-        type,
-        amount: amountVal,
-        date,
-        category: category || "",
-        method: method || "",
-        note: note || "",
-        createdAt: now
-      };
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
   
-      financeState.transactions.push(tx);
-      saveFinanceState();
-      renderFinanceList();
-      renderFinanceSummary();
+          const sum = state.financeTransactions
+            .filter((t) => t.accountId === acc.id)
+            .reduce(
+              (total, t) =>
+                t.type === "income" ? total + t.amount : total - t.amount,
+              0
+            );
   
-      financeAmountInput.value = "";
-      if (financeNoteInput) financeNoteInput.value = "";
-    }
+          const balTag = document.createElement("span");
+          balTag.className = "tag";
+          balTag.textContent = `Balance: ${sum.toFixed(2)}`;
+          meta.appendChild(balTag);
   
-    function getFilteredTransactions() {
-      let txs = [...financeState.transactions];
-      const catFilter = financeFilterCategorySelect ? financeFilterCategorySelect.value : "all";
-      if (catFilter && catFilter !== "all") {
-        txs = txs.filter((tx) => (tx.category || "").toLowerCase() === catFilter.toLowerCase());
+          titleWrap.appendChild(title);
+          titleWrap.appendChild(meta);
+          main.appendChild(titleWrap);
+  
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Rename account";
+  
+          editBtn.addEventListener("click", () => {
+            const newName = prompt("New account name:", acc.name);
+            if (newName === null) return;
+            acc.name = newName.trim() || acc.name;
+            saveState();
+            refreshAccountsUI();
+          });
+  
+          const delBtn = document.createElement("button");
+          delBtn.className = "icon-btn danger";
+          delBtn.textContent = "🗑";
+          delBtn.title = "Delete account";
+  
+          delBtn.addEventListener("click", () => {
+            if (
+              !confirm(
+                "Delete this account? (Transactions will remain but may become 'orphaned')"
+              )
+            )
+              return;
+            state.financeAccounts = state.financeAccounts.filter(
+              (a) => a.id !== acc.id
+            );
+            saveState();
+            refreshAccountsUI();
+            renderFinance();
+          });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          accountsListContainer.appendChild(item);
+        });
       }
-      txs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      return txs;
-    }
-  
-    function renderFinanceSummary() {
-      if (!financeSummaryEl) return;
-      const txs = getFilteredTransactions();
-      let income = 0;
-      let expense = 0;
-      txs.forEach((tx) => {
-        if (tx.type === "income") income += tx.amount;
-        else expense += tx.amount;
-      });
-      const net = income - expense;
-      financeSummaryEl.textContent = `Income: ${income.toFixed(2)}  |  Expenses: ${expense.toFixed(2)}  |  Net: ${net.toFixed(2)}`;
-    }
-  
-    function renderFinanceList() {
-      if (!financeListEl || !noFinanceMsg) return;
-      financeListEl.innerHTML = "";
-      const txs = getFilteredTransactions();
-      if (!txs.length) {
-        noFinanceMsg.classList.remove("hidden");
-        return;
-      }
-      noFinanceMsg.classList.add("hidden");
-  
-      txs.forEach((tx) => {
-        const item = document.createElement("div");
-        item.className = "item";
-        item.dataset.id = tx.id;
-  
-        const acc = getAccountById(tx.accountId);
-        const accName = acc ? acc.name : "Unknown account";
-        const currency = acc ? (acc.currency || "") : "";
-        const dateText = tx.date
-          ? new Date(tx.date + "T00:00:00").toLocaleDateString()
-          : new Date(tx.createdAt || Date.now()).toLocaleDateString();
-        const typeTagClass = tx.type === "income" ? "tag-income" : "tag-expense";
-        const typeLabel = tx.type === "income" ? "Income" : "Expense";
-  
-        item.innerHTML = `
-          <div class="item-main">
-            <div class="item-text">
-              <div class="item-title">${tx.category || "(no category)"} - ${tx.amount.toFixed(2)} ${currency}</div>
-              <div class="item-meta">
-                <span class="tag ${typeTagClass}">${typeLabel}</span>
-                <span class="tag">${accName}</span>
-                <span class="tag">${dateText}</span>
-                ${tx.method ? `<span class="tag">${tx.method}</span>` : ""}
-                ${tx.note ? `<span class="tag">${tx.note}</span>` : ""}
-              </div>
-            </div>
-          </div>
-          <div class="item-actions">
-            <button class="icon-btn" data-action="edit" title="Edit transaction">✏️</button>
-            <button class="icon-btn danger" data-action="delete" title="Delete transaction">🗑</button>
-          </div>
-        `;
-  
-        financeListEl.appendChild(item);
-      });
-  
-      financeListEl.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const itemEl = btn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const tx = financeState.transactions.find((t) => t.id === id);
-        if (!tx) return;
-  
-        if (action === "delete") {
-          if (!confirm("Delete this transaction?")) return;
-          financeState.transactions = financeState.transactions.filter((t) => t.id !== id);
-          saveFinanceState();
-          renderFinanceList();
-          renderFinanceSummary();
-        } else if (action === "edit") {
-          const newAmountStr = prompt("Amount:", tx.amount.toString());
-          const newCategory = prompt("Category:", tx.category || "") ?? tx.category;
-          const newMethod = prompt("Method:", tx.method || "") ?? tx.method;
-          const newNote = prompt("Note:", tx.note || "") ?? tx.note;
-          const newDate = prompt("Date (YYYY-MM-DD or empty):", tx.date || "") ?? tx.date;
-  
-          const amountNum = parseFloat(newAmountStr || "");
-          if (!isNaN(amountNum) && amountNum > 0) {
-            tx.amount = amountNum;
-          }
-          tx.category = (newCategory || "").trim();
-          tx.method = (newMethod || "").trim();
-          tx.note = (newNote || "").trim();
-          tx.date = (newDate || "").trim();
-  
-          saveFinanceState();
-          renderFinanceList();
-          renderFinanceSummary();
-        }
-      }, { once: true });
-    }
-  
-    function renderAccounts() {
-      if (!accountsListEl || !noAccountsMsg) return;
-      accountsListEl.innerHTML = "";
-  
-      if (!financeState.accounts.length) {
-        noAccountsMsg.classList.remove("hidden");
-        return;
-      }
-      noAccountsMsg.classList.add("hidden");
-  
-      const balances = {};
-      financeState.accounts.forEach((acc) => {
-        balances[acc.id] = 0;
-      });
-      financeState.transactions.forEach((tx) => {
-        if (!balances.hasOwnProperty(tx.accountId)) return;
-        if (tx.type === "income") balances[tx.accountId] += tx.amount;
-        else balances[tx.accountId] -= tx.amount;
-      });
-  
-      financeState.accounts.forEach((acc) => {
-        const item = document.createElement("div");
-        item.className = "item";
-        item.dataset.id = acc.id;
-  
-        const balance = balances[acc.id] || 0;
-  
-        item.innerHTML = `
-          <div class="item-main">
-            <div class="item-text">
-              <div class="item-title">${acc.name}</div>
-              <div class="item-meta">
-                <span class="tag">Currency: ${acc.currency || ""}</span>
-                <span class="tag">Balance: ${balance.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-          <div class="item-actions">
-            <button class="icon-btn danger" data-action="delete" title="Delete account">🗑</button>
-          </div>
-        `;
-  
-        accountsListEl.appendChild(item);
-      });
-  
-      accountsListEl.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const itemEl = btn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const acc = financeState.accounts.find((a) => a.id === id);
-        if (!acc) return;
-  
-        if (action === "delete") {
-          if (!confirm("Delete this account? All related transactions will remain but may show 'Unknown account'.")) {
-            return;
-          }
-          financeState.accounts = financeState.accounts.filter((a) => a.id !== id);
-          saveFinanceState();
-          ensureFinanceAccountOptions();
-          renderAccounts();
-          renderFinanceList();
-          renderFinanceSummary();
-        }
-      }, { once: true });
-    }
-  
-    loadFinanceState();
-    ensureFinanceAccountOptions();
-    renderAccounts();
-    renderFinanceList();
-    renderFinanceSummary();
-  
-    if (addFinanceBtn) {
-      addFinanceBtn.addEventListener("click", () => {
-        addFinanceTransaction();
-      });
-    }
-  
-    if (financeAmountInput) {
-      financeAmountInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addFinanceTransaction();
-        }
-      });
-    }
-  
-    if (financeFilterCategorySelect) {
-      financeFilterCategorySelect.addEventListener("change", () => {
-        renderFinanceList();
-        renderFinanceSummary();
-      });
     }
   
     if (addAccountBtn) {
       addAccountBtn.addEventListener("click", () => {
-        addFinanceAccount();
+        const name = prompt(
+          "Account name (e.g. THB main, BRL, USD):",
+          "New account"
+        );
+        if (!name) return;
+        state.financeAccounts.push({
+          id: makeId("acc"),
+          name: name.trim(),
+        });
+        saveState();
+        refreshAccountsUI();
       });
     }
   
-    // ==============================
-    // NOTES MODULE (TEXT + CANVAS)
-    // ==============================
-    (function setupNotes() {
-      const notesPage = document.querySelector('.page[data-page="notes"]');
-      if (!notesPage) return;
+    function renderFinance() {
+      if (!financeListContainer || !noFinanceMsg || !financeSummary) return;
   
+      financeListContainer.innerHTML = "";
+  
+      const catFilter = financeFilterCategory?.value || "all";
+      const txs = state.financeTransactions || [];
+  
+      const filtered = txs.filter((t) => {
+        if (catFilter === "all") return true;
+        return (t.category || "").toLowerCase() === catFilter.toLowerCase();
+      });
+  
+      if (filtered.length === 0) {
+        noFinanceMsg.style.display = "block";
+      } else {
+        noFinanceMsg.style.display = "none";
+      }
+  
+      let totalIncome = 0;
+      let totalExpense = 0;
+  
+      filtered
+        .slice()
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+        .forEach((t) => {
+          if (t.type === "income") totalIncome += t.amount;
+          else totalExpense += t.amount;
+  
+          const item = document.createElement("div");
+          item.className = "item";
+  
+          const main = document.createElement("div");
+          main.className = "item-main";
+  
+          const textWrap = document.createElement("div");
+          textWrap.className = "item-text";
+  
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = `${t.type === "income" ? "+" : "-"}${t.amount.toFixed(
+            2
+          )} ${t.category || ""}`;
+  
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
+  
+          const dateTag = document.createElement("span");
+          dateTag.className = "tag";
+          dateTag.textContent = t.date || "";
+          meta.appendChild(dateTag);
+  
+          const acc = state.financeAccounts.find((a) => a.id === t.accountId);
+          if (acc) {
+            const accTag = document.createElement("span");
+            accTag.className = "tag";
+            accTag.textContent = acc.name;
+            meta.appendChild(accTag);
+          }
+  
+          if (t.method) {
+            const mTag = document.createElement("span");
+            mTag.className = "tag";
+            mTag.textContent = t.method;
+            meta.appendChild(mTag);
+          }
+  
+          if (t.note) {
+            const nTag = document.createElement("span");
+            nTag.className = "tag";
+            nTag.textContent = `📝 ${t.note}`;
+            meta.appendChild(nTag);
+          }
+  
+          const typeTag = document.createElement("span");
+          typeTag.className =
+            "tag " + (t.type === "income" ? "tag-income" : "tag-expense");
+          typeTag.textContent = t.type === "income" ? "Income" : "Expense";
+          meta.appendChild(typeTag);
+  
+          textWrap.appendChild(title);
+          textWrap.appendChild(meta);
+          main.appendChild(textWrap);
+  
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Edit transaction";
+  
+          editBtn.addEventListener("click", () => {
+            const newAmountStr = prompt(
+              "Edit amount:",
+              t.amount != null ? String(t.amount) : ""
+            );
+            if (newAmountStr === null) return;
+            const newAmt = parseFloat(newAmountStr);
+            if (!isNaN(newAmt) && newAmt >= 0) t.amount = newAmt;
+  
+            const newCat = prompt(
+              "Edit category:",
+              t.category != null ? t.category : ""
+            );
+            if (newCat !== null) t.category = newCat.trim();
+  
+            const newMethod = prompt(
+              "Edit method (cash, card...):",
+              t.method != null ? t.method : ""
+            );
+            if (newMethod !== null) t.method = newMethod.trim();
+  
+            const newNote = prompt(
+              "Edit note:",
+              t.note != null ? t.note : ""
+            );
+            if (newNote !== null) t.note = newNote.trim();
+  
+            saveState();
+            renderFinance();
+            refreshAccountsUI();
+          });
+  
+          const delBtn = document.createElement("button");
+          delBtn.className = "icon-btn danger";
+          delBtn.textContent = "🗑";
+          delBtn.title = "Delete transaction";
+  
+          delBtn.addEventListener("click", () => {
+            if (!confirm("Delete this transaction?")) return;
+            state.financeTransactions = state.financeTransactions.filter(
+              (x) => x.id !== t.id
+            );
+            saveState();
+            renderFinance();
+            refreshAccountsUI();
+          });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          financeListContainer.appendChild(item);
+        });
+  
+      const net = totalIncome - totalExpense;
+      financeSummary.textContent = `Income: ${totalIncome.toFixed(
+        2
+      )}  |  Expense: ${totalExpense.toFixed(
+        2
+      )}  |  Net: ${net.toFixed(2)}`;
+    }
+  
+    if (addFinanceBtn) {
+      addFinanceBtn.addEventListener("click", () => {
+        if (!financeAccountSelect || state.financeAccounts.length === 0) {
+          alert("Please add an account first.");
+          return;
+        }
+        const accountId = financeAccountSelect.value;
+        const type = financeTypeSelect?.value || "expense";
+        const amountStr = financeAmountInput?.value || "";
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) return;
+        const date =
+          financeDateInput?.value || new Date().toISOString().slice(0, 10);
+        const category = (financeCategoryInput?.value || "").trim();
+        const method = (financeMethodInput?.value || "").trim();
+        const note = (financeNoteInput?.value || "").trim();
+  
+        state.financeTransactions.push({
+          id: makeId("tx"),
+          accountId,
+          type,
+          amount,
+          date,
+          category,
+          method,
+          note,
+        });
+        saveState();
+  
+        if (financeAmountInput) financeAmountInput.value = "";
+        if (financeNoteInput) financeNoteInput.value = "";
+        renderFinance();
+        refreshAccountsUI();
+      });
+    }
+  
+    if (financeFilterCategory) {
+      financeFilterCategory.addEventListener("change", renderFinance);
+    }
+  
+    refreshAccountsUI();
+    renderFinance();
+  
+    // -----------------------------
+    // NOTES (text + canvas)
+    // -----------------------------
+    const notesPage = document.querySelector('.page[data-page="notes"]');
+    if (notesPage) {
       notesPage.innerHTML = `
         <h2 class="section-title">Notes</h2>
-  
-        <div class="pill-row" style="margin-bottom: 10px;">
-          <button id="notesTabText" class="btn btn-secondary">📝 Text notes</button>
-          <button id="notesTabCanvas" class="btn btn-secondary">✍️ Canvas</button>
-        </div>
-  
-        <div id="notesTextPanel" class="card">
+        <div class="card">
           <div class="card-header">
-            <div class="card-title">Text notes</div>
+            <div class="card-title">Quick text notes</div>
           </div>
-  
           <div class="input-grid">
             <div class="input-row">
-              <label for="textNoteTitle">Title</label>
-              <input id="textNoteTitle" type="text" placeholder="e.g. Ideas, reminders, class notes…" />
+              <textarea id="notesText" placeholder="Write anything you don't want to forget..."></textarea>
+            </div>
+            <div class="input-row" style="align-items:flex-end;">
+              <button id="saveNotesTextBtn" class="btn">💾 Save notes</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Freehand canvas</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label>Color</label>
+                <div id="notesColorPalette" style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button data-color="#ffffff" class="icon-btn" title="White">⬜</button>
+                  <button data-color="#000000" class="icon-btn" title="Black">⬛</button>
+                  <button data-color="#f44336" class="icon-btn" title="Red">🟥</button>
+                  <button data-color="#2196f3" class="icon-btn" title="Blue">🟦</button>
+                  <button data-color="#4caf50" class="icon-btn" title="Green">🟩</button>
+                  <button data-color="erase" class="icon-btn" title="Eraser">🧽</button>
+                </div>
+              </div>
+              <div class="input-row" style="align-items:flex-end;">
+                <button id="notesToggleCanvasSize" class="btn btn-secondary">
+                  ⤢ Expand canvas
+                </button>
+              </div>
             </div>
             <div class="input-row">
-              <label for="textNoteBody">Note</label>
-              <textarea id="textNoteBody" placeholder="Write your note here…"></textarea>
+              <div id="notesCanvasWrapper" style="width:100%; max-height:400px; overflow:hidden;">
+                <canvas id="notesCanvas" style="border-radius:12px; background:#050608; border:1px solid #26293a; display:block;"></canvas>
+              </div>
             </div>
-            <div class="input-row" style="align-items: flex-end;">
-              <button id="addTextNoteBtn" class="btn">➕ Save note</button>
-            </div>
-          </div>
-  
-          <div id="noTextNotesMsg" class="empty-msg">
-            No notes yet. Write something and save.
-          </div>
-          <div id="textNotesList" class="list"></div>
-        </div>
-  
-        <div id="notesCanvasPanel" class="card hidden">
-          <div class="card-header">
-            <div class="card-title">Canvas</div>
-          </div>
-  
-          <div class="input-row-inline" style="margin-bottom: 8px;">
-            <button id="clearCanvasBtn" class="btn btn-secondary">🧹 Clear</button>
-            <button id="saveCanvasBtn" class="btn">💾 Save image</button>
-          </div>
-  
-          <div style="border-radius: 12px; overflow: hidden; background: #ffffff; border: 1px solid #26293a;">
-            <canvas
-              id="notesCanvas"
-              width="360"
-              height="360"
-              style="display:block; touch-action:none; background:#ffffff;"
-            ></canvas>
-          </div>
-  
-          <div class="empty-msg" style="margin-top:6px;">
-            Draw with your finger or mouse. Use “Save image” to download a PNG.
           </div>
         </div>
       `;
   
-      const notesTabText = document.getElementById("notesTabText");
-      const notesTabCanvas = document.getElementById("notesTabCanvas");
-      const notesTextPanel = document.getElementById("notesTextPanel");
-      const notesCanvasPanel = document.getElementById("notesCanvasPanel");
+      const notesText = document.getElementById("notesText");
+      const saveNotesTextBtn = document.getElementById("saveNotesTextBtn");
+      const notesCanvas = document.getElementById("notesCanvas");
+      const notesCanvasWrapper = document.getElementById("notesCanvasWrapper");
+      const notesColorPalette = document.getElementById("notesColorPalette");
+      const notesToggleCanvasSize = document.getElementById(
+        "notesToggleCanvasSize"
+      );
   
-      function activateTextTab() {
-        notesTextPanel.classList.remove("hidden");
-        notesCanvasPanel.classList.add("hidden");
+      if (notesText) {
+        notesText.value = state.notesText || "";
       }
   
-      function activateCanvasTab() {
-        notesCanvasPanel.classList.remove("hidden");
-        notesTextPanel.classList.add("hidden");
+      if (saveNotesTextBtn && notesText) {
+        saveNotesTextBtn.addEventListener("click", () => {
+          state.notesText = notesText.value;
+          saveState();
+        });
       }
   
-      notesTabText.addEventListener("click", activateTextTab);
-      notesTabCanvas.addEventListener("click", activateCanvasTab);
+      if (notesCanvas && notesCanvasWrapper) {
+        const ctx = notesCanvas.getContext("2d");
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let strokeColor = "#ffffff";
+        let expanded = false;
   
-      const textTitleInput = document.getElementById("textNoteTitle");
-      const textBodyInput = document.getElementById("textNoteBody");
-      const addTextNoteBtn = document.getElementById("addTextNoteBtn");
-      const textNotesList = document.getElementById("textNotesList");
-      const noTextNotesMsg = document.getElementById("noTextNotesMsg");
-  
-      const NOTES_STORAGE_KEY = "myhub_notes_text_v1";
-      let textNotes = [];
-  
-      function loadTextNotes() {
-        try {
-          const raw = localStorage.getItem(NOTES_STORAGE_KEY);
-          textNotes = raw ? JSON.parse(raw) : [];
-        } catch (err) {
-          console.error("Failed to load notes", err);
-          textNotes = [];
+        function resizeCanvas() {
+          const rect = notesCanvasWrapper.getBoundingClientRect();
+          notesCanvas.width = Math.floor(rect.width - 4);
+          notesCanvas.height = expanded ? 380 : 240;
         }
-      }
   
-      function saveTextNotes() {
-        try {
-          localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(textNotes));
-        } catch (err) {
-          console.error("Failed to save notes", err);
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+  
+        function startDraw(x, y) {
+          drawing = true;
+          lastX = x;
+          lastY = y;
         }
-      }
   
-      function escapeHtml(str) {
-        if (!str) return "";
-        return String(str)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      }
+        function drawTo(x, y) {
+          if (!drawing) return;
+          ctx.lineWidth = 2.5;
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          if (strokeColor === "erase") {
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.strokeStyle = "rgba(0,0,0,1)";
+            ctx.lineWidth = 10;
+          } else {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.strokeStyle = strokeColor;
+          }
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          lastX = x;
+          lastY = y;
+        }
   
-      function formatNoteDate(ts) {
-        if (!ts) return "";
-        try {
-          const d = new Date(ts);
-          return d.toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric"
+        function endDraw() {
+          drawing = false;
+        }
+  
+        notesCanvas.addEventListener("mousedown", (e) => {
+          const rect = notesCanvas.getBoundingClientRect();
+          startDraw(e.clientX - rect.left, e.clientY - rect.top);
+        });
+  
+        notesCanvas.addEventListener("mousemove", (e) => {
+          const rect = notesCanvas.getBoundingClientRect();
+          drawTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+  
+        notesCanvas.addEventListener("mouseup", endDraw);
+        notesCanvas.addEventListener("mouseleave", endDraw);
+  
+        notesCanvas.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          const rect = notesCanvas.getBoundingClientRect();
+          startDraw(t.clientX - rect.left, t.clientY - rect.top);
+        });
+  
+        notesCanvas.addEventListener("touchmove", (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          const rect = notesCanvas.getBoundingClientRect();
+          drawTo(t.clientX - rect.left, t.clientY - rect.top);
+        });
+  
+        notesCanvas.addEventListener("touchend", endDraw);
+        notesCanvas.addEventListener("touchcancel", endDraw);
+  
+        if (notesColorPalette) {
+          notesColorPalette.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const color = btn.getAttribute("data-color");
+              strokeColor = color;
+            });
           });
-        } catch {
-          return "";
+        }
+  
+        if (notesToggleCanvasSize) {
+          notesToggleCanvasSize.addEventListener("click", () => {
+            expanded = !expanded;
+            notesToggleCanvasSize.textContent = expanded
+              ? "⤡ Shrink canvas"
+              : "⤢ Expand canvas";
+            resizeCanvas();
+            // when expanded, we could auto-collapse sidebar to give you space
+            sidebar.classList.remove("expanded");
+          });
         }
       }
+    }
   
-      function renderTextNotes() {
-        textNotesList.innerHTML = "";
-        if (!textNotes.length) {
-          noTextNotesMsg.classList.remove("hidden");
-          return;
-        }
-        noTextNotesMsg.classList.add("hidden");
-  
-        const sorted = [...textNotes].sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
-  
-        for (const note of sorted) {
-          const item = document.createElement("div");
-          item.className = "item";
-          item.dataset.id = note.id;
-  
-          const title = escapeHtml(note.title || "(no title)");
-          const body = escapeHtml(note.body || "");
-  
-          item.innerHTML = `
-            <div class="item-main">
-              <div class="item-text">
-                <div class="item-title">${title}</div>
-                <div class="item-body" style="font-size:12px;color:var(--text-muted);white-space:pre-wrap;max-height:6em;overflow:auto;margin-top:2px;">
-                  ${body || "<span style='font-style:italic;'>Empty note</span>"}
-                </div>
-                <div class="item-meta">
-                  <span class="tag">${formatNoteDate(note.updatedAt || note.createdAt)}</span>
-                </div>
+    // -----------------------------
+    // MEALS – basic macros per day
+    // -----------------------------
+    const mealsPage = document.querySelector('.page[data-page="meals"]');
+    if (mealsPage) {
+      mealsPage.innerHTML = `
+        <h2 class="section-title">Meals</h2>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Add meal</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealDate">Date</label>
+                <input id="mealDate" type="date" />
+              </div>
+              <div class="input-row">
+                <label for="mealFood">Food</label>
+                <input id="mealFood" type="text" placeholder="e.g. Chicken breast, yogurt..." />
               </div>
             </div>
-            <div class="item-actions">
-              <button class="icon-btn" data-action="edit" title="Edit note">✏️</button>
-              <button class="icon-btn danger" data-action="delete" title="Delete note">🗑</button>
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealAmount">Amount</label>
+                <input id="mealAmount" type="number" step="0.01" min="0" placeholder="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealUnit">Unit</label>
+                <select id="mealUnit">
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="piece">piece</option>
+                  <option value="sachet">sachet</option>
+                  <option value="cup">cup</option>
+                  <option value="slice">slice</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
             </div>
-          `;
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealProtein">Protein (g)</label>
+                <input id="mealProtein" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealCarbs">Carbs (g)</label>
+                <input id="mealCarbs" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealFat">Fat (g)</label>
+                <input id="mealFat" type="number" step="0.1" min="0" />
+              </div>
+            </div>
+            <div class="input-row" style="align-items:flex-end;">
+              <button id="addMealBtn" class="btn">➕ Add meal</button>
+            </div>
+          </div>
+        </div>
   
-          textNotesList.appendChild(item);
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Daily log</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealViewDate">View date</label>
+                <input id="mealViewDate" type="date" />
+              </div>
+            </div>
+          </div>
+          <div id="mealsEmptyMsg" class="empty-msg">No meals logged for this date.</div>
+          <div id="mealsList" class="list"></div>
+          <div id="mealsTotals" class="empty-msg"></div>
+        </div>
+      `;
+  
+      const mealDateInput = document.getElementById("mealDate");
+      const mealFoodInput = document.getElementById("mealFood");
+      const mealAmountInput = document.getElementById("mealAmount");
+      const mealUnitSelect = document.getElementById("mealUnit");
+      const mealProteinInput = document.getElementById("mealProtein");
+      const mealCarbsInput = document.getElementById("mealCarbs");
+      const mealFatInput = document.getElementById("mealFat");
+      const addMealBtn = document.getElementById("addMealBtn");
+  
+      const mealViewDateInput = document.getElementById("mealViewDate");
+      const mealsEmptyMsg = document.getElementById("mealsEmptyMsg");
+      const mealsListContainer = document.getElementById("mealsList");
+      const mealsTotals = document.getElementById("mealsTotals");
+  
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (mealDateInput) mealDateInput.value = todayStr;
+      if (mealViewDateInput) mealViewDateInput.value = todayStr;
+  
+      function renderMeals() {
+        if (!mealsListContainer || !mealsEmptyMsg || !mealsTotals) return;
+        const date = mealViewDateInput?.value || todayStr;
+        mealsListContainer.innerHTML = "";
+  
+        const entries = (state.meals || []).filter((m) => m.date === date);
+        if (entries.length === 0) {
+          mealsEmptyMsg.style.display = "block";
+          mealsTotals.textContent = "";
+          return;
         }
+        mealsEmptyMsg.style.display = "none";
+  
+        let totals = { protein: 0, carbs: 0, fat: 0 };
+  
+        entries.forEach((m) => {
+          const item = document.createElement("div");
+          item.className = "item";
+  
+          const main = document.createElement("div");
+          main.className = "item-main";
+  
+          const textWrap = document.createElement("div");
+          textWrap.className = "item-text";
+  
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = `${m.food} – ${m.amount} ${m.unit}`;
+  
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
+  
+          if (m.protein != null) {
+            const p = document.createElement("span");
+            p.className = "tag";
+            p.textContent = `P: ${m.protein}g`;
+            meta.appendChild(p);
+            totals.protein += m.protein;
+          }
+          if (m.carbs != null) {
+            const c = document.createElement("span");
+            c.className = "tag";
+            c.textContent = `C: ${m.carbs}g`;
+            meta.appendChild(c);
+            totals.carbs += m.carbs;
+          }
+          if (m.fat != null) {
+            const f = document.createElement("span");
+            f.className = "tag";
+            f.textContent = `F: ${m.fat}g`;
+            meta.appendChild(f);
+            totals.fat += m.fat;
+          }
+  
+          textWrap.appendChild(title);
+          if (meta.childNodes.length > 0) textWrap.appendChild(meta);
+          main.appendChild(textWrap);
+  
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Edit meal";
+  
+          editBtn.addEventListener("click", () => {
+            const newFood = prompt("Food:", m.food || "");
+            if (newFood === null) return;
+            m.food = newFood.trim() || m.food;
+  
+            const newAmtStr = prompt(
+              "Amount:",
+              m.amount != null ? String(m.amount) : ""
+            );
+            if (newAmtStr !== null) {
+              const val = parseFloat(newAmtStr);
+              if (!isNaN(val) && val >= 0) m.amount = val;
+            }
+  
+            const newProtStr = prompt(
+              "Protein (g):",
+              m.protein != null ? String(m.protein) : ""
+            );
+            if (newProtStr !== null) {
+              const val = parseFloat(newProtStr);
+              m.protein = !isNaN(val) && val >= 0 ? val : m.protein;
+            }
+  
+            const newCarbStr = prompt(
+              "Carbs (g):",
+              m.carbs != null ? String(m.carbs) : ""
+            );
+            if (newCarbStr !== null) {
+              const val = parseFloat(newCarbStr);
+              m.carbs = !isNaN(val) && val >= 0 ? val : m.carbs;
+            }
+  
+            const newFatStr = prompt(
+              "Fat (g):",
+              m.fat != null ? String(m.fat) : ""
+            );
+            if (newFatStr !== null) {
+              const val = parseFloat(newFatStr);
+              m.fat = !isNaN(val) && val >= 0 ? val : m.fat;
+            }
+  
+            saveState();
+            renderMeals();
+          });
+  
+          const delBtn = document.createElement("button");
+          delBtn.className = "icon-btn danger";
+          delBtn.textContent = "🗑";
+          delBtn.title = "Delete meal";
+  
+          delBtn.addEventListener("click", () => {
+            if (!confirm("Delete this meal entry?")) return;
+            state.meals = state.meals.filter((x) => x.id !== m.id);
+            saveState();
+            renderMeals();
+          });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          mealsListContainer.appendChild(item);
+        });
+  
+        const kcal =
+          totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
+  
+        mealsTotals.textContent = `Totals – Protein: ${totals.protein.toFixed(
+          1
+        )}g | Carbs: ${totals.carbs.toFixed(1)}g | Fat: ${totals.fat.toFixed(
+          1
+        )}g | ~${kcal.toFixed(0)} kcal`;
       }
   
-      addTextNoteBtn.addEventListener("click", () => {
-        const title = textTitleInput.value.trim();
-        const body = textBodyInput.value.trim();
-        if (!title && !body) return;
+      if (addMealBtn) {
+        addMealBtn.addEventListener("click", () => {
+          const date = mealDateInput?.value || todayStr;
+          const food = (mealFoodInput?.value || "").trim();
+          const amtStr = mealAmountInput?.value || "";
+          const unit = mealUnitSelect?.value || "g";
+          if (!food) return;
+          const amount = parseFloat(amtStr || "0") || 0;
+          const prot = mealProteinInput?.value
+            ? parseFloat(mealProteinInput.value)
+            : null;
+          const carbs = mealCarbsInput?.value
+            ? parseFloat(mealCarbsInput.value)
+            : null;
+          const fat = mealFatInput?.value
+            ? parseFloat(mealFatInput.value)
+            : null;
   
-        const now = Date.now();
-        const newNote = {
-          id: now.toString(),
-          title,
-          body,
-          createdAt: now,
-          updatedAt: now
-        };
+          state.meals.push({
+            id: makeId("meal"),
+            date,
+            food,
+            amount,
+            unit,
+            protein: prot,
+            carbs,
+            fat,
+          });
+          saveState();
   
-        textNotes.push(newNote);
-        saveTextNotes();
-        renderTextNotes();
+          if (mealFoodInput) mealFoodInput.value = "";
+          if (mealAmountInput) mealAmountInput.value = "";
+          if (mealProteinInput) mealProteinInput.value = "";
+          if (mealCarbsInput) mealCarbsInput.value = "";
+          if (mealFatInput) mealFatInput.value = "";
   
-        textTitleInput.value = "";
-        textBodyInput.value = "";
-      });
-  
-      textNotesList.addEventListener("click", (e) => {
-        const actionBtn = e.target.closest("button[data-action]");
-        if (!actionBtn) return;
-  
-        const action = actionBtn.dataset.action;
-        const itemEl = actionBtn.closest(".item");
-        if (!itemEl) return;
-        const id = itemEl.dataset.id;
-        const note = textNotes.find((n) => n.id === id);
-        if (!note) return;
-  
-        if (action === "delete") {
-          if (!confirm("Delete this note?")) return;
-          textNotes = textNotes.filter((n) => n.id !== id);
-          saveTextNotes();
-          renderTextNotes();
-        } else if (action === "edit") {
-          const newTitle = prompt("Edit title:", note.title || "") ?? note.title;
-          const newBody = prompt("Edit note text:", note.body || "") ?? note.body;
-          note.title = (newTitle || "").trim();
-          note.body = (newBody || "").trim();
-          note.updatedAt = Date.now();
-          saveTextNotes();
-          renderTextNotes();
-        }
-      });
-  
-      loadTextNotes();
-      renderTextNotes();
-  
-      const canvas = document.getElementById("notesCanvas");
-      const ctx = canvas.getContext("2d");
-      const clearCanvasBtn = document.getElementById("clearCanvasBtn");
-      const saveCanvasBtn = document.getElementById("saveCanvasBtn");
-  
-      function initCanvasBackground() {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      initCanvasBackground();
-  
-      let drawing = false;
-      let lastX = 0;
-      let lastY = 0;
-  
-      function getCanvasPos(evt) {
-        const rect = canvas.getBoundingClientRect();
-        if (evt.touches && evt.touches.length > 0) {
-          const t = evt.touches[0];
-          return {
-            x: t.clientX - rect.left,
-            y: t.clientY - rect.top
-          };
-        } else {
-          return {
-            x: evt.clientX - rect.left,
-            y: evt.clientY - rect.top
-          };
-        }
+          // Set view date to that date so you see it immediately
+          if (mealViewDateInput) mealViewDateInput.value = date;
+          renderMeals();
+        });
       }
   
-      function startDrawing(evt) {
-        evt.preventDefault();
-        const pos = getCanvasPos(evt);
-        drawing = true;
-        lastX = pos.x;
-        lastY = pos.y;
+      if (mealViewDateInput) {
+        mealViewDateInput.addEventListener("change", renderMeals);
       }
   
-      function draw(evt) {
-        if (!drawing) return;
-        evt.preventDefault();
-        const pos = getCanvasPos(evt);
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        lastX = pos.x;
-        lastY = pos.y;
-      }
+      renderMeals();
+    }
   
-      function stopDrawing(evt) {
-        if (evt) evt.preventDefault();
-        drawing = false;
-      }
-  
-      canvas.addEventListener("mousedown", startDrawing);
-      canvas.addEventListener("mousemove", draw);
-      canvas.addEventListener("mouseup", stopDrawing);
-      canvas.addEventListener("mouseleave", stopDrawing);
-  
-      canvas.addEventListener("touchstart", startDrawing, { passive: false });
-      canvas.addEventListener("touchmove", draw, { passive: false });
-      canvas.addEventListener("touchend", stopDrawing, { passive: false });
-      canvas.addEventListener("touchcancel", stopDrawing, { passive: false });
-  
-      clearCanvasBtn.addEventListener("click", () => {
-        if (!confirm("Clear the canvas?")) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        initCanvasBackground();
-      });
-  
-      saveCanvasBtn.addEventListener("click", () => {
-        try {
-          const dataUrl = canvas.toDataURL("image/png");
-          const a = document.createElement("a");
-          const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-          a.href = dataUrl;
-          a.download = `myhub-note-${timestamp}.png`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        } catch (err) {
-          console.error("Error saving canvas image", err);
-          alert("Could not save image in this browser.");
-        }
-      });
-    })();
-  
-    // ==============================
-    // BASIC CALENDAR (NEXT 7 DAYS)
-    // ==============================
-    (function setupCalendar() {
-      const calPage = document.querySelector('.page[data-page="calendar"]');
-      if (!calPage) return;
-  
-      calPage.innerHTML = `
+    // -----------------------------
+    // CALENDAR – monthly with dots
+    // -----------------------------
+    const calendarPage = document.querySelector('.page[data-page="calendar"]');
+    if (calendarPage) {
+      calendarPage.innerHTML = `
         <h2 class="section-title">Calendar</h2>
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Next 7 days</div>
+            <div class="card-title">Monthly view</div>
           </div>
-          <div class="empty-msg" id="calTodayLabel"></div>
-          <div id="calDaysContainer" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+          <div class="input-grid">
+            <div class="input-row-inline" style="align-items:center;">
+              <button id="calPrevMonth" class="btn btn-secondary btn-icon">◀</button>
+              <div class="input-row" style="flex:1; text-align:center;">
+                <label id="calMonthLabel"></label>
+              </div>
+              <button id="calNextMonth" class="btn btn-secondary btn-icon">▶</button>
+            </div>
+          </div>
+          <div id="calendarGrid" style="margin-top:8px;"></div>
         </div>
       `;
   
-      const calTodayLabel = document.getElementById("calTodayLabel");
-      const calDaysContainer = document.getElementById("calDaysContainer");
+      const calPrevMonthBtn = document.getElementById("calPrevMonth");
+      const calNextMonthBtn = document.getElementById("calNextMonth");
+      const calMonthLabel = document.getElementById("calMonthLabel");
+      const calendarGrid = document.getElementById("calendarGrid");
   
-      function getISODate(d) {
-        return d.toISOString().slice(0, 10);
+      let calYear, calMonth; // month 0–11
+  
+      const today = new Date();
+      calYear = today.getFullYear();
+      calMonth = today.getMonth();
+  
+      function getEventsForDate(dateStr) {
+        return (state.calendarEvents || []).filter((e) => e.date === dateStr);
       }
   
-      function buildCalendar() {
-        const now = new Date();
-        if (calTodayLabel) {
-          calTodayLabel.textContent = `Today: ${now.toLocaleDateString()}`;
-        }
-        if (!calDaysContainer) return;
-        calDaysContainer.innerHTML = "";
+      function renderCalendar() {
+        if (!calendarGrid || !calMonthLabel) return;
+        const firstOfMonth = new Date(calYear, calMonth, 1);
+        const monthName = firstOfMonth.toLocaleString(undefined, {
+          month: "long",
+          year: "numeric",
+        });
+        calMonthLabel.textContent = monthName;
   
-        for (let offset = 0; offset < 7; offset++) {
-          const d = new Date();
-          d.setDate(now.getDate() + offset);
-          const iso = getISODate(d);
-          const label = d.toLocaleDateString(undefined, {
-            weekday: "short",
-            day: "numeric",
-            month: "short"
-          });
+        const startDay = (firstOfMonth.getDay() + 6) % 7; // Monday=0
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   
-          const dayCard = document.createElement("div");
-          dayCard.className = "card";
+        const weeks = [];
+        let currentDay = 1;
   
-          const header = document.createElement("div");
-          header.className = "card-header";
-          header.innerHTML = `<div class="card-title">${label}${offset === 0 ? " (Today)" : ""}</div>`;
-          dayCard.appendChild(header);
-  
-          const list = document.createElement("div");
-          list.className = "list";
-  
-          // To-dos by dueDate
-          const dayTodos = todoState.tasks.filter((t) => t.dueDate === iso);
-          dayTodos.forEach((t) => {
-            const item = document.createElement("div");
-            item.className = "item";
-            item.innerHTML = `
-              <div class="item-main">
-                <div class="item-text">
-                  <div class="item-title">✅ ${t.title}</div>
-                  <div class="item-meta">
-                    <span class="tag">${getTodoListNameById(t.listId)}</span>
-                    <span class="tag">${t.priority || "medium"}</span>
-                    <span class="tag">${t.status || "open"}</span>
-                  </div>
-                </div>
-              </div>
-            `;
-            list.appendChild(item);
-          });
-  
-          // Finance by date
-          const dayTxs = financeState.transactions.filter((tx) => tx.date === iso);
-          dayTxs.forEach((tx) => {
-            const acc = getAccountById(tx.accountId);
-            const currency = acc ? (acc.currency || "") : "";
-            const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
-            const item = document.createElement("div");
-            item.className = "item";
-            item.innerHTML = `
-              <div class="item-main">
-                <div class="item-text">
-                  <div class="item-title">💰 ${tx.category || "(no category)"} - ${amount} ${currency}</div>
-                  <div class="item-meta">
-                    <span class="tag">${tx.type === "income" ? "Income" : "Expense"}</span>
-                    <span class="tag">${acc ? acc.name : "Unknown account"}</span>
-                  </div>
-                </div>
-              </div>
-            `;
-            list.appendChild(item);
-          });
-  
-          // Workouts by start date
-          const dayWorkouts = workoutState.workouts.filter((w) => {
-            if (!w.startTime && !w.createdAt) return false;
-            const wd = new Date(w.startTime || w.createdAt);
-            return getISODate(wd) === iso;
-          });
-          dayWorkouts.forEach((w) => {
-            const item = document.createElement("div");
-            item.className = "item";
-            const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
-            item.innerHTML = `
-              <div class="item-main">
-                <div class="item-text">
-                  <div class="item-title">🏋️ ${w.name || "(no name)"}</div>
-                  <div class="item-meta">
-                    <span class="tag">${exCount} exercises</span>
-                    <span class="tag">${formatDuration(w.durationMs)}</span>
-                  </div>
-                </div>
-              </div>
-            `;
-            list.appendChild(item);
-          });
-  
-          if (!dayTodos.length && !dayTxs.length && !dayWorkouts.length) {
-            const empty = document.createElement("div");
-            empty.className = "empty-msg";
-            empty.textContent = "No items yet.";
-            list.appendChild(empty);
+        for (let row = 0; row < 6; row++) {
+          const week = [];
+          for (let col = 0; col < 7; col++) {
+            if (row === 0 && col < startDay) {
+              week.push(null);
+            } else if (currentDay > daysInMonth) {
+              week.push(null);
+            } else {
+              week.push(currentDay);
+              currentDay++;
+            }
           }
-  
-          dayCard.appendChild(list);
-          calDaysContainer.appendChild(dayCard);
+          weeks.push(week);
         }
+  
+        const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        let html = `<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:11px; color:#a0a4b8;">`;
+        weekdays.forEach((w) => {
+          html += `<div style="text-align:center; padding:4px 0;">${w}</div>`;
+        });
+        html += `</div>`;
+  
+        html += `<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:4px;">`;
+  
+        weeks.forEach((week) => {
+          week.forEach((day) => {
+            if (!day) {
+              html += `<div style="height:40px; border-radius:10px; background:#0b0d14;"></div>`;
+            } else {
+              const dateStr = new Date(calYear, calMonth, day)
+                .toISOString()
+                .slice(0, 10);
+              const evts = getEventsForDate(dateStr);
+              const hasEvents = evts.length > 0;
+              const isToday =
+                dateStr === new Date().toISOString().slice(0, 10);
+  
+              html += `<div
+                data-date="${dateStr}"
+                style="
+                  height:40px;
+                  border-radius:10px;
+                  background:${isToday ? "#151827" : "#101320"};
+                  border:1px solid ${
+                    hasEvents ? "rgba(0,188,212,0.6)" : "#26293a"
+                  };
+                  display:flex;
+                  flex-direction:column;
+                  align-items:center;
+                  justify-content:center;
+                  font-size:12px;
+                  cursor:pointer;
+                  position:relative;
+                "
+              >
+                <span>${day}</span>
+                ${
+                  hasEvents
+                    ? `<span style="width:6px;height:6px;border-radius:999px;background:#00bcd4;position:absolute;bottom:5px;"></span>`
+                    : ""
+                }
+              </div>`;
+            }
+          });
+        });
+  
+        html += `</div>`;
+  
+        calendarGrid.innerHTML = html;
+  
+        calendarGrid.querySelectorAll("[data-date]").forEach((cell) => {
+          cell.addEventListener("click", () => {
+            const dateStr = cell.getAttribute("data-date");
+            const existing = getEventsForDate(dateStr);
+            let promptMsg = `Events on ${dateStr}:\n`;
+            if (existing.length === 0) {
+              promptMsg += "(none yet)\n\nAdd a new event (leave blank to cancel):";
+            } else {
+              existing.forEach((e, idx) => {
+                promptMsg += `${idx + 1}. ${e.text}\n`;
+              });
+              promptMsg +=
+                "\nAdd another event for this date (leave blank to cancel):";
+            }
+            const text = prompt(promptMsg);
+            if (!text) return;
+            state.calendarEvents.push({
+              id: makeId("event"),
+              date: dateStr,
+              text: text.trim(),
+            });
+            saveState();
+            renderCalendar();
+          });
+        });
       }
   
-      window.__myhubRebuildCalendar = buildCalendar;
-      buildCalendar();
-    })();
+      if (calPrevMonthBtn) {
+        calPrevMonthBtn.addEventListener("click", () => {
+          calMonth--;
+          if (calMonth < 0) {
+            calMonth = 11;
+            calYear--;
+          }
+          renderCalendar();
+        });
+      }
+  
+      if (calNextMonthBtn) {
+        calNextMonthBtn.addEventListener("click", () => {
+          calMonth++;
+          if (calMonth > 11) {
+            calMonth = 0;
+            calYear++;
+          }
+          renderCalendar();
+        });
+      }
+  
+      renderCalendar();
+    }
+  
+    // Initial renders
+    renderTodos();
+    renderShopping();
   });
   </script>
 </body>
 </html>
-
-
 
