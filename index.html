@@ -982,7 +982,7 @@
     </main>
   </div>
   <script>
-  // MyHub App - v0.9.0
+  // MyHub App - v0.9.1
   window.addEventListener("DOMContentLoaded", () => {
     // ==============================
     // NAVIGATION & LAYOUT
@@ -994,7 +994,7 @@
     const pageTitleEl = document.getElementById("pageTitle");
     const versionEl = document.getElementById("appVersion");
   
-    if (versionEl) versionEl.textContent = "0.9.0";
+    if (versionEl) versionEl.textContent = "0.9.1";
   
     function showPage(pageId) {
       pages.forEach((p) => {
@@ -1044,15 +1044,12 @@
     const homeQuickTaskInput = document.getElementById("homeQuickTaskInput");
     const homeQuickTaskBtn = document.getElementById("homeQuickTaskBtn");
   
-    // We'll wire this into the To-do state once it's defined
     function addQuickTaskFromHome() {
       if (!homeQuickTaskInput) return;
       const text = homeQuickTaskInput.value.trim();
       if (!text) return;
-      // Defer actual adding until todo is ready; we store temporarily on window
       window.__myhubQuickTaskBuffer = text;
       homeQuickTaskInput.value = "";
-      // Jump to To-do page so user sees it
       showPage("todo");
     }
   
@@ -1107,11 +1104,16 @@
       if (!Array.isArray(todoState.lists)) todoState.lists = [];
       if (!Array.isArray(todoState.tasks)) todoState.tasks = [];
   
-      // Ensure at least one default list
       if (!todoState.lists.length) {
         const defaultList = { id: "default", name: "General" };
         todoState.lists.push(defaultList);
       }
+  
+      // Ensure linking fields exist
+      todoState.tasks.forEach((t) => {
+        if (typeof t.shoppingListId === "undefined") t.shoppingListId = "";
+        if (typeof t.financeTxId === "undefined") t.financeTxId = "";
+      });
     }
   
     function saveTodoState() {
@@ -1120,6 +1122,7 @@
       } catch (err) {
         console.error("Error saving todo state", err);
       }
+      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
     }
   
     function getTodoListNameById(id) {
@@ -1132,7 +1135,6 @@
       todoListSelect.innerHTML = "";
       todoFilterList.innerHTML = "";
   
-      // Main select: just the actual lists
       todoState.lists.forEach((list) => {
         const opt = document.createElement("option");
         opt.value = list.id;
@@ -1140,7 +1142,6 @@
         todoListSelect.appendChild(opt);
       });
   
-      // Filter select: "All" + lists
       const allOpt = document.createElement("option");
       allOpt.value = "all";
       allOpt.textContent = "All";
@@ -1181,18 +1182,19 @@
         title,
         listId,
         priority,
-        dueDate, // ISO date string or ""
-        status: "open", // open | inprogress | done
+        dueDate,
+        status: "open",
         createdAt: now,
         updatedAt: now,
-        order: maxOrder + 1
+        order: maxOrder + 1,
+        shoppingListId: "",
+        financeTxId: ""
       };
   
       todoState.tasks.push(newTask);
       saveTodoState();
       renderTodoList();
   
-      // Clear inputs if source is the main form
       if (extraTitle == null) {
         todoTitleInput.value = "";
         if (todoDueDateInput) todoDueDateInput.value = "";
@@ -1238,7 +1240,6 @@
         tasks = tasks.filter((t) => t.title && t.title.toLowerCase().includes(search));
       }
   
-      // Sort: status, priority, dueDate, createdAt, order
       tasks.sort((a, b) => {
         const sDiff = statusWeight(a.status) - statusWeight(b.status);
         if (sDiff !== 0) return sDiff;
@@ -1266,6 +1267,33 @@
   
     let todoDragId = null;
   
+    // Helpers for linking display (will use shoppingState / financeState later)
+    function getShoppingListNameByIdLink(id) {
+      try {
+        if (!id || !window.__myhubShoppingState) return "";
+        const list = window.__myhubShoppingState.lists.find((l) => l.id === id);
+        return list ? list.name : "";
+      } catch {
+        return "";
+      }
+    }
+  
+    function getFinanceTxShortLabel(id) {
+      try {
+        if (!id || !window.__myhubFinanceState) return "";
+        const tx = window.__myhubFinanceState.transactions.find((t) => t.id === id);
+        if (!tx) return "";
+        const acc = window.__myhubGetAccountById
+          ? window.__myhubGetAccountById(tx.accountId)
+          : null;
+        const currency = acc ? acc.currency || "" : "";
+        const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
+        return `${tx.category || ""} ${amount} ${currency}`.trim();
+      } catch {
+        return "";
+      }
+    }
+  
     function renderTodoList() {
       if (!todoListEl || !noTodosMsg) return;
       todoListEl.innerHTML = "";
@@ -1292,6 +1320,9 @@
         else if (task.priority === "medium") priorityLabel = "Medium";
         else if (task.priority === "low") priorityLabel = "Low";
   
+        const linkedShopping = task.shoppingListId ? getShoppingListNameByIdLink(task.shoppingListId) : "";
+        const linkedFinance = task.financeTxId ? getFinanceTxShortLabel(task.financeTxId) : "";
+  
         item.innerHTML = `
           <div class="item-main">
             <div class="item-checkbox">
@@ -1304,17 +1335,20 @@
                 <span class="tag">${dueText}</span>
                 <span class="tag">${listName}</span>
                 <span class="tag">${statusLabel}</span>
+                ${linkedShopping ? `<span class="tag">🛒 ${linkedShopping}</span>` : ""}
+                ${linkedFinance ? `<span class="tag">💰 ${linkedFinance}</span>` : ""}
               </div>
             </div>
           </div>
           <div class="item-actions">
+            <button class="icon-btn" data-action="link-shopping" title="Link to shopping list">🛒</button>
+            <button class="icon-btn" data-action="link-finance" title="Link to transaction">💰</button>
             <button class="icon-btn" data-action="status" title="Toggle in progress">⏳</button>
             <button class="icon-btn" data-action="edit" title="Edit task">✏️</button>
             <button class="icon-btn danger" data-action="delete" title="Delete task">🗑</button>
           </div>
         `;
   
-        // Drag & drop for ordering
         item.addEventListener("dragstart", (e) => {
           todoDragId = task.id;
           e.dataTransfer.effectAllowed = "move";
@@ -1335,7 +1369,7 @@
         todoListEl.appendChild(item);
       }
   
-      // Event delegation for checkbox + actions
+      // checkbox changes
       todoListEl.addEventListener("change", (e) => {
         const checkbox = e.target.closest("input[type='checkbox']");
         if (!checkbox) return;
@@ -1350,6 +1384,7 @@
         renderTodoList();
       }, { once: true });
   
+      // buttons (edit/delete/status/link)
       todoListEl.addEventListener("click", (e) => {
         const btn = e.target.closest("button[data-action]");
         if (!btn) return;
@@ -1385,6 +1420,10 @@
           task.updatedAt = Date.now();
           saveTodoState();
           renderTodoList();
+        } else if (action === "link-shopping") {
+          linkTodoToShopping(task);
+        } else if (action === "link-finance") {
+          linkTodoToFinance(task);
         }
       }, { once: true });
     }
@@ -1400,6 +1439,78 @@
         const original = todoState.tasks.find((x) => x.id === t.id);
         if (original) original.order = index + 1;
       });
+      saveTodoState();
+      renderTodoList();
+    }
+  
+    function linkTodoToShopping(task) {
+      if (!window.__myhubShoppingState || !window.__myhubShoppingState.lists.length) {
+        alert("No shopping lists yet. Create one in the Shopping tab first.");
+        return;
+      }
+      const lists = window.__myhubShoppingState.lists;
+      const lines = lists.map((l, i) => `${i + 1}) ${l.name}`);
+      const resp = prompt(
+        "Link to which shopping list?\n" +
+        lines.join("\n") +
+        "\n\nType the number, or leave empty to clear the link."
+      );
+      if (resp === null) return;
+      const trimmed = resp.trim();
+      if (!trimmed) {
+        task.shoppingListId = "";
+        task.updatedAt = Date.now();
+        saveTodoState();
+        renderTodoList();
+        return;
+      }
+      const num = parseInt(trimmed, 10);
+      if (isNaN(num) || num < 1 || num > lists.length) {
+        alert("Invalid choice.");
+        return;
+      }
+      task.shoppingListId = lists[num - 1].id;
+      task.updatedAt = Date.now();
+      saveTodoState();
+      renderTodoList();
+    }
+  
+    function linkTodoToFinance(task) {
+      if (!window.__myhubFinanceState || !window.__myhubFinanceState.transactions.length) {
+        alert("No finance transactions yet. Add one in the Finance tab first.");
+        return;
+      }
+      const txs = [...window.__myhubFinanceState.transactions]
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 10);
+      const lines = txs.map((tx, i) => {
+        const acc = window.__myhubGetAccountById ? window.__myhubGetAccountById(tx.accountId) : null;
+        const currency = acc ? acc.currency || "" : "";
+        const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
+        const cat = tx.category || "(no category)";
+        return `${i + 1}) ${cat} - ${amount} ${currency}`;
+      });
+      const resp = prompt(
+        "Link to which transaction? (last 10)\n" +
+        lines.join("\n") +
+        "\n\nType the number, or leave empty to clear the link."
+      );
+      if (resp === null) return;
+      const trimmed = resp.trim();
+      if (!trimmed) {
+        task.financeTxId = "";
+        task.updatedAt = Date.now();
+        saveTodoState();
+        renderTodoList();
+        return;
+      }
+      const num = parseInt(trimmed, 10);
+      if (isNaN(num) || num < 1 || num > txs.length) {
+        alert("Invalid choice.");
+        return;
+      }
+      task.financeTxId = txs[num - 1].id;
+      task.updatedAt = Date.now();
       saveTodoState();
       renderTodoList();
     }
@@ -1448,7 +1559,6 @@
     loadTodoState();
     ensureTodoListOptions();
   
-    // If a quick task was added on Home, add it now
     if (window.__myhubQuickTaskBuffer) {
       addTodoTaskFromInputs(window.__myhubQuickTaskBuffer);
       window.__myhubQuickTaskBuffer = null;
@@ -1473,6 +1583,7 @@
       lists: [],
       items: []
     };
+    window.__myhubShoppingState = shoppingState; // expose for linking
   
     function loadShoppingState() {
       try {
@@ -1491,6 +1602,8 @@
         const defaultList = { id: "shop_default", name: "Regular" };
         shoppingState.lists.push(defaultList);
       }
+  
+      window.__myhubShoppingState = shoppingState;
     }
   
     function saveShoppingState() {
@@ -1617,7 +1730,6 @@
         shoppingListEl.appendChild(item);
       }
   
-      // Event delegation
       shoppingListEl.addEventListener("change", (e) => {
         const checkbox = e.target.closest("input[type='checkbox']");
         if (!checkbox) return;
@@ -1733,6 +1845,7 @@
     let workoutState = {
       workouts: []
     };
+    window.__myhubWorkoutState = workoutState;
   
     let currentWorkoutStart = null;
   
@@ -1747,6 +1860,7 @@
         workoutState = { workouts: [] };
       }
       if (!Array.isArray(workoutState.workouts)) workoutState.workouts = [];
+      window.__myhubWorkoutState = workoutState;
     }
   
     function saveWorkoutState() {
@@ -1755,6 +1869,7 @@
       } catch (err) {
         console.error("Error saving workouts", err);
       }
+      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
     }
   
     function formatDuration(ms) {
@@ -1827,7 +1942,7 @@
         const doneCheckbox = row.querySelector(".workout-done");
   
         const name = nameInput && nameInput.value.trim();
-        if (!name) return; // ignore completely empty rows
+        if (!name) return;
   
         exercises.push({
           id: "ex_" + Date.now() + "_" + index,
@@ -2029,6 +2144,7 @@
       accounts: [],
       transactions: []
     };
+    window.__myhubFinanceState = financeState;
   
     function loadFinanceState() {
       try {
@@ -2047,6 +2163,8 @@
       if (!financeState.accounts.length) {
         financeState.accounts.push({ id: "acc_main", name: "Main (THB)", currency: "THB" });
       }
+  
+      window.__myhubFinanceState = financeState;
     }
   
     function saveFinanceState() {
@@ -2055,6 +2173,7 @@
       } catch (err) {
         console.error("Error saving finance state", err);
       }
+      if (window.__myhubRebuildCalendar) window.__myhubRebuildCalendar();
     }
   
     function ensureFinanceAccountOptions() {
@@ -2082,6 +2201,7 @@
     function getAccountById(id) {
       return financeState.accounts.find((a) => a.id === id) || null;
     }
+    window.__myhubGetAccountById = getAccountById;
   
     function addFinanceTransaction() {
       if (!financeAccountSelect || !financeAmountInput || !financeTypeSelect) return;
@@ -2235,7 +2355,6 @@
       }
       noAccountsMsg.classList.add("hidden");
   
-      // Compute balances
       const balances = {};
       financeState.accounts.forEach((acc) => {
         balances[acc.id] = 0;
@@ -2336,7 +2455,6 @@
       const notesPage = document.querySelector('.page[data-page="notes"]');
       if (!notesPage) return;
   
-      // Inject Notes UI into the Notes page
       notesPage.innerHTML = `
         <h2 class="section-title">Notes</h2>
   
@@ -2345,7 +2463,6 @@
           <button id="notesTabCanvas" class="btn btn-secondary">✍️ Canvas</button>
         </div>
   
-        <!-- TEXT NOTES -->
         <div id="notesTextPanel" class="card">
           <div class="card-header">
             <div class="card-title">Text notes</div>
@@ -2371,7 +2488,6 @@
           <div id="textNotesList" class="list"></div>
         </div>
   
-        <!-- CANVAS NOTES -->
         <div id="notesCanvasPanel" class="card hidden">
           <div class="card-header">
             <div class="card-title">Canvas</div>
@@ -2397,7 +2513,6 @@
         </div>
       `;
   
-      // --- Tab switching ---
       const notesTabText = document.getElementById("notesTabText");
       const notesTabCanvas = document.getElementById("notesTabCanvas");
       const notesTextPanel = document.getElementById("notesTextPanel");
@@ -2416,9 +2531,6 @@
       notesTabText.addEventListener("click", activateTextTab);
       notesTabCanvas.addEventListener("click", activateCanvasTab);
   
-      // ==============
-      // TEXT NOTES
-      // ==============
       const textTitleInput = document.getElementById("textNoteTitle");
       const textBodyInput = document.getElementById("textNoteBody");
       const addTextNoteBtn = document.getElementById("addTextNoteBtn");
@@ -2478,7 +2590,6 @@
         }
         noTextNotesMsg.classList.add("hidden");
   
-        // Most recent notes first
         const sorted = [...textNotes].sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
   
         for (const note of sorted) {
@@ -2514,7 +2625,7 @@
       addTextNoteBtn.addEventListener("click", () => {
         const title = textTitleInput.value.trim();
         const body = textBodyInput.value.trim();
-        if (!title && !body) return; // don't save empty note
+        if (!title && !body) return;
   
         const now = Date.now();
         const newNote = {
@@ -2533,7 +2644,6 @@
         textBodyInput.value = "";
       });
   
-      // Edit / delete via event delegation
       textNotesList.addEventListener("click", (e) => {
         const actionBtn = e.target.closest("button[data-action]");
         if (!actionBtn) return;
@@ -2564,15 +2674,11 @@
       loadTextNotes();
       renderTextNotes();
   
-      // ==============
-      // CANVAS NOTES
-      // ==============
       const canvas = document.getElementById("notesCanvas");
       const ctx = canvas.getContext("2d");
       const clearCanvasBtn = document.getElementById("clearCanvasBtn");
       const saveCanvasBtn = document.getElementById("saveCanvasBtn");
   
-      // Fill white background once
       function initCanvasBackground() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2627,13 +2733,11 @@
         drawing = false;
       }
   
-      // Mouse events
       canvas.addEventListener("mousedown", startDrawing);
       canvas.addEventListener("mousemove", draw);
       canvas.addEventListener("mouseup", stopDrawing);
       canvas.addEventListener("mouseleave", stopDrawing);
   
-      // Touch events
       canvas.addEventListener("touchstart", startDrawing, { passive: false });
       canvas.addEventListener("touchmove", draw, { passive: false });
       canvas.addEventListener("touchend", stopDrawing, { passive: false });
@@ -2661,9 +2765,146 @@
         }
       });
     })();
+  
+    // ==============================
+    // BASIC CALENDAR (NEXT 7 DAYS)
+    // ==============================
+    (function setupCalendar() {
+      const calPage = document.querySelector('.page[data-page="calendar"]');
+      if (!calPage) return;
+  
+      calPage.innerHTML = `
+        <h2 class="section-title">Calendar</h2>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Next 7 days</div>
+          </div>
+          <div class="empty-msg" id="calTodayLabel"></div>
+          <div id="calDaysContainer" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      `;
+  
+      const calTodayLabel = document.getElementById("calTodayLabel");
+      const calDaysContainer = document.getElementById("calDaysContainer");
+  
+      function getISODate(d) {
+        return d.toISOString().slice(0, 10);
+      }
+  
+      function buildCalendar() {
+        const now = new Date();
+        if (calTodayLabel) {
+          calTodayLabel.textContent = `Today: ${now.toLocaleDateString()}`;
+        }
+        if (!calDaysContainer) return;
+        calDaysContainer.innerHTML = "";
+  
+        for (let offset = 0; offset < 7; offset++) {
+          const d = new Date();
+          d.setDate(now.getDate() + offset);
+          const iso = getISODate(d);
+          const label = d.toLocaleDateString(undefined, {
+            weekday: "short",
+            day: "numeric",
+            month: "short"
+          });
+  
+          const dayCard = document.createElement("div");
+          dayCard.className = "card";
+  
+          const header = document.createElement("div");
+          header.className = "card-header";
+          header.innerHTML = `<div class="card-title">${label}${offset === 0 ? " (Today)" : ""}</div>`;
+          dayCard.appendChild(header);
+  
+          const list = document.createElement("div");
+          list.className = "list";
+  
+          // To-dos by dueDate
+          const dayTodos = todoState.tasks.filter((t) => t.dueDate === iso);
+          dayTodos.forEach((t) => {
+            const item = document.createElement("div");
+            item.className = "item";
+            item.innerHTML = `
+              <div class="item-main">
+                <div class="item-text">
+                  <div class="item-title">✅ ${t.title}</div>
+                  <div class="item-meta">
+                    <span class="tag">${getTodoListNameById(t.listId)}</span>
+                    <span class="tag">${t.priority || "medium"}</span>
+                    <span class="tag">${t.status || "open"}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+            list.appendChild(item);
+          });
+  
+          // Finance by date
+          const dayTxs = financeState.transactions.filter((tx) => tx.date === iso);
+          dayTxs.forEach((tx) => {
+            const acc = getAccountById(tx.accountId);
+            const currency = acc ? (acc.currency || "") : "";
+            const amount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : tx.amount;
+            const item = document.createElement("div");
+            item.className = "item";
+            item.innerHTML = `
+              <div class="item-main">
+                <div class="item-text">
+                  <div class="item-title">💰 ${tx.category || "(no category)"} - ${amount} ${currency}</div>
+                  <div class="item-meta">
+                    <span class="tag">${tx.type === "income" ? "Income" : "Expense"}</span>
+                    <span class="tag">${acc ? acc.name : "Unknown account"}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+            list.appendChild(item);
+          });
+  
+          // Workouts by start date
+          const dayWorkouts = workoutState.workouts.filter((w) => {
+            if (!w.startTime && !w.createdAt) return false;
+            const wd = new Date(w.startTime || w.createdAt);
+            return getISODate(wd) === iso;
+          });
+          dayWorkouts.forEach((w) => {
+            const item = document.createElement("div");
+            item.className = "item";
+            const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
+            item.innerHTML = `
+              <div class="item-main">
+                <div class="item-text">
+                  <div class="item-title">🏋️ ${w.name || "(no name)"}</div>
+                  <div class="item-meta">
+                    <span class="tag">${exCount} exercises</span>
+                    <span class="tag">${formatDuration(w.durationMs)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+            list.appendChild(item);
+          });
+  
+          if (!dayTodos.length && !dayTxs.length && !dayWorkouts.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty-msg";
+            empty.textContent = "No items yet.";
+            list.appendChild(empty);
+          }
+  
+          dayCard.appendChild(list);
+          calDaysContainer.appendChild(dayCard);
+        }
+      }
+  
+      window.__myhubRebuildCalendar = buildCalendar;
+      buildCalendar();
+    })();
   });
   </script>
 </body>
 </html>
+
 
 
