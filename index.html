@@ -1085,68 +1085,45 @@
   <script>
   // ==============================
   // MyHub v0.9.3 - script.js
-  // ==============================
+   // script.js – MyHub v0.9.3
+  
   document.addEventListener("DOMContentLoaded", () => {
-    const STORAGE_KEY = "myhub_state_v093";
+    // -----------------------------
+    // GLOBAL STATE & STORAGE
+    // -----------------------------
+    const STORAGE_KEY = "myhub_state_v1";
   
-    // -----------------------------
-    // STATE & STORAGE
-    // -----------------------------
     const defaultState = {
-      theme: "dark",
-  
-      // To-do
-      todoLists: ["General"],
-      selectedTodoList: "General",
-      todos: [],
-  
-      // Shopping
-      shoppingLists: {
-        General: []
-      },
-      selectedShoppingList: "General",
-  
-      // Workouts
-      workouts: [],
-      currentWorkout: null,
-  
-      // Finance
-      financeTransactions: [],
-      accounts: [],
-  
-      // Notes
+      todos: [], // {id, title, priority, dueDate, status, listId, createdAt, link}
+      todoLists: [{ id: "default", name: "Personal" }],
+      shoppingLists: [
+        {
+          id: "default",
+          name: "General",
+          items: [], // {id, text, checked, note}
+        },
+      ],
+      workouts: [], // logged workouts
+      workoutFavorites: [], // {id, name, exercises}
+      financeAccounts: [], // {id, name}
+      financeTransactions: [], // {id, accountId, type, amount, date, category, method, note}
       notesText: "",
-  
-      // Meals
-      foodLibrary: {},   // we’ll fill later
-      meals: [],
-  
-      // Calendar focus (for later)
-      calendarWeeklyFocus: {
-        mon: "",
-        tue: "",
-        wed: "",
-        thu: "",
-        fri: "",
-        sat: "",
-        sun: ""
-      }
+      meals: [], // {id, date, food, amount, unit, protein, carbs, fat}
+      calendarEvents: [], // {id, date, text}
     };
-  
-    let state = loadState();
   
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { ...defaultState };
+        if (!raw) return structuredClone(defaultState);
         const parsed = JSON.parse(raw);
         return {
-          ...defaultState,
-          ...parsed
+          ...structuredClone(defaultState),
+          ...parsed,
         };
       } catch (e) {
-        console.error("Failed to load state", e);
-        return { ...defaultState };
+        console.error("Error loading state", e);
+        return structuredClone(defaultState);
       }
     }
   
@@ -1154,70 +1131,160 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e) {
-        console.error("Failed to save state", e);
+        console.error("Error saving state", e);
       }
     }
   
+    function makeId(prefix) {
+      return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+  
+    let state = loadState();
+  
+    if (!state.todoLists || state.todoLists.length === 0) {
+      state.todoLists = structuredClone(defaultState.todoLists);
+    }
+    if (!state.shoppingLists || state.shoppingLists.length === 0) {
+      state.shoppingLists = structuredClone(defaultState.shoppingLists);
+    }
+  
+    // Bump version label
+    const appVersionSpan = document.getElementById("appVersion");
+    if (appVersionSpan) appVersionSpan.textContent = "0.9.3";
+  
     // -----------------------------
-    // THEME TOGGLE (🌙 / ☀️)
+    // BASIC ELEMENTS & EXTRA STYLES
     // -----------------------------
-    const headerEl = document.querySelector(".header");
-    let themeToggle;
-    if (headerEl) {
-      themeToggle = document.createElement("button");
-      themeToggle.id = "themeToggle";
-      themeToggle.className = "icon-btn";
-      themeToggle.title = "Toggle theme";
-      themeToggle.textContent = state.theme === "light" ? "🌙" : "☀️";
-      headerEl.appendChild(themeToggle);
+    const sidebar = document.querySelector(".sidebar");
+    const navToggle = document.getElementById("navToggle");
+    const navItems = document.querySelectorAll(".nav-item");
+    const pages = document.querySelectorAll(".page");
+    const pageTitle = document.getElementById("pageTitle");
+  
+    // Extra styles for collapsed sidebar & handle
+    const extraStyle = document.createElement("style");
+    extraStyle.textContent = `
+      .sidebar.collapsed {
+        width: 8px;
+        padding: 6px 2px;
+        overflow: hidden;
+      }
+      .sidebar.collapsed .logo,
+      .sidebar.collapsed .nav-toggle,
+      .sidebar.collapsed .nav,
+      .sidebar.collapsed .version {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #sidebarHandle {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 70px;
+        border-radius: 0 10px 10px 0;
+        background: rgba(0, 188, 212, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 999;
+        font-size: 10px;
+        color: #020308;
+        box-shadow: 0 0 12px rgba(0, 188, 212, 0.7);
+      }
+    `;
+    document.head.appendChild(extraStyle);
+  
+    const sidebarHandle = document.createElement("div");
+    sidebarHandle.id = "sidebarHandle";
+    sidebarHandle.textContent = "▶";
+    document.body.appendChild(sidebarHandle);
+  
+    let canvasSidebarModeActive = false;
+    let navExpandTimer = null;
+  
+    function setSidebarCollapsed(collapsed) {
+      if (!sidebar) return;
+      if (collapsed) {
+        sidebar.classList.add("collapsed");
+        sidebar.classList.remove("expanded");
+      } else {
+        sidebar.classList.remove("collapsed");
+      }
     }
   
-    function applyTheme(theme) {
-      document.documentElement.setAttribute("data-theme", theme);
+    function enableCanvasSidebarMode() {
+      canvasSidebarModeActive = true;
+      setSidebarCollapsed(true);
+      sidebarHandle.style.display = "flex";
     }
   
-    applyTheme(state.theme);
-  
-    if (themeToggle) {
-      themeToggle.addEventListener("click", () => {
-        const next = state.theme === "light" ? "dark" : "light";
-        state.theme = next;
-        saveState();
-        applyTheme(next);
-        themeToggle.textContent = next === "light" ? "🌙" : "☀️";
-      });
+    function disableCanvasSidebarMode() {
+      canvasSidebarModeActive = false;
+      setSidebarCollapsed(false);
+      sidebarHandle.style.display = "none";
     }
+  
+    sidebarHandle.addEventListener("click", () => {
+      setSidebarCollapsed(false);
+      // auto-collapse again after a few seconds in canvas mode
+      if (canvasSidebarModeActive) {
+        setTimeout(() => {
+          if (canvasSidebarModeActive) {
+            setSidebarCollapsed(true);
+          }
+        }, 4000);
+      }
+    });
   
     // -----------------------------
     // NAVIGATION
     // -----------------------------
-    const navItems = document.querySelectorAll(".nav-item");
-    const pages = document.querySelectorAll(".page");
-    const pageTitle = document.getElementById("pageTitle");
-    const sidebar = document.querySelector(".sidebar");
-    const navToggle = document.getElementById("navToggle");
-  
-    function showPage(pageName) {
-      pages.forEach((p) => {
-        if (p.dataset.page === pageName) {
-          p.classList.add("active");
-          p.classList.remove("hidden");
+    if (navToggle) {
+      navToggle.addEventListener("click", () => {
+        if (sidebar.classList.contains("expanded")) {
+          sidebar.classList.remove("expanded");
+          if (navExpandTimer) clearTimeout(navExpandTimer);
         } else {
-          p.classList.remove("active");
+          sidebar.classList.add("expanded");
+          if (navExpandTimer) clearTimeout(navExpandTimer);
+          // auto-collapse name expansion after a few seconds
+          navExpandTimer = setTimeout(() => {
+            sidebar.classList.remove("expanded");
+          }, 3500);
+        }
+      });
+    }
+  
+    function showPage(pageId) {
+      pages.forEach((p) => {
+        if (p.dataset.page === pageId) {
+          p.classList.remove("hidden");
+          p.classList.add("active");
+        } else {
           p.classList.add("hidden");
+          p.classList.remove("active");
         }
       });
   
       navItems.forEach((btn) => {
-        btn.classList.toggle("nav-active", btn.dataset.page === pageName);
+        if (btn.dataset.page === pageId) {
+          btn.classList.add("nav-active");
+        } else {
+          btn.classList.remove("nav-active");
+        }
       });
   
       if (pageTitle) {
-        const activeNav = Array.from(navItems).find(
-          (btn) => btn.dataset.page === pageName
-        );
-        pageTitle.textContent =
-          (activeNav && activeNav.title) || pageName.charAt(0).toUpperCase() + pageName.slice(1);
+        const item = [...navItems].find((b) => b.dataset.page === pageId);
+        pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
+      }
+  
+      // Leaving notes canvas mode
+      if (pageId !== "notes") {
+        disableCanvasSidebarMode();
       }
     }
   
@@ -1227,51 +1294,42 @@
       });
     });
   
-    if (navToggle && sidebar) {
-      navToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("expanded");
-      });
-    }
-  
-    showPage("home");
-  
-    function enableCanvasSidebarMode() {
-      if (!sidebar) return;
-      sidebar.classList.add("sidebar-collapsed");
-    }
-    function disableCanvasSidebarMode() {
-      if (!sidebar) return;
-      sidebar.classList.remove("sidebar-collapsed");
-    }
-  
     // -----------------------------
-    // HOME - Quick Task
+    // HOME – QUICK TASK
     // -----------------------------
     const homeQuickTaskInput = document.getElementById("homeQuickTaskInput");
     const homeQuickTaskBtn = document.getElementById("homeQuickTaskBtn");
   
+    function getDefaultTodoListId() {
+      if (state.todoLists.length === 0) {
+        const def = { id: "default", name: "Personal" };
+        state.todoLists.push(def);
+        saveState();
+        return def.id;
+      }
+      return state.todoLists[0].id;
+    }
+  
     if (homeQuickTaskBtn && homeQuickTaskInput) {
       homeQuickTaskBtn.addEventListener("click", () => {
-        const title = homeQuickTaskInput.value.trim();
-        if (!title) return;
-        const todo = {
-          id: Date.now().toString(),
-          list: state.selectedTodoList || "General",
-          title,
+        const text = homeQuickTaskInput.value.trim();
+        if (!text) return;
+        const listId = getDefaultTodoListId();
+        const newTodo = {
+          id: makeId("todo"),
+          title: text,
           priority: "medium",
           dueDate: "",
           status: "open",
-          createdAt: Date.now()
+          listId,
+          createdAt: Date.now(),
+          link: "",
         };
-        state.todos.push(todo);
+        state.todos.push(newTodo);
         saveState();
         homeQuickTaskInput.value = "";
-        renderTodos();
-      });
-  
-      homeQuickTaskInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          homeQuickTaskBtn.click();
+        if (currentTodoListId === listId) {
+          renderTodos();
         }
       });
     }
@@ -1280,124 +1338,146 @@
     // TO-DO
     // -----------------------------
     const todoListSelect = document.getElementById("todoListSelect");
-    const todoNewListBtn = document.getElementById("todoNewListBtn");
+    const todoListNameInput = document.getElementById("todoListName");
     const todoTitleInput = document.getElementById("todoTitleInput");
     const todoPrioritySelect = document.getElementById("todoPrioritySelect");
-    const todoDueDate = document.getElementById("todoDueDate");
+    const todoDueDateInput = document.getElementById("todoDueDate");
     const addTodoBtn = document.getElementById("addTodoBtn");
-  
     const todoFiltersToggle = document.getElementById("todoFiltersToggle");
     const todoFiltersPanel = document.getElementById("todoFiltersPanel");
     const todoSearchInput = document.getElementById("todoSearchInput");
     const todoFilterPriority = document.getElementById("todoFilterPriority");
     const todoFilterStatus = document.getElementById("todoFilterStatus");
     const todoFilterList = document.getElementById("todoFilterList");
-  
-    const todoListContainer = document.getElementById("todoList");
     const noTodosMsg = document.getElementById("noTodosMsg");
+    const todoListContainer = document.getElementById("todoList");
   
-    function ensureTodoLists() {
-      if (!state.todoLists || !state.todoLists.length) {
-        state.todoLists = ["General"];
-        state.selectedTodoList = "General";
+    let currentTodoListId = getDefaultTodoListId();
+  
+    // Layout tweaks: remove direct "new list" field, add + button with popup
+    (function adaptTodoListRow() {
+      if (!todoListSelect) return;
+      if (todoListNameInput) {
+        const rowInline = todoListNameInput.closest(".input-row-inline");
+        if (rowInline) rowInline.style.display = "none";
       }
-      if (!state.todoLists.includes(state.selectedTodoList)) {
-        state.selectedTodoList = state.todoLists[0];
+      const selectRow = todoListSelect.closest(".input-row");
+      if (!selectRow) return;
+      selectRow.style.display = "flex";
+      selectRow.style.flexDirection = "row";
+      selectRow.style.alignItems = "flex-end";
+      selectRow.style.gap = "8px";
+  
+      const label = selectRow.querySelector("label");
+      if (label) {
+        label.style.marginRight = "4px";
+        label.style.whiteSpace = "nowrap";
       }
+  
+      const newListBtn = document.createElement("button");
+      newListBtn.className = "btn btn-secondary btn-icon";
+      newListBtn.textContent = "➕";
+      newListBtn.title = "New list";
+  
+      newListBtn.addEventListener("click", () => {
+        const name = prompt("New to-do list name:");
+        if (!name) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const id = makeId("tlist");
+        state.todoLists.push({ id, name: trimmed });
+        currentTodoListId = id;
+        saveState();
+        refreshTodoListsUI();
+        renderTodos();
+      });
+  
+      selectRow.appendChild(newListBtn);
+    })();
+  
+    function refreshTodoListsUI() {
+      if (!todoListSelect || !todoFilterList) return;
+      todoListSelect.innerHTML = "";
+      state.todoLists.forEach((list) => {
+        const opt = document.createElement("option");
+        opt.value = list.id;
+        opt.textContent = list.name;
+        todoListSelect.appendChild(opt);
+      });
+      if (!state.todoLists.find((l) => l.id === currentTodoListId)) {
+        currentTodoListId = getDefaultTodoListId();
+      }
+      todoListSelect.value = currentTodoListId;
+  
+      todoFilterList.innerHTML = "";
+      const allOpt = document.createElement("option");
+      allOpt.value = "all";
+      allOpt.textContent = "All";
+      todoFilterList.appendChild(allOpt);
+      state.todoLists.forEach((list) => {
+        const opt = document.createElement("option");
+        opt.value = list.id;
+        opt.textContent = list.name;
+        todoFilterList.appendChild(opt);
+      });
+      todoFilterList.value = "all";
     }
   
-    function renderTodoListsDropdowns() {
-      ensureTodoLists();
-      if (todoListSelect) {
-        todoListSelect.innerHTML = "";
-        state.todoLists.forEach((name) => {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          todoListSelect.appendChild(opt);
-        });
-        todoListSelect.value = state.selectedTodoList;
-      }
-      if (todoFilterList) {
-        todoFilterList.innerHTML = "";
-        const allOpt = document.createElement("option");
-        allOpt.value = "all";
-        allOpt.textContent = "All";
-        todoFilterList.appendChild(allOpt);
-        state.todoLists.forEach((name) => {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          todoFilterList.appendChild(opt);
-        });
-        todoFilterList.value = "all";
-      }
+    function triStateNext(status) {
+      if (status === "open") return "inprogress";
+      if (status === "inprogress") return "done";
+      return "open";
     }
   
-    function priorityWeight(p) {
-      if (p === "high") return 0;
-      if (p === "medium") return 1;
-      return 2;
+    function applyTodoFilters(task) {
+      const search = (todoSearchInput?.value || "").toLowerCase();
+      const fp = todoFilterPriority?.value || "all";
+      const fs = todoFilterStatus?.value || "all";
+      const fl = todoFilterList?.value || "all";
+  
+      if (search) {
+        const hay = task.title.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      if (fp !== "all" && task.priority !== fp) return false;
+      if (fs !== "all" && task.status !== fs) return false;
+      if (fl !== "all" && task.listId !== fl) return false;
+      return true;
     }
   
-    function statusWeight(s) {
-      if (s === "done") return 2;
-      if (s === "inprogress") return 1;
-      return 0;
+    function sortTodos(a, b) {
+      const statusRank = { open: 0, inprogress: 1, done: 2 };
+      const prRank = { high: 0, medium: 1, low: 2 };
+      const sa = statusRank[a.status] ?? 1;
+      const sb = statusRank[b.status] ?? 1;
+      if (sa !== sb) return sa - sb;
+      const pa = prRank[a.priority] ?? 1;
+      const pb = prRank[b.priority] ?? 1;
+      if (pa !== pb) return pa - pb;
+  
+      const da = a.dueDate || "";
+      const db = b.dueDate || "";
+      if (da && db && da !== db) return da.localeCompare(db);
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      return (a.createdAt || 0) - (b.createdAt || 0);
     }
   
     function renderTodos() {
-      if (!todoListContainer) return;
-      ensureTodoLists();
-  
-      const currentList = state.selectedTodoList || "General";
-      let items = state.todos.filter((t) => t.list === currentList);
-  
-      const search = (todoSearchInput?.value || "").toLowerCase();
-      if (search) {
-        items = items.filter((t) =>
-          t.title.toLowerCase().includes(search)
-        );
-      }
-  
-      const filterP = todoFilterPriority?.value || "all";
-      if (filterP !== "all") {
-        items = items.filter((t) => t.priority === filterP);
-      }
-  
-      const filterS = todoFilterStatus?.value || "all";
-      if (filterS !== "all") {
-        items = items.filter((t) => t.status === filterS);
-      }
-  
-      const filterL = todoFilterList?.value || "all";
-      if (filterL !== "all") {
-        items = items.filter((t) => t.list === filterL);
-      }
-  
-      items.sort((a, b) => {
-        const sw = statusWeight(a.status) - statusWeight(b.status);
-        if (sw !== 0) return sw;
-        const pw = priorityWeight(a.priority) - priorityWeight(b.priority);
-        if (pw !== 0) return pw;
-        if (a.dueDate && b.dueDate) {
-          return a.dueDate.localeCompare(b.dueDate);
-        }
-        if (a.dueDate && !b.dueDate) return -1;
-        if (!a.dueDate && b.dueDate) return 1;
-        return (a.createdAt || 0) - (b.createdAt || 0);
-      });
-  
+      if (!todoListContainer || !noTodosMsg) return;
       todoListContainer.innerHTML = "";
-      if (!items.length) {
-        if (noTodosMsg) noTodosMsg.style.display = "block";
+      const tasks = state.todos.filter(applyTodoFilters).sort(sortTodos);
+  
+      if (tasks.length === 0) {
+        noTodosMsg.style.display = "block";
         return;
       }
-      if (noTodosMsg) noTodosMsg.style.display = "none";
+      noTodosMsg.style.display = "none";
   
-      items.forEach((todo) => {
-        const row = document.createElement("div");
-        row.className = "item";
+      tasks.forEach((task) => {
+        const item = document.createElement("div");
+        item.className = "item";
+        item.draggable = true;
   
         const main = document.createElement("div");
         main.className = "item-main";
@@ -1406,168 +1486,202 @@
         checkboxWrap.className = "item-checkbox";
         const cb = document.createElement("input");
         cb.type = "checkbox";
-        cb.checked = todo.status === "done";
+  
+        if (task.status === "done") cb.checked = true;
+        else cb.checked = false;
+        cb.indeterminate = task.status === "inprogress";
+  
+        cb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          task.status = triStateNext(task.status);
+          saveState();
+          renderTodos();
+        });
+  
         checkboxWrap.appendChild(cb);
   
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
   
-        const titleEl = document.createElement("div");
-        titleEl.className = "item-title";
-        titleEl.textContent = todo.title;
-        if (todo.status === "done") {
-          titleEl.style.textDecoration = "line-through";
-          titleEl.style.opacity = "0.6";
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = task.title || "(no title)";
+  
+        if (task.status === "done") {
+          title.style.textDecoration = "line-through";
+          title.style.color = "#777a90";
+        } else if (task.status === "inprogress") {
+          title.style.fontStyle = "italic";
         }
+  
+        title.addEventListener("click", () => {
+          const newTitle = prompt("Edit task title:", task.title || "");
+          if (newTitle === null) return;
+          task.title = newTitle.trim() || task.title;
+  
+          const newDue = prompt(
+            "Edit due date (YYYY-MM-DD, leave blank to clear):",
+            task.dueDate || ""
+          );
+          if (newDue !== null) {
+            const trimmed = newDue.trim();
+            task.dueDate = trimmed || "";
+          }
+  
+          const newPriority = prompt(
+            "Priority (high / medium / low):",
+            task.priority || "medium"
+          );
+          if (newPriority) {
+            const p = newPriority.toLowerCase();
+            if (["high", "medium", "low"].includes(p)) {
+              task.priority = p;
+            }
+          }
+          saveState();
+          renderTodos();
+        });
   
         const meta = document.createElement("div");
         meta.className = "item-meta";
   
-        const listTag = document.createElement("span");
-        listTag.className = "tag";
-        listTag.textContent = todo.list;
-        meta.appendChild(listTag);
-  
-        const prTag = document.createElement("span");
-        prTag.className = "tag";
-        prTag.textContent =
-          todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1);
-        meta.appendChild(prTag);
-  
-        if (todo.dueDate) {
+        if (task.priority) {
+          const pTag = document.createElement("span");
+          pTag.className = "tag";
+          pTag.textContent =
+            task.priority === "high"
+              ? "High"
+              : task.priority === "low"
+              ? "Low"
+              : "Medium";
+          meta.appendChild(pTag);
+        }
+        if (task.dueDate) {
           const dTag = document.createElement("span");
           dTag.className = "tag";
-          dTag.textContent = `Due: ${todo.dueDate}`;
+          dTag.textContent = `Due ${task.dueDate}`;
           meta.appendChild(dTag);
         }
+        if (task.listId) {
+          const list = state.todoLists.find((l) => l.id === task.listId);
+          if (list) {
+            const lTag = document.createElement("span");
+            lTag.className = "tag";
+            lTag.textContent = list.name;
+            meta.appendChild(lTag);
+          }
+        }
+        if (task.link) {
+          const linkTag = document.createElement("span");
+          linkTag.className = "tag";
+          linkTag.textContent = `🔗 ${task.link}`;
+          meta.appendChild(linkTag);
+        }
   
-        const stTag = document.createElement("span");
-        stTag.className = "tag";
-        stTag.textContent =
-          todo.status === "open"
-            ? "Open"
-            : todo.status === "inprogress"
-            ? "In progress"
-            : "Done";
-        meta.appendChild(stTag);
+        textWrap.appendChild(title);
+        if (meta.childNodes.length > 0) textWrap.appendChild(meta);
   
-        textWrap.appendChild(titleEl);
-        textWrap.appendChild(meta);
         main.appendChild(checkboxWrap);
         main.appendChild(textWrap);
   
         const actions = document.createElement("div");
         actions.className = "item-actions";
   
-        const editBtn = document.createElement("button");
-        editBtn.className = "icon-btn";
-        editBtn.textContent = "✏️";
+        const linkBtn = document.createElement("button");
+        linkBtn.className = "icon-btn";
+        linkBtn.textContent = "🔗";
+        linkBtn.title = "Set / edit link";
+  
+        linkBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const current = task.link || "";
+          const newLink = prompt(
+            "Link this task to something (e.g. 'Shopping: Weekly list')",
+            current
+          );
+          if (newLink === null) return;
+          task.link = newLink.trim();
+          saveState();
+          renderTodos();
+        });
   
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
+        delBtn.title = "Delete task";
   
-        actions.appendChild(editBtn);
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!confirm("Delete this task?")) return;
+          state.todos = state.todos.filter((t) => t.id !== task.id);
+          saveState();
+          renderTodos();
+        });
+  
+        actions.appendChild(linkBtn);
         actions.appendChild(delBtn);
   
-        row.appendChild(main);
-        row.appendChild(actions);
-        todoListContainer.appendChild(row);
+        item.appendChild(main);
+        item.appendChild(actions);
   
-        cb.addEventListener("change", () => {
-          todo.status = cb.checked ? "done" : "open";
+        item.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", task.id);
+        });
+        item.addEventListener("dragover", (e) => e.preventDefault());
+        item.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const fromId = e.dataTransfer.getData("text/plain");
+          if (!fromId || fromId === task.id) return;
+          const arr = state.todos;
+          const fromIndex = arr.findIndex((t) => t.id === fromId);
+          const toIndex = arr.findIndex((t) => t.id === task.id);
+          if (fromIndex === -1 || toIndex === -1) return;
+          const [moved] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, moved);
           saveState();
           renderTodos();
         });
   
-        titleEl.addEventListener("click", () => {
-          // cycle open → inprogress → done
-          if (todo.status === "open") todo.status = "inprogress";
-          else if (todo.status === "inprogress") todo.status = "done";
-          else todo.status = "open";
-          saveState();
-          renderTodos();
-        });
-  
-        editBtn.addEventListener("click", () => {
-          const newTitle = prompt("Edit task title:", todo.title);
-          if (newTitle !== null) {
-            todo.title = newTitle.trim() || todo.title;
-          }
-          const newDue = prompt(
-            "Edit due date (YYYY-MM-DD or blank):",
-            todo.dueDate || ""
-          );
-          if (newDue !== null) {
-            todo.dueDate = newDue.trim();
-          }
-          saveState();
-          renderTodos();
-        });
-  
-        delBtn.addEventListener("click", () => {
-          if (!confirm("Delete this task?")) return;
-          state.todos = state.todos.filter((t) => t.id !== todo.id);
-          saveState();
-          renderTodos();
-        });
+        todoListContainer.appendChild(item);
       });
     }
   
     if (todoListSelect) {
       todoListSelect.addEventListener("change", () => {
-        state.selectedTodoList = todoListSelect.value;
-        saveState();
+        currentTodoListId = todoListSelect.value;
         renderTodos();
       });
     }
   
-    if (todoNewListBtn) {
-      todoNewListBtn.addEventListener("click", () => {
-        const name = (prompt("New list name:") || "").trim();
-        if (!name) return;
-        if (!state.todoLists.includes(name)) {
-          state.todoLists.push(name);
-        }
-        state.selectedTodoList = name;
-        saveState();
-        renderTodoListsDropdowns();
-        renderTodos();
-      });
-    }
-  
-    if (addTodoBtn && todoTitleInput) {
+    if (addTodoBtn) {
       addTodoBtn.addEventListener("click", () => {
-        const title = todoTitleInput.value.trim();
+        const title = (todoTitleInput?.value || "").trim();
         if (!title) return;
         const priority = todoPrioritySelect?.value || "medium";
-        const due = todoDueDate?.value || "";
-        const todo = {
-          id: Date.now().toString(),
-          list: state.selectedTodoList || "General",
+        const dueDate = todoDueDateInput?.value || "";
+        const newTodo = {
+          id: makeId("todo"),
           title,
           priority,
-          dueDate: due,
+          dueDate,
           status: "open",
-          createdAt: Date.now()
+          listId: currentTodoListId,
+          createdAt: Date.now(),
+          link: "",
         };
-        state.todos.push(todo);
+        state.todos.push(newTodo);
         saveState();
-        todoTitleInput.value = "";
-        renderTodos();
-      });
   
-      todoTitleInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") addTodoBtn.click();
+        if (todoTitleInput) todoTitleInput.value = "";
+        if (todoDueDateInput) todoDueDateInput.value = "";
+        renderTodos();
       });
     }
   
     if (todoFiltersToggle && todoFiltersPanel) {
       todoFiltersToggle.addEventListener("click", () => {
-        todoFiltersPanel.style.display =
-          todoFiltersPanel.style.display === "none" || !todoFiltersPanel.style.display
-            ? "block"
-            : "none";
+        const visible = todoFiltersPanel.style.display === "block";
+        todoFiltersPanel.style.display = visible ? "none" : "block";
       });
     }
   
@@ -1579,97 +1693,178 @@
       }
     );
   
-    renderTodoListsDropdowns();
-    renderTodos();
+    refreshTodoListsUI();
+  
+    // *** To-do small Filters button on same line as Add task ***
+    (function compactTodoFiltersButton() {
+      if (!todoFiltersToggle || !addTodoBtn) return;
+      const filterRow = todoFiltersToggle.closest(".input-row");
+      const addRow = addTodoBtn.closest(".input-row");
+      if (!filterRow || !addRow) return;
+  
+      // Only icon for filters to make it small
+      todoFiltersToggle.textContent = "⚙️";
+      todoFiltersToggle.title = "Filters";
+      // Move filter button into same row as Add task
+      filterRow.style.display = "none";
+      addRow.style.display = "flex";
+      addRow.style.alignItems = "flex-end";
+      addRow.style.gap = "8px";
+  
+      // Put filter button before Add task
+      addRow.insertBefore(todoFiltersToggle, addTodoBtn);
+      todoFiltersToggle.style.flex = "0 0 auto";
+      addTodoBtn.style.flex = "1 1 auto";
+    })();
   
     // -----------------------------
     // SHOPPING
     // -----------------------------
     const shoppingListSelect = document.getElementById("shoppingListSelect");
+    const shoppingListNameInput = document.getElementById("shoppingListName");
     const shoppingNewListBtn = document.getElementById("shoppingNewListBtn");
     const shoppingItemInput = document.getElementById("shoppingItemInput");
     const addShoppingBtn = document.getElementById("addShoppingBtn");
-    const shoppingListContainer = document.getElementById("shoppingList");
     const shoppingEmptyMsg = document.getElementById("shoppingEmptyMsg");
+    const shoppingListContainer = document.getElementById("shoppingList");
   
-    function ensureShoppingLists() {
-      if (!state.shoppingLists || typeof state.shoppingLists !== "object") {
-        state.shoppingLists = { General: [] };
-        state.selectedShoppingList = "General";
-      }
-      const names = Object.keys(state.shoppingLists);
-      if (!names.length) {
-        state.shoppingLists = { General: [] };
-        state.selectedShoppingList = "General";
-      }
-      if (!state.selectedShoppingList || !state.shoppingLists[state.selectedShoppingList]) {
-        state.selectedShoppingList = Object.keys(state.shoppingLists)[0];
-      }
-    }
+    let currentShoppingListId =
+      state.shoppingLists.length > 0 ? state.shoppingLists[0].id : "default";
   
-    function renderShoppingListDropdown() {
-      ensureShoppingLists();
+    (function adaptShoppingListRow() {
+      if (!shoppingListSelect) return;
+      if (shoppingListNameInput) {
+        const rowInline = shoppingListNameInput.closest(".input-row-inline");
+        if (rowInline) rowInline.style.display = "none";
+      }
+      const selectRow = shoppingListSelect.closest(".input-row");
+      if (!selectRow) return;
+  
+      selectRow.style.display = "flex";
+      selectRow.style.flexDirection = "row";
+      selectRow.style.alignItems = "flex-end";
+      selectRow.style.gap = "8px";
+  
+      const label = selectRow.querySelector("label");
+      if (label) {
+        label.style.marginRight = "4px";
+        label.style.whiteSpace = "nowrap";
+      }
+  
+      const newListBtn = document.createElement("button");
+      newListBtn.className = "btn btn-secondary btn-icon";
+      newListBtn.textContent = "➕";
+      newListBtn.title = "New shopping list";
+  
+      newListBtn.addEventListener("click", () => {
+        const name = prompt("New shopping list name:");
+        if (!name) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const id = makeId("slist");
+        state.shoppingLists.push({ id, name: trimmed, items: [] });
+        currentShoppingListId = id;
+        saveState();
+        refreshShoppingListsUI();
+        renderShopping();
+      });
+  
+      selectRow.appendChild(newListBtn);
+    })();
+  
+    function refreshShoppingListsUI() {
       if (!shoppingListSelect) return;
       shoppingListSelect.innerHTML = "";
-      Object.keys(state.shoppingLists).forEach((name) => {
+      state.shoppingLists.forEach((list) => {
         const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
+        opt.value = list.id;
+        opt.textContent = list.name;
         shoppingListSelect.appendChild(opt);
       });
-      shoppingListSelect.value = state.selectedShoppingList;
+      if (!state.shoppingLists.find((l) => l.id === currentShoppingListId)) {
+        currentShoppingListId =
+          state.shoppingLists.length > 0 ? state.shoppingLists[0].id : "default";
+      }
+      shoppingListSelect.value = currentShoppingListId;
     }
   
-    function renderShoppingItems() {
-      if (!shoppingListContainer) return;
-      ensureShoppingLists();
-      const listName = state.selectedShoppingList;
-      const items = state.shoppingLists[listName] || [];
+    function getCurrentShoppingList() {
+      let list = state.shoppingLists.find((l) => l.id === currentShoppingListId);
+      if (!list && state.shoppingLists.length > 0) {
+        list = state.shoppingLists[0];
+        currentShoppingListId = list.id;
+      }
+      if (!list) {
+        list = { id: "default", name: "General", items: [] };
+        state.shoppingLists.push(list);
+      }
+      return list;
+    }
   
+    function renderShopping() {
+      if (!shoppingListContainer || !shoppingEmptyMsg) return;
       shoppingListContainer.innerHTML = "";
-      if (!items.length) {
-        if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "block";
+      const list = getCurrentShoppingList();
+      if (!list.items || list.items.length === 0) {
+        shoppingEmptyMsg.style.display = "block";
         return;
       }
-      if (shoppingEmptyMsg) shoppingEmptyMsg.style.display = "none";
+      shoppingEmptyMsg.style.display = "none";
   
-      items.forEach((item) => {
-        const row = document.createElement("div");
-        row.className = "item";
+      list.items.forEach((itemObj) => {
+        const item = document.createElement("div");
+        item.className = "item";
+        item.draggable = true;
   
         const main = document.createElement("div");
         main.className = "item-main";
   
-        const cbWrap = document.createElement("div");
-        cbWrap.className = "item-checkbox";
+        const checkboxWrap = document.createElement("div");
+        checkboxWrap.className = "item-checkbox";
         const cb = document.createElement("input");
         cb.type = "checkbox";
-        cb.checked = !!item.done;
-        cbWrap.appendChild(cb);
+        cb.checked = !!itemObj.checked;
+        cb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          itemObj.checked = cb.checked;
+          saveState();
+          renderShopping();
+        });
+        checkboxWrap.appendChild(cb);
   
         const textWrap = document.createElement("div");
         textWrap.className = "item-text";
   
-        const titleEl = document.createElement("div");
-        titleEl.className = "item-title";
-        titleEl.textContent = item.text;
-        if (item.done) {
-          titleEl.style.textDecoration = "line-through";
-          titleEl.style.opacity = "0.6";
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = itemObj.text || "(no name)";
+  
+        if (itemObj.checked) {
+          title.style.textDecoration = "line-through";
+          title.style.color = "#777a90";
         }
+  
+        title.addEventListener("click", () => {
+          const newName = prompt("Edit item name:", itemObj.text || "");
+          if (newName === null) return;
+          itemObj.text = newName.trim() || itemObj.text;
+          saveState();
+          renderShopping();
+        });
   
         const meta = document.createElement("div");
         meta.className = "item-meta";
-        if (item.note) {
+        if (itemObj.note) {
           const noteTag = document.createElement("span");
           noteTag.className = "tag";
-          noteTag.textContent = "Has note";
+          noteTag.textContent = `📝 ${itemObj.note}`;
           meta.appendChild(noteTag);
         }
   
-        textWrap.appendChild(titleEl);
-        textWrap.appendChild(meta);
-        main.appendChild(cbWrap);
+        textWrap.appendChild(title);
+        if (meta.childNodes.length > 0) textWrap.appendChild(meta);
+  
+        main.appendChild(checkboxWrap);
         main.appendChild(textWrap);
   
         const actions = document.createElement("div");
@@ -1678,100 +1873,87 @@
         const noteBtn = document.createElement("button");
         noteBtn.className = "icon-btn";
         noteBtn.textContent = "📝";
+        noteBtn.title = "Add note";
+  
+        noteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const newNote = prompt("Note for this item:", itemObj.note || "");
+          if (newNote === null) return;
+          itemObj.note = newNote.trim();
+          saveState();
+          renderShopping();
+        });
   
         const delBtn = document.createElement("button");
         delBtn.className = "icon-btn danger";
         delBtn.textContent = "🗑";
+        delBtn.title = "Delete item";
+  
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!confirm("Delete this item?")) return;
+          list.items = list.items.filter((i) => i.id !== itemObj.id);
+          saveState();
+          renderShopping();
+        });
   
         actions.appendChild(noteBtn);
         actions.appendChild(delBtn);
   
-        row.appendChild(main);
-        row.appendChild(actions);
-        shoppingListContainer.appendChild(row);
+        item.appendChild(main);
+        item.appendChild(actions);
   
-        cb.addEventListener("change", () => {
-          item.done = cb.checked;
+        item.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", itemObj.id);
+        });
+        item.addEventListener("dragover", (e) => e.preventDefault());
+        item.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const fromId = e.dataTransfer.getData("text/plain");
+          if (!fromId || fromId === itemObj.id) return;
+          const arr = list.items;
+          const fromIndex = arr.findIndex((i) => i.id === fromId);
+          const toIndex = arr.findIndex((i) => i.id === itemObj.id);
+          if (fromIndex === -1 || toIndex === -1) return;
+          const [moved] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, moved);
           saveState();
-          renderShoppingItems();
+          renderShopping();
         });
   
-        titleEl.addEventListener("click", () => {
-          cb.checked = !cb.checked;
-          item.done = cb.checked;
-          saveState();
-          renderShoppingItems();
-        });
-  
-        noteBtn.addEventListener("click", () => {
-          const newNote = prompt("Note for this item:", item.note || "");
-          if (newNote !== null) {
-            item.note = newNote.trim();
-            saveState();
-            renderShoppingItems();
-          }
-        });
-  
-        delBtn.addEventListener("click", () => {
-          if (!confirm("Delete this item?")) return;
-          state.shoppingLists[listName] = state.shoppingLists[listName].filter(
-            (x) => x.id !== item.id
-          );
-          saveState();
-          renderShoppingItems();
-        });
+        shoppingListContainer.appendChild(item);
       });
     }
   
     if (shoppingListSelect) {
       shoppingListSelect.addEventListener("change", () => {
-        state.selectedShoppingList = shoppingListSelect.value;
-        saveState();
-        renderShoppingItems();
+        currentShoppingListId = shoppingListSelect.value;
+        renderShopping();
       });
     }
   
-    if (shoppingNewListBtn) {
-      shoppingNewListBtn.addEventListener("click", () => {
-        const name = (prompt("New shopping list name:") || "").trim();
-        if (!name) return;
-        if (!state.shoppingLists[name]) {
-          state.shoppingLists[name] = [];
-        }
-        state.selectedShoppingList = name;
-        saveState();
-        renderShoppingListDropdown();
-        renderShoppingItems();
-      });
-    }
-  
-    if (addShoppingBtn && shoppingItemInput) {
+    if (addShoppingBtn) {
       addShoppingBtn.addEventListener("click", () => {
-        const text = shoppingItemInput.value.trim();
+        const text = (shoppingItemInput?.value || "").trim();
         if (!text) return;
-        ensureShoppingLists();
-        const listName = state.selectedShoppingList;
-        state.shoppingLists[listName].push({
-          id: Date.now().toString(),
+        const list = getCurrentShoppingList();
+        list.items.push({
+          id: makeId("sitem"),
           text,
-          done: false,
-          note: ""
+          checked: false,
+          note: "",
         });
-        shoppingItemInput.value = "";
         saveState();
-        renderShoppingItems();
-      });
-  
-      shoppingItemInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") addShoppingBtn.click();
+        if (shoppingItemInput) shoppingItemInput.value = "";
+        renderShopping();
       });
     }
   
-    renderShoppingListDropdown();
-    renderShoppingItems();
+    refreshShoppingListsUI();
+    renderShopping();
   
     // -----------------------------
-    // WORKOUTS (basic, NOT full v2 yet)
+    // WORKOUTS
     // -----------------------------
     const workoutNameInput = document.getElementById("workoutName");
     const workoutStartLabel = document.getElementById("workoutStartLabel");
@@ -1781,335 +1963,440 @@
     const addExerciseRowBtn = document.getElementById("addExerciseRowBtn");
     const workoutExercisesContainer = document.getElementById("workoutExercises");
     const workoutNotesInput = document.getElementById("workoutNotes");
-    const workoutListContainer = document.getElementById("workoutList");
+    const workoutFavoritesEmpty = document.getElementById("workoutFavoritesEmpty");
+    const workoutFavoritesGrid = document.getElementById("workoutFavorites");
     const noWorkoutMsg = document.getElementById("noWorkoutMsg");
+    const workoutListContainer = document.getElementById("workoutList");
   
-    function ensureCurrentWorkout() {
-      if (!state.currentWorkout) {
-        state.currentWorkout = {
-          id: "current",
-          name: "",
-          date: new Date().toISOString().slice(0, 10),
-          startTime: "",
-          endTime: "",
-          durationMinutes: 0,
-          notes: "",
-          exercises: []
-        };
-      }
+    let currentWorkout = {
+      name: "",
+      startTime: null,
+      durationMs: 0,
+      notes: "",
+      exercises: [],
+    };
+    let workoutTimer = null;
+  
+    function formatDuration(ms) {
+      if (!ms || ms <= 0) return "–";
+      const totalSec = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      if (mins === 0) return `${secs}s`;
+      return `${mins}m ${secs}s`;
     }
   
-    function formatDuration(minutes) {
-      if (!minutes || minutes <= 0) return "–";
-      const h = Math.floor(minutes / 60);
-      const m = minutes % 60;
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}m`;
-    }
-  
-    function renderCurrentWorkout() {
-      ensureCurrentWorkout();
-      const cw = state.currentWorkout;
-  
-      if (workoutNameInput) workoutNameInput.value = cw.name || "";
-      if (workoutNotesInput) workoutNotesInput.value = cw.notes || "";
-  
-      if (workoutStartLabel) {
-        workoutStartLabel.textContent = cw.startTime || "Tap to set start";
-      }
+    function updateWorkoutDurationLabel() {
+      if (!currentWorkout.startTime) return;
+      const now = Date.now();
+      const ms = now - currentWorkout.startTime;
+      currentWorkout.durationMs = ms;
       if (workoutDurationLabel) {
-        workoutDurationLabel.textContent = formatDuration(cw.durationMinutes);
-      }
-  
-      if (workoutExercisesContainer) {
-        workoutExercisesContainer.innerHTML = "";
-        cw.exercises.forEach((ex, idx) => {
-          const row = document.createElement("div");
-          row.className = "workout-row";
-  
-          const top = document.createElement("div");
-          top.className = "workout-row-top";
-          const exNameInput = document.createElement("input");
-          exNameInput.type = "text";
-          exNameInput.placeholder = "Exercise name";
-          exNameInput.value = ex.name || "";
-          top.appendChild(exNameInput);
-  
-          const bottom = document.createElement("div");
-          bottom.className = "workout-row-bottom";
-  
-          const setsInput = document.createElement("input");
-          setsInput.type = "number";
-          setsInput.min = "0";
-          setsInput.placeholder = "Sets";
-          setsInput.value = ex.sets || "";
-  
-          const repsInput = document.createElement("input");
-          repsInput.type = "number";
-          repsInput.min = "0";
-          repsInput.placeholder = "Reps";
-          repsInput.value = ex.reps || "";
-  
-          const weightInput = document.createElement("input");
-          weightInput.type = "number";
-          weightInput.min = "0";
-          weightInput.placeholder = "Weight";
-          weightInput.value = ex.weight || "";
-  
-          const doneCb = document.createElement("input");
-          doneCb.type = "checkbox";
-          doneCb.className = "workout-done";
-          doneCb.checked = !!ex.done;
-  
-          const delBtn = document.createElement("button");
-          delBtn.className = "icon-btn danger";
-          delBtn.textContent = "🗑";
-  
-          bottom.appendChild(setsInput);
-          bottom.appendChild(repsInput);
-          bottom.appendChild(weightInput);
-          bottom.appendChild(doneCb);
-          bottom.appendChild(delBtn);
-  
-          row.appendChild(top);
-          row.appendChild(bottom);
-          workoutExercisesContainer.appendChild(row);
-  
-          exNameInput.addEventListener("input", () => {
-            ex.name = exNameInput.value;
-            saveState();
-          });
-          setsInput.addEventListener("input", () => {
-            ex.sets = setsInput.value;
-            saveState();
-          });
-          repsInput.addEventListener("input", () => {
-            ex.reps = repsInput.value;
-            saveState();
-          });
-          weightInput.addEventListener("input", () => {
-            ex.weight = weightInput.value;
-            saveState();
-          });
-          doneCb.addEventListener("change", () => {
-            ex.done = doneCb.checked;
-            saveState();
-          });
-          delBtn.addEventListener("click", () => {
-            cw.exercises.splice(idx, 1);
-            saveState();
-            renderCurrentWorkout();
-          });
-        });
+        workoutDurationLabel.textContent = formatDuration(ms);
       }
     }
   
-    function renderWorkoutLog() {
-      if (!workoutListContainer) return;
-      const items = state.workouts || [];
-      workoutListContainer.innerHTML = "";
-      if (!items.length) {
-        if (noWorkoutMsg) noWorkoutMsg.style.display = "block";
+    function startWorkoutTimer() {
+      if (workoutTimer) clearInterval(workoutTimer);
+      workoutTimer = setInterval(updateWorkoutDurationLabel, 1000);
+    }
+  
+    function stopWorkoutTimer() {
+      if (workoutTimer) clearInterval(workoutTimer);
+      workoutTimer = null;
+    }
+  
+    function createExerciseRow(data) {
+      const row = document.createElement("div");
+      row.className = "workout-row";
+      const id = data?.id || makeId("ex");
+  
+      const top = document.createElement("div");
+      top.className = "workout-row-top";
+      const exNameInput = document.createElement("input");
+      exNameInput.type = "text";
+      exNameInput.placeholder = "Exercise name";
+      exNameInput.value = data?.name || "";
+      top.appendChild(exNameInput);
+  
+      const bottom = document.createElement("div");
+      bottom.className = "workout-row-bottom";
+  
+      const setsInput = document.createElement("input");
+      setsInput.type = "number";
+      setsInput.min = "0";
+      setsInput.placeholder = "Sets";
+      setsInput.value = data?.sets ?? "";
+  
+      const repsInput = document.createElement("input");
+      repsInput.type = "number";
+      repsInput.min = "0";
+      repsInput.placeholder = "Reps";
+      repsInput.value = data?.reps ?? "";
+  
+      const weightInput = document.createElement("input");
+      weightInput.type = "number";
+      weightInput.min = "0";
+      weightInput.placeholder = "Weight";
+      weightInput.value = data?.weight ?? "";
+  
+      const doneCheckbox = document.createElement("input");
+      doneCheckbox.type = "checkbox";
+      doneCheckbox.className = "workout-done";
+      doneCheckbox.checked = !!data?.done;
+  
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "icon-btn danger";
+      deleteBtn.textContent = "🗑";
+      deleteBtn.title = "Remove exercise";
+  
+      deleteBtn.addEventListener("click", () => {
+        row.remove();
+        currentWorkout.exercises = currentWorkout.exercises.filter(
+          (e) => e.id !== id
+        );
+      });
+  
+      bottom.appendChild(setsInput);
+      bottom.appendChild(repsInput);
+      bottom.appendChild(weightInput);
+      bottom.appendChild(doneCheckbox);
+      bottom.appendChild(deleteBtn);
+  
+      row.appendChild(top);
+      row.appendChild(bottom);
+      workoutExercisesContainer.appendChild(row);
+  
+      const updateData = () => {
+        const ex = currentWorkout.exercises.find((e) => e.id === id);
+        if (!ex) return;
+        ex.name = exNameInput.value.trim();
+        ex.sets = setsInput.value ? parseInt(setsInput.value, 10) : null;
+        ex.reps = repsInput.value ? parseInt(repsInput.value, 10) : null;
+        ex.weight = weightInput.value ? parseFloat(weightInput.value) : null;
+        ex.done = doneCheckbox.checked;
+      };
+  
+      currentWorkout.exercises.push({
+        id,
+        name: data?.name || "",
+        sets: data?.sets ?? null,
+        reps: data?.reps ?? null,
+        weight: data?.weight ?? null,
+        done: !!data?.done,
+      });
+  
+      [exNameInput, setsInput, repsInput, weightInput, doneCheckbox].forEach(
+        (el) => {
+          el.addEventListener("input", updateData);
+          el.addEventListener("change", updateData);
+        }
+      );
+    }
+  
+    function clearCurrentWorkoutUI() {
+      currentWorkout = {
+        name: "",
+        startTime: null,
+        durationMs: 0,
+        notes: "",
+        exercises: [],
+      };
+      if (workoutNameInput) workoutNameInput.value = "";
+      if (workoutStartLabel) workoutStartLabel.textContent = "Not started";
+      if (workoutDurationLabel) workoutDurationLabel.textContent = "–";
+      if (workoutNotesInput) workoutNotesInput.value = "";
+      if (workoutExercisesContainer) workoutExercisesContainer.innerHTML = "";
+      stopWorkoutTimer();
+    }
+  
+    function renderWorkoutFavorites() {
+      if (!workoutFavoritesGrid || !workoutFavoritesEmpty) return;
+      workoutFavoritesGrid.innerHTML = "";
+      const favs = state.workoutFavorites || [];
+      if (favs.length === 0) {
+        workoutFavoritesEmpty.style.display = "block";
         return;
       }
-      if (noWorkoutMsg) noWorkoutMsg.style.display = "none";
+      workoutFavoritesEmpty.style.display = "none";
+      favs.slice(0, 6).forEach((fav) => {
+        const card = document.createElement("div");
+        card.className = "favorite-card";
+        card.textContent = fav.name || "Workout";
+        card.addEventListener("click", () => {
+          clearCurrentWorkoutUI();
+          currentWorkout.name = fav.name || "";
+          if (workoutNameInput) workoutNameInput.value = currentWorkout.name;
+          fav.exercises.forEach((ex) => {
+            createExerciseRow({
+              name: ex.name,
+              sets: ex.sets,
+              reps: ex.reps,
+              weight: ex.weight,
+              done: false,
+            });
+          });
+        });
+        workoutFavoritesGrid.appendChild(card);
+      });
+    }
   
-      items
+    function renderWorkoutsList() {
+      if (!workoutListContainer || !noWorkoutMsg) return;
+      workoutListContainer.innerHTML = "";
+      const ws = state.workouts || [];
+      if (ws.length === 0) {
+        noWorkoutMsg.style.display = "block";
+        return;
+      }
+      noWorkoutMsg.style.display = "none";
+  
+      ws
         .slice()
-        .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+        .sort((a, b) => (b.startTime || 0) - (a.startTime || 0))
         .forEach((w) => {
-          const row = document.createElement("div");
-          row.className = "item";
+          const item = document.createElement("div");
+          item.className = "item";
   
           const main = document.createElement("div");
           main.className = "item-main";
   
-          const textWrap = document.createElement("div");
-          textWrap.className = "item-text";
+          const titleWrap = document.createElement("div");
+          titleWrap.className = "item-text";
   
-          const titleEl = document.createElement("div");
-          titleEl.className = "item-title";
-          titleEl.textContent = `${w.date || ""} – ${w.name || "Workout"}`;
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = w.name || "Workout";
   
           const meta = document.createElement("div");
           meta.className = "item-meta";
   
-          if (w.durationMinutes) {
-            const dTag = document.createElement("span");
-            dTag.className = "tag";
-            dTag.textContent = formatDuration(w.durationMinutes);
-            meta.appendChild(dTag);
-          }
+          const date = new Date(w.startTime || Date.now());
+          const dTag = document.createElement("span");
+          dTag.className = "tag";
+          dTag.textContent = date.toLocaleString();
+          meta.appendChild(dTag);
+  
+          const durTag = document.createElement("span");
+          durTag.className = "tag";
+          durTag.textContent = formatDuration(w.durationMs || 0);
+          meta.appendChild(durTag);
   
           const exTag = document.createElement("span");
           exTag.className = "tag";
-          exTag.textContent = `${(w.exercises || []).length} exercise(s)`;
+          exTag.textContent = `${(w.exercises || []).length} exercises`;
           meta.appendChild(exTag);
   
-          textWrap.appendChild(titleEl);
-          textWrap.appendChild(meta);
-          main.appendChild(textWrap);
+          titleWrap.appendChild(title);
+          titleWrap.appendChild(meta);
+          main.appendChild(titleWrap);
   
           const actions = document.createElement("div");
           actions.className = "item-actions";
+  
+          const favBtn = document.createElement("button");
+          favBtn.className = "icon-btn";
+          const isFav = state.workoutFavorites?.some((f) => f.id === w.id);
+          favBtn.textContent = isFav ? "★" : "☆";
+          favBtn.title = "Toggle favorite (max 6)";
+  
+          favBtn.addEventListener("click", () => {
+            const favIndex = state.workoutFavorites.findIndex(
+              (f) => f.id === w.id
+            );
+            if (favIndex >= 0) {
+              state.workoutFavorites.splice(favIndex, 1);
+            } else {
+              if ((state.workoutFavorites || []).length >= 6) {
+                alert("You already have 6 favorite workouts.");
+                return;
+              }
+              state.workoutFavorites.push({
+                id: w.id,
+                name: w.name,
+                exercises: w.exercises || [],
+              });
+            }
+            saveState();
+            renderWorkoutFavorites();
+            renderWorkoutsList();
+          });
+  
           const delBtn = document.createElement("button");
           delBtn.className = "icon-btn danger";
           delBtn.textContent = "🗑";
-          actions.appendChild(delBtn);
-  
-          row.appendChild(main);
-          row.appendChild(actions);
-          workoutListContainer.appendChild(row);
+          delBtn.title = "Delete workout";
   
           delBtn.addEventListener("click", () => {
             if (!confirm("Delete this workout?")) return;
-            state.workouts = state.workouts.filter((x) => x.id !== w.id);
+            state.workouts = state.workouts.filter((wk) => wk.id !== w.id);
+            state.workoutFavorites = state.workoutFavorites.filter(
+              (f) => f.id !== w.id
+            );
             saveState();
-            renderWorkoutLog();
+            renderWorkoutFavorites();
+            renderWorkoutsList();
           });
+  
+          actions.appendChild(favBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          workoutListContainer.appendChild(item);
         });
     }
   
     if (startWorkoutBtn) {
       startWorkoutBtn.addEventListener("click", () => {
-        ensureCurrentWorkout();
-        const cw = state.currentWorkout;
-        if (!cw.startTime) {
-          // default: now
-          const now = new Date();
-          const hh = String(now.getHours()).padStart(2, "0");
-          const mm = String(now.getMinutes()).padStart(2, "0");
-          cw.startTime = `${hh}:${mm}`;
-          cw.date = now.toISOString().slice(0, 10);
-        } else {
-          // allow editing start time
-          const newStart = prompt(
-            "Start time (HH:MM):",
-            cw.startTime || ""
-          );
-          if (newStart !== null && newStart.trim()) {
-            cw.startTime = newStart.trim();
+        if (!currentWorkout.startTime) {
+          currentWorkout.startTime = Date.now();
+          if (workoutStartLabel) {
+            const d = new Date(currentWorkout.startTime);
+            workoutStartLabel.textContent = d.toLocaleTimeString();
           }
+          startWorkoutTimer();
         }
-        saveState();
-        renderCurrentWorkout();
-      });
-    }
-  
-    if (workoutStartLabel) {
-      workoutStartLabel.addEventListener("click", () => {
-        ensureCurrentWorkout();
-        const cw = state.currentWorkout;
-        const newStart = prompt(
-          "Start time (HH:MM):",
-          cw.startTime || ""
-        );
-        if (newStart !== null) {
-          cw.startTime = newStart.trim();
-          saveState();
-          renderCurrentWorkout();
+        if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
+          createExerciseRow();
         }
       });
     }
   
-    if (workoutDurationLabel) {
-      workoutDurationLabel.addEventListener("click", () => {
-        ensureCurrentWorkout();
-        const cw = state.currentWorkout;
-        const newEnd = prompt(
-          "End time (HH:MM):",
-          cw.endTime || ""
-        );
-        if (newEnd !== null) {
-          cw.endTime = newEnd.trim();
-          cw.durationMinutes = computeDurationMinutes(cw.startTime, cw.endTime);
-          saveState();
-          renderCurrentWorkout();
-        }
-      });
-    }
-  
-    function computeDurationMinutes(startStr, endStr) {
-      if (!startStr || !endStr) return 0;
-      const [sh, sm] = startStr.split(":").map((x) => parseInt(x || "0", 10));
-      const [eh, em] = endStr.split(":").map((x) => parseInt(x || "0", 10));
-      const start = sh * 60 + sm;
-      let end = eh * 60 + em;
-      if (end < start) end += 24 * 60;
-      return end - start;
-    }
-  
-    if (addExerciseRowBtn) {
+    if (addExerciseRowBtn && workoutExercisesContainer) {
       addExerciseRowBtn.addEventListener("click", () => {
-        ensureCurrentWorkout();
-        state.currentWorkout.exercises.push({
-          id: Date.now().toString(),
-          name: "",
-          sets: "",
-          reps: "",
-          weight: "",
-          done: false
-        });
-        saveState();
-        renderCurrentWorkout();
-      });
-    }
-  
-    if (workoutNameInput) {
-      workoutNameInput.addEventListener("input", () => {
-        ensureCurrentWorkout();
-        state.currentWorkout.name = workoutNameInput.value;
-        saveState();
-      });
-    }
-  
-    if (workoutNotesInput) {
-      workoutNotesInput.addEventListener("input", () => {
-        ensureCurrentWorkout();
-        state.currentWorkout.notes = workoutNotesInput.value;
-        saveState();
+        createExerciseRow();
       });
     }
   
     if (saveWorkoutBtn) {
       saveWorkoutBtn.addEventListener("click", () => {
-        ensureCurrentWorkout();
-        const cw = state.currentWorkout;
-        if (!cw.name) {
-          cw.name = "Workout";
+        const name = (workoutNameInput?.value || "").trim();
+        const notes = workoutNotesInput?.value || "";
+        const exs = currentWorkout.exercises || [];
+        if (exs.length === 0) {
+          if (!confirm("No exercises added. Save anyway?")) return;
         }
-        if (!cw.startTime) {
-          const now = new Date();
-          const hh = String(now.getHours()).padStart(2, "0");
-          const mm = String(now.getMinutes()).padStart(2, "0");
-          cw.startTime = `${hh}:${mm}`;
-          cw.date = now.toISOString().slice(0, 10);
-        }
-        if (!cw.endTime) {
-          const now = new Date();
-          const hh = String(now.getHours()).padStart(2, "0");
-          const mm = String(now.getMinutes()).padStart(2, "0");
-          cw.endTime = `${hh}:${mm}`;
-        }
-        cw.durationMinutes = computeDurationMinutes(cw.startTime, cw.endTime);
   
-        const stored = {
-          ...cw,
-          id: Date.now().toString(),
-          isCurrent: false
+        const now = Date.now();
+        let startTime = currentWorkout.startTime || now;
+        let durationMs = currentWorkout.durationMs || 0;
+        if (!durationMs && currentWorkout.startTime) {
+          durationMs = now - currentWorkout.startTime;
+        }
+  
+        const workout = {
+          id: makeId("workout"),
+          name: name || "Workout",
+          notes,
+          exercises: exs.map((e) => ({
+            id: e.id,
+            name: e.name,
+            sets: e.sets,
+            reps: e.reps,
+            weight: e.weight,
+            done: e.done,
+          })),
+          startTime,
+          durationMs,
         };
   
-        state.workouts.push(stored);
-        state.currentWorkout = null;
+        state.workouts.push(workout);
         saveState();
-        renderCurrentWorkout();
-        renderWorkoutLog();
-        alert("Workout saved!");
+        clearCurrentWorkoutUI();
+        renderWorkoutsList();
       });
     }
   
-    renderCurrentWorkout();
-    renderWorkoutLog();
+    if (workoutNotesInput) {
+      workoutNotesInput.addEventListener("input", () => {
+        currentWorkout.notes = workoutNotesInput.value;
+      });
+    }
+  
+    // *** Workout: manual start/end time editing ***
+    function parseDateTimeLocal(str) {
+      if (!str) return null;
+      const parts = str.trim().split(" ");
+      const datePart = parts[0];
+      if (!datePart) return null;
+      const [y, m, d] = datePart.split("-").map(Number);
+      let hh = 0,
+        mm = 0;
+      if (parts[1]) {
+        const [hStr, mStr] = parts[1].split(":");
+        hh = parseInt(hStr || "0", 10) || 0;
+        mm = parseInt(mStr || "0", 10) || 0;
+      }
+      const dt = new Date(y, (m || 1) - 1, d || 1, hh, mm);
+      if (isNaN(dt.getTime())) return null;
+      return dt;
+    }
+  
+    (function addManualWorkoutTimeButton() {
+      if (!workoutStartLabel) return;
+      const startRow = workoutStartLabel.closest(".input-row");
+      if (!startRow) return;
+      const btn = document.createElement("button");
+      btn.className = "btn btn-secondary btn-icon";
+      btn.textContent = "🕒";
+      btn.title = "Set start/end time manually";
+      startRow.appendChild(btn);
+  
+      btn.addEventListener("click", () => {
+        const currentStart =
+          currentWorkout.startTime || Date.now();
+        const defStart = new Date(currentStart)
+          .toISOString()
+          .slice(0, 16)
+          .replace("T", " ");
+  
+        const startStr = prompt(
+          "Start (YYYY-MM-DD HH:MM):",
+          defStart
+        );
+        if (!startStr) return;
+        const startDt = parseDateTimeLocal(startStr);
+        if (!startDt) {
+          alert("Invalid start date/time.");
+          return;
+        }
+  
+        const defEndDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+        const defEnd = defEndDt
+          .toISOString()
+          .slice(0, 16)
+          .replace("T", " ");
+  
+        const endStr = prompt(
+          "End (YYYY-MM-DD HH:MM):",
+          defEnd
+        );
+        if (!endStr) return;
+        const endDt = parseDateTimeLocal(endStr);
+        if (!endDt || endDt <= startDt) {
+          alert("End must be after start.");
+          return;
+        }
+  
+        currentWorkout.startTime = startDt.getTime();
+        currentWorkout.durationMs = endDt.getTime() - startDt.getTime();
+        stopWorkoutTimer();
+  
+        if (workoutStartLabel) {
+          workoutStartLabel.textContent = startDt.toLocaleString();
+        }
+        if (workoutDurationLabel) {
+          workoutDurationLabel.textContent = formatDuration(
+            currentWorkout.durationMs
+          );
+        }
+      });
+    })();
+  
+    renderWorkoutFavorites();
+    renderWorkoutsList();
   
     // -----------------------------
     // FINANCE
@@ -2122,138 +2409,162 @@
     const financeMethodInput = document.getElementById("financeMethod");
     const financeNoteInput = document.getElementById("financeNote");
     const addFinanceBtn = document.getElementById("addFinanceBtn");
-    const financeListContainer = document.getElementById("financeList");
-    const noFinanceMsg = document.getElementById("noFinanceMsg");
+    const financeFilterCategory = document.getElementById(
+      "financeFilterCategory"
+    );
     const financeSummary = document.getElementById("financeSummary");
+    const noFinanceMsg = document.getElementById("noFinanceMsg");
+    const financeListContainer = document.getElementById("financeList");
   
     const addAccountBtn = document.getElementById("addAccountBtn");
-    const accountsListContainer = document.getElementById("accountsList");
     const noAccountsMsg = document.getElementById("noAccountsMsg");
+    const accountsListContainer = document.getElementById("accountsList");
   
-    function ensureAccounts() {
-      if (!Array.isArray(state.accounts)) {
-        state.accounts = [];
-      }
-    }
+    function refreshAccountsUI() {
+      if (!financeAccountSelect || !accountsListContainer || !noAccountsMsg)
+        return;
   
-    function renderAccounts() {
-      ensureAccounts();
-      if (accountsListContainer) {
-        accountsListContainer.innerHTML = "";
-        if (!state.accounts.length) {
-          if (noAccountsMsg) noAccountsMsg.style.display = "block";
-        } else {
-          if (noAccountsMsg) noAccountsMsg.style.display = "none";
-        }
-        state.accounts.forEach((acc) => {
-          const row = document.createElement("div");
-          row.className = "item";
+      financeAccountSelect.innerHTML = "";
+      state.financeAccounts.forEach((acc, idx) => {
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = acc.name || `Account ${idx + 1}`;
+        financeAccountSelect.appendChild(opt);
+      });
+  
+      accountsListContainer.innerHTML = "";
+      if (state.financeAccounts.length === 0) {
+        noAccountsMsg.style.display = "block";
+      } else {
+        noAccountsMsg.style.display = "none";
+        state.financeAccounts.forEach((acc) => {
+          const item = document.createElement("div");
+          item.className = "item";
   
           const main = document.createElement("div");
           main.className = "item-main";
   
-          const textWrap = document.createElement("div");
-          textWrap.className = "item-text";
+          const titleWrap = document.createElement("div");
+          titleWrap.className = "item-text";
   
-          const titleEl = document.createElement("div");
-          titleEl.className = "item-title";
-          titleEl.textContent = `${acc.name} (${acc.currency || ""})`;
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = acc.name;
   
           const meta = document.createElement("div");
           meta.className = "item-meta";
   
+          const sum = state.financeTransactions
+            .filter((t) => t.accountId === acc.id)
+            .reduce(
+              (total, t) =>
+                t.type === "income" ? total + t.amount : total - t.amount,
+              0
+            );
+  
           const balTag = document.createElement("span");
           balTag.className = "tag";
-          balTag.textContent = `Balance: ${acc.balance || 0}`;
+          balTag.textContent = `Balance: ${sum.toFixed(2)}`;
           meta.appendChild(balTag);
   
-          textWrap.appendChild(titleEl);
-          textWrap.appendChild(meta);
-          main.appendChild(textWrap);
+          titleWrap.appendChild(title);
+          titleWrap.appendChild(meta);
+          main.appendChild(titleWrap);
   
           const actions = document.createElement("div");
           actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Rename account";
+  
+          editBtn.addEventListener("click", () => {
+            const newName = prompt("New account name:", acc.name);
+            if (newName === null) return;
+            acc.name = newName.trim() || acc.name;
+            saveState();
+            refreshAccountsUI();
+          });
+  
           const delBtn = document.createElement("button");
           delBtn.className = "icon-btn danger";
           delBtn.textContent = "🗑";
-          actions.appendChild(delBtn);
-  
-          row.appendChild(main);
-          row.appendChild(actions);
-          accountsListContainer.appendChild(row);
+          delBtn.title = "Delete account";
   
           delBtn.addEventListener("click", () => {
-            if (!confirm("Delete this account?")) return;
-            state.accounts = state.accounts.filter((a) => a.id !== acc.id);
+            if (
+              !confirm(
+                "Delete this account? (Transactions will remain but may become 'orphaned')"
+              )
+            )
+              return;
+            state.financeAccounts = state.financeAccounts.filter(
+              (a) => a.id !== acc.id
+            );
             saveState();
-            renderAccounts();
-            renderFinanceAccountsDropdown();
+            refreshAccountsUI();
+            renderFinance();
           });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          accountsListContainer.appendChild(item);
         });
       }
     }
   
-    function renderFinanceAccountsDropdown() {
-      ensureAccounts();
-      if (!financeAccountSelect) return;
-      financeAccountSelect.innerHTML = "";
-      if (!state.accounts.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "No account";
-        financeAccountSelect.appendChild(opt);
-        return;
-      }
-      state.accounts.forEach((acc) => {
-        const opt = document.createElement("option");
-        opt.value = acc.id;
-        opt.textContent = acc.name;
-        financeAccountSelect.appendChild(opt);
-      });
-    }
-  
     if (addAccountBtn) {
       addAccountBtn.addEventListener("click", () => {
-        ensureAccounts();
-        const name = (prompt("Account name:") || "").trim();
+        const name = prompt(
+          "Account name (e.g. THB main, BRL, USD):",
+          "New account"
+        );
         if (!name) return;
-        const currency = (prompt("Currency (e.g. THB, BRL, USD):") || "").trim();
-        const acc = {
-          id: Date.now().toString(),
-          name,
-          currency,
-          balance: 0
-        };
-        state.accounts.push(acc);
+        state.financeAccounts.push({
+          id: makeId("acc"),
+          name: name.trim(),
+        });
         saveState();
-        renderAccounts();
-        renderFinanceAccountsDropdown();
+        refreshAccountsUI();
       });
     }
   
-    function renderFinanceList() {
-      if (!financeListContainer) return;
-      const txs = state.financeTransactions || [];
+    function renderFinance() {
+      if (!financeListContainer || !noFinanceMsg || !financeSummary) return;
   
       financeListContainer.innerHTML = "";
-      if (!txs.length) {
-        if (noFinanceMsg) noFinanceMsg.style.display = "block";
+  
+      const catFilter = financeFilterCategory?.value || "all";
+      const txs = state.financeTransactions || [];
+  
+      const filtered = txs.filter((t) => {
+        if (catFilter === "all") return true;
+        return (t.category || "").toLowerCase() === catFilter.toLowerCase();
+      });
+  
+      if (filtered.length === 0) {
+        noFinanceMsg.style.display = "block";
       } else {
-        if (noFinanceMsg) noFinanceMsg.style.display = "none";
+        noFinanceMsg.style.display = "none";
       }
   
       let totalIncome = 0;
       let totalExpense = 0;
   
-      txs
+      filtered
         .slice()
-        .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
-        .forEach((tx) => {
-          if (tx.type === "income") totalIncome += tx.amount || 0;
-          if (tx.type === "expense") totalExpense += tx.amount || 0;
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+        .forEach((t) => {
+          if (t.type === "income") totalIncome += t.amount;
+          else totalExpense += t.amount;
   
-          const row = document.createElement("div");
-          row.className = "item";
+          const item = document.createElement("div");
+          item.className = "item";
   
           const main = document.createElement("div");
           main.className = "item-main";
@@ -2261,126 +2572,169 @@
           const textWrap = document.createElement("div");
           textWrap.className = "item-text";
   
-          const titleEl = document.createElement("div");
-          titleEl.className = "item-title";
-          titleEl.textContent = `${tx.type === "income" ? "+" : "-"} ${tx.amount} ${tx.currency || ""} – ${tx.category || ""}`;
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = `${t.type === "income" ? "+" : "-"}${t.amount.toFixed(
+            2
+          )} ${t.category || ""}`;
   
           const meta = document.createElement("div");
           meta.className = "item-meta";
   
-          if (tx.date) {
-            const dTag = document.createElement("span");
-            dTag.className = "tag";
-            dTag.textContent = tx.date;
-            meta.appendChild(dTag);
+          const dateTag = document.createElement("span");
+          dateTag.className = "tag";
+          dateTag.textContent = t.date || "";
+          meta.appendChild(dateTag);
+  
+          const acc = state.financeAccounts.find((a) => a.id === t.accountId);
+          if (acc) {
+            const accTag = document.createElement("span");
+            accTag.className = "tag";
+            accTag.textContent = acc.name;
+            meta.appendChild(accTag);
           }
   
-          const typeTag = document.createElement("span");
-          typeTag.className = "tag " + (tx.type === "income" ? "tag-income" : "tag-expense");
-          typeTag.textContent = tx.type === "income" ? "Income" : "Expense";
-          meta.appendChild(typeTag);
-  
-          if (tx.method) {
+          if (t.method) {
             const mTag = document.createElement("span");
             mTag.className = "tag";
-            mTag.textContent = tx.method;
+            mTag.textContent = t.method;
             meta.appendChild(mTag);
           }
   
-          if (tx.note) {
+          if (t.note) {
             const nTag = document.createElement("span");
             nTag.className = "tag";
-            nTag.textContent = "Note";
+            nTag.textContent = `📝 ${t.note}`;
             meta.appendChild(nTag);
           }
   
-          textWrap.appendChild(titleEl);
+          const typeTag = document.createElement("span");
+          typeTag.className =
+            "tag " + (t.type === "income" ? "tag-income" : "tag-expense");
+          typeTag.textContent = t.type === "income" ? "Income" : "Expense";
+          meta.appendChild(typeTag);
+  
+          textWrap.appendChild(title);
           textWrap.appendChild(meta);
           main.appendChild(textWrap);
   
           const actions = document.createElement("div");
           actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Edit transaction";
+  
+          editBtn.addEventListener("click", () => {
+            const newAmountStr = prompt(
+              "Edit amount:",
+              t.amount != null ? String(t.amount) : ""
+            );
+            if (newAmountStr === null) return;
+            const newAmt = parseFloat(newAmountStr);
+            if (!isNaN(newAmt) && newAmt >= 0) t.amount = newAmt;
+  
+            const newCat = prompt(
+              "Edit category:",
+              t.category != null ? t.category : ""
+            );
+            if (newCat !== null) t.category = newCat.trim();
+  
+            const newMethod = prompt(
+              "Edit method (cash, card...):",
+              t.method != null ? t.method : ""
+            );
+            if (newMethod !== null) t.method = newMethod.trim();
+  
+            const newNote = prompt(
+              "Edit note:",
+              t.note != null ? t.note : ""
+            );
+            if (newNote !== null) t.note = newNote.trim();
+  
+            saveState();
+            renderFinance();
+            refreshAccountsUI();
+          });
+  
           const delBtn = document.createElement("button");
           delBtn.className = "icon-btn danger";
           delBtn.textContent = "🗑";
-          actions.appendChild(delBtn);
-  
-          row.appendChild(main);
-          row.appendChild(actions);
-          financeListContainer.appendChild(row);
+          delBtn.title = "Delete transaction";
   
           delBtn.addEventListener("click", () => {
             if (!confirm("Delete this transaction?")) return;
             state.financeTransactions = state.financeTransactions.filter(
-              (x) => x.id !== tx.id
+              (x) => x.id !== t.id
             );
             saveState();
-            renderFinanceList();
-            renderFinanceSummary();
+            renderFinance();
+            refreshAccountsUI();
           });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          financeListContainer.appendChild(item);
         });
   
-      if (financeSummary) {
-        const net = totalIncome - totalExpense;
-        financeSummary.textContent = `Income: ${totalIncome.toFixed(
-          2
-        )} | Expense: ${totalExpense.toFixed(2)} | Net: ${net.toFixed(2)}`;
-      }
-    }
-  
-    function renderFinanceSummary() {
-      // summary already handled in renderFinanceList for now
+      const net = totalIncome - totalExpense;
+      financeSummary.textContent = `Income: ${totalIncome.toFixed(
+        2
+      )}  |  Expense: ${totalExpense.toFixed(
+        2
+      )}  |  Net: ${net.toFixed(2)}`;
     }
   
     if (addFinanceBtn) {
       addFinanceBtn.addEventListener("click", () => {
-        const accountId = financeAccountSelect?.value || "";
+        if (!financeAccountSelect || state.financeAccounts.length === 0) {
+          alert("Please add an account first.");
+          return;
+        }
+        const accountId = financeAccountSelect.value;
         const type = financeTypeSelect?.value || "expense";
-        const amount = parseFloat(financeAmountInput?.value || "0");
-        const date = financeDateInput?.value || new Date().toISOString().slice(0, 10);
-        const category = financeCategoryInput?.value || "";
-        const method = financeMethodInput?.value || "";
-        const note = financeNoteInput?.value || "";
+        const amountStr = financeAmountInput?.value || "";
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) return;
+        const date =
+          financeDateInput?.value || new Date().toISOString().slice(0, 10);
+        const category = (financeCategoryInput?.value || "").trim();
+        const method = (financeMethodInput?.value || "").trim();
+        const note = (financeNoteInput?.value || "").trim();
   
-        if (!amount || amount <= 0) return;
-  
-        const acc = state.accounts.find((a) => a.id === accountId);
-  
-        const tx = {
-          id: Date.now().toString(),
+        state.financeTransactions.push({
+          id: makeId("tx"),
           accountId,
-          accountName: acc ? acc.name : "",
           type,
           amount,
           date,
           category,
           method,
           note,
-          currency: acc?.currency || ""
-        };
-  
-        state.financeTransactions.push(tx);
-  
-        if (acc) {
-          if (type === "income") acc.balance += amount;
-          else acc.balance -= amount;
-        }
-  
+        });
         saveState();
-        renderFinanceList();
-        renderAccounts();
   
         if (financeAmountInput) financeAmountInput.value = "";
         if (financeNoteInput) financeNoteInput.value = "";
+        renderFinance();
+        refreshAccountsUI();
       });
     }
   
-    renderAccounts();
-    renderFinanceAccountsDropdown();
-    renderFinanceList();
+    if (financeFilterCategory) {
+      financeFilterCategory.addEventListener("change", renderFinance);
+    }
+  
+    refreshAccountsUI();
+    renderFinance();
   
     // -----------------------------
-    // NOTES (Text + Canvas with colors)
+    // NOTES (tabs: Text + Canvas)
     // -----------------------------
     const notesPage = document.querySelector('.page[data-page="notes"]');
     if (notesPage) {
@@ -2396,10 +2750,9 @@
           </div>
           <div id="notesTextSection" class="input-grid">
             <div class="input-row">
-              <textarea id="notesText" placeholder="Write anything you don't want to forget..." style="min-height:180px;"></textarea>
+              <textarea id="notesText" placeholder="Write anything you don't want to forget..."></textarea>
             </div>
-            <div class="input-row" style="align-items:flex-end; justify-content:space-between; display:flex;">
-              <span id="notesSavedMsg" class="empty-msg" style="display:none;">Saved ✓</span>
+            <div class="input-row" style="align-items:flex-end;">
               <button id="saveNotesTextBtn" class="btn">💾 Save notes</button>
             </div>
           </div>
@@ -2416,8 +2769,7 @@
                   <button data-color="erase" class="icon-btn" title="Eraser">🧽</button>
                 </div>
               </div>
-              <div class="input-row" style="align-items:flex-end; display:flex; gap:6px;">
-                <button id="notesClearCanvas" class="btn btn-secondary">🧹 Clear</button>
+              <div class="input-row" style="align-items:flex-end;">
                 <button id="notesToggleCanvasSize" class="btn btn-secondary">
                   ⤢ Expand canvas
                 </button>
@@ -2439,12 +2791,12 @@
   
       const notesText = document.getElementById("notesText");
       const saveNotesTextBtn = document.getElementById("saveNotesTextBtn");
-      const notesSavedMsg = document.getElementById("notesSavedMsg");
       const notesCanvas = document.getElementById("notesCanvas");
       const notesCanvasWrapper = document.getElementById("notesCanvasWrapper");
       const notesColorPalette = document.getElementById("notesColorPalette");
-      const notesToggleCanvasSize = document.getElementById("notesToggleCanvasSize");
-      const notesClearCanvas = document.getElementById("notesClearCanvas");
+      const notesToggleCanvasSize = document.getElementById(
+        "notesToggleCanvasSize"
+      );
   
       if (notesText) {
         notesText.value = state.notesText || "";
@@ -2454,12 +2806,6 @@
         saveNotesTextBtn.addEventListener("click", () => {
           state.notesText = notesText.value;
           saveState();
-          if (notesSavedMsg) {
-            notesSavedMsg.style.display = "inline";
-            setTimeout(() => {
-              notesSavedMsg.style.display = "none";
-            }, 1500);
-          }
         });
       }
   
@@ -2471,7 +2817,7 @@
         } else {
           notesTextSection.style.display = "none";
           notesCanvasSection.style.display = "block";
-          // Do NOT auto-collapse sidebar here; only on expand
+          enableCanvasSidebarMode();
         }
       }
   
@@ -2482,6 +2828,7 @@
         notesTabCanvas.addEventListener("click", () => activateNotesTab("canvas"));
       }
   
+      // Default tab: text
       activateNotesTab("text");
   
       if (notesCanvas && notesCanvasWrapper) {
@@ -2512,16 +2859,16 @@
   
         function drawTo(x, y) {
           if (!drawing) return;
+          ctx.lineWidth = 2.5;
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
           if (strokeColor === "erase") {
             ctx.globalCompositeOperation = "destination-out";
             ctx.strokeStyle = "rgba(0,0,0,1)";
-            ctx.lineWidth = 12;
+            ctx.lineWidth = 10;
           } else {
             ctx.globalCompositeOperation = "source-over";
             ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 3;
           }
           ctx.beginPath();
           ctx.moveTo(lastX, lastY);
@@ -2558,7 +2905,7 @@
         notesCanvas.addEventListener("touchmove", (e) => {
           e.preventDefault();
           const t = e.touches[0];
-          const rect = notesCanvas.getBoundingClientClientRect?.() || notesCanvas.getBoundingClientRect();
+          const rect = notesCanvas.getBoundingClientRect();
           drawTo(t.clientX - rect.left, t.clientY - rect.top);
         });
   
@@ -2574,12 +2921,6 @@
           });
         }
   
-        if (notesClearCanvas) {
-          notesClearCanvas.addEventListener("click", () => {
-            ctx.clearRect(0, 0, notesCanvas.width, notesCanvas.height);
-          });
-        }
-  
         if (notesToggleCanvasSize) {
           notesToggleCanvasSize.addEventListener("click", () => {
             expanded = !expanded;
@@ -2587,26 +2928,481 @@
               ? "⤡ Shrink canvas"
               : "⤢ Expand canvas";
             resizeCanvas();
-            if (expanded) {
-              enableCanvasSidebarMode();
-            } else {
-              disableCanvasSidebarMode();
-            }
+            sidebar.classList.remove("expanded");
           });
         }
       }
     }
   
     // -----------------------------
-    // MEALS (basic – library integration later)
+    // MEALS – basic macros per day
     // -----------------------------
-    // For now we keep Meals page as placeholder – logic will be added when you paste your library
+    const mealsPage = document.querySelector('.page[data-page="meals"]');
+    if (mealsPage) {
+      mealsPage.innerHTML = `
+        <h2 class="section-title">Meals</h2>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Add meal</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealDate">Date</label>
+                <input id="mealDate" type="date" />
+              </div>
+              <div class="input-row">
+                <label for="mealFood">Food</label>
+                <input id="mealFood" type="text" placeholder="e.g. Chicken breast, yogurt..." />
+              </div>
+            </div>
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealAmount">Amount</label>
+                <input id="mealAmount" type="number" step="0.01" min="0" placeholder="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealUnit">Unit</label>
+                <select id="mealUnit">
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="piece">piece</option>
+                  <option value="sachet">sachet</option>
+                  <option value="cup">cup</option>
+                  <option value="slice">slice</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealProtein">Protein (g)</label>
+                <input id="mealProtein" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealCarbs">Carbs (g)</label>
+                <input id="mealCarbs" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="mealFat">Fat (g)</label>
+                <input id="mealFat" type="number" step="0.1" min="0" />
+              </div>
+            </div>
+            <div class="input-row" style="align-items:flex-end;">
+              <button id="addMealBtn" class="btn">➕ Add meal</button>
+            </div>
+          </div>
+        </div>
+  
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Daily log</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="mealViewDate">View date</label>
+                <input id="mealViewDate" type="date" />
+              </div>
+            </div>
+          </div>
+          <div id="mealsEmptyMsg" class="empty-msg">No meals logged for this date.</div>
+          <div id="mealsList" class="list"></div>
+          <div id="mealsTotals" class="empty-msg"></div>
+        </div>
+      `;
+  
+      const mealDateInput = document.getElementById("mealDate");
+      const mealFoodInput = document.getElementById("mealFood");
+      const mealAmountInput = document.getElementById("mealAmount");
+      const mealUnitSelect = document.getElementById("mealUnit");
+      const mealProteinInput = document.getElementById("mealProtein");
+      const mealCarbsInput = document.getElementById("mealCarbs");
+      const mealFatInput = document.getElementById("mealFat");
+      const addMealBtn = document.getElementById("addMealBtn");
+  
+      const mealViewDateInput = document.getElementById("mealViewDate");
+      const mealsEmptyMsg = document.getElementById("mealsEmptyMsg");
+      const mealsListContainer = document.getElementById("mealsList");
+      const mealsTotals = document.getElementById("mealsTotals");
+  
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (mealDateInput) mealDateInput.value = todayStr;
+      if (mealViewDateInput) mealViewDateInput.value = todayStr;
+  
+      function renderMeals() {
+        if (!mealsListContainer || !mealsEmptyMsg || !mealsTotals) return;
+        const date = mealViewDateInput?.value || todayStr;
+        mealsListContainer.innerHTML = "";
+  
+        const entries = (state.meals || []).filter((m) => m.date === date);
+        if (entries.length === 0) {
+          mealsEmptyMsg.style.display = "block";
+          mealsTotals.textContent = "";
+          return;
+        }
+        mealsEmptyMsg.style.display = "none";
+  
+        let totals = { protein: 0, carbs: 0, fat: 0 };
+  
+        entries.forEach((m) => {
+          const item = document.createElement("div");
+          item.className = "item";
+  
+          const main = document.createElement("div");
+          main.className = "item-main";
+  
+          const textWrap = document.createElement("div");
+          textWrap.className = "item-text";
+  
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = `${m.food} – ${m.amount} ${m.unit}`;
+  
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
+  
+          if (m.protein != null) {
+            const p = document.createElement("span");
+            p.className = "tag";
+            p.textContent = `P: ${m.protein}g`;
+            meta.appendChild(p);
+            totals.protein += m.protein;
+          }
+          if (m.carbs != null) {
+            const c = document.createElement("span");
+            c.className = "tag";
+            c.textContent = `C: ${m.carbs}g`;
+            meta.appendChild(c);
+            totals.carbs += m.carbs;
+          }
+          if (m.fat != null) {
+            const f = document.createElement("span");
+            f.className = "tag";
+            f.textContent = `F: ${m.fat}g`;
+            meta.appendChild(f);
+            totals.fat += m.fat;
+          }
+  
+          textWrap.appendChild(title);
+          if (meta.childNodes.length > 0) textWrap.appendChild(meta);
+          main.appendChild(textWrap);
+  
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+  
+          const editBtn = document.createElement("button");
+          editBtn.className = "icon-btn";
+          editBtn.textContent = "✏️";
+          editBtn.title = "Edit meal";
+  
+          editBtn.addEventListener("click", () => {
+            const newFood = prompt("Food:", m.food || "");
+            if (newFood === null) return;
+            m.food = newFood.trim() || m.food;
+  
+            const newAmtStr = prompt(
+              "Amount:",
+              m.amount != null ? String(m.amount) : ""
+            );
+            if (newAmtStr !== null) {
+              const val = parseFloat(newAmtStr);
+              if (!isNaN(val) && val >= 0) m.amount = val;
+            }
+  
+            const newProtStr = prompt(
+              "Protein (g):",
+              m.protein != null ? String(m.protein) : ""
+            );
+            if (newProtStr !== null) {
+              const val = parseFloat(newProtStr);
+              m.protein = !isNaN(val) && val >= 0 ? val : m.protein;
+            }
+  
+            const newCarbStr = prompt(
+              "Carbs (g):",
+              m.carbs != null ? String(m.carbs) : ""
+            );
+            if (newCarbStr !== null) {
+              const val = parseFloat(newCarbStr);
+              m.carbs = !isNaN(val) && val >= 0 ? val : m.carbs;
+            }
+  
+            const newFatStr = prompt(
+              "Fat (g):",
+              m.fat != null ? String(m.fat) : ""
+            );
+            if (newFatStr !== null) {
+              const val = parseFloat(newFatStr);
+              m.fat = !isNaN(val) && val >= 0 ? val : m.fat;
+            }
+  
+            saveState();
+            renderMeals();
+          });
+  
+          const delBtn = document.createElement("button");
+          delBtn.className = "icon-btn danger";
+          delBtn.textContent = "🗑";
+          delBtn.title = "Delete meal";
+  
+          delBtn.addEventListener("click", () => {
+            if (!confirm("Delete this meal entry?")) return;
+            state.meals = state.meals.filter((x) => x.id !== m.id);
+            saveState();
+            renderMeals();
+          });
+  
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+  
+          item.appendChild(main);
+          item.appendChild(actions);
+  
+          mealsListContainer.appendChild(item);
+        });
+  
+        const kcal =
+          totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
+  
+        mealsTotals.textContent = `Totals – Protein: ${totals.protein.toFixed(
+          1
+        )}g | Carbs: ${totals.carbs.toFixed(
+          1
+        )}g | Fat: ${totals.fat.toFixed(1)}g | ~${kcal.toFixed(0)} kcal`;
+      }
+  
+      if (addMealBtn) {
+        addMealBtn.addEventListener("click", () => {
+          const date = mealDateInput?.value || todayStr;
+          const food = (mealFoodInput?.value || "").trim();
+          const amtStr = mealAmountInput?.value || "";
+          const unit = mealUnitSelect?.value || "g";
+          if (!food) return;
+          const amount = parseFloat(amtStr || "0") || 0;
+          const prot = mealProteinInput?.value
+            ? parseFloat(mealProteinInput.value)
+            : null;
+          const carbs = mealCarbsInput?.value
+            ? parseFloat(mealCarbsInput.value)
+            : null;
+          const fat = mealFatInput?.value
+            ? parseFloat(mealFatInput.value)
+            : null;
+  
+          state.meals.push({
+            id: makeId("meal"),
+            date,
+            food,
+            amount,
+            unit,
+            protein: prot,
+            carbs,
+            fat,
+          });
+          saveState();
+  
+          if (mealFoodInput) mealFoodInput.value = "";
+          if (mealAmountInput) mealAmountInput.value = "";
+          if (mealProteinInput) mealProteinInput.value = "";
+          if (mealCarbsInput) mealCarbsInput.value = "";
+          if (mealFatInput) mealFatInput.value = "";
+  
+          if (mealViewDateInput) mealViewDateInput.value = date;
+          renderMeals();
+        });
+      }
+  
+      if (mealViewDateInput) {
+        mealViewDateInput.addEventListener("change", renderMeals);
+      }
+  
+      renderMeals();
+    }
+  
     // -----------------------------
-    // CALENDAR & ANALYTICS are still placeholders for future versions.
+    // CALENDAR – monthly with dots
+    // -----------------------------
+    const calendarPage = document.querySelector('.page[data-page="calendar"]');
+    if (calendarPage) {
+      calendarPage.innerHTML = `
+        <h2 class="section-title">Calendar</h2>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Monthly view</div>
+          </div>
+          <div class="input-grid">
+            <div class="input-row-inline" style="align-items:center;">
+              <button id="calPrevMonth" class="btn btn-secondary btn-icon">◀</button>
+              <div class="input-row" style="flex:1; text-align:center;">
+                <label id="calMonthLabel"></label>
+              </div>
+              <button id="calNextMonth" class="btn btn-secondary btn-icon">▶</button>
+            </div>
+          </div>
+          <div id="calendarGrid" style="margin-top:8px;"></div>
+        </div>
+      `;
+  
+      const calPrevMonthBtn = document.getElementById("calPrevMonth");
+      const calNextMonthBtn = document.getElementById("calNextMonth");
+      const calMonthLabel = document.getElementById("calMonthLabel");
+      const calendarGrid = document.getElementById("calendarGrid");
+  
+      let calYear, calMonth;
+      const today = new Date();
+      calYear = today.getFullYear();
+      calMonth = today.getMonth();
+  
+      function getEventsForDate(dateStr) {
+        return (state.calendarEvents || []).filter((e) => e.date === dateStr);
+      }
+  
+      function renderCalendar() {
+        if (!calendarGrid || !calMonthLabel) return;
+        const firstOfMonth = new Date(calYear, calMonth, 1);
+        const monthName = firstOfMonth.toLocaleString(undefined, {
+          month: "long",
+          year: "numeric",
+        });
+        calMonthLabel.textContent = monthName;
+  
+        const startDay = (firstOfMonth.getDay() + 6) % 7; // Monday=0
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  
+        const weeks = [];
+        let currentDay = 1;
+  
+        for (let row = 0; row < 6; row++) {
+          const week = [];
+          for (let col = 0; col < 7; col++) {
+            if (row === 0 && col < startDay) {
+              week.push(null);
+            } else if (currentDay > daysInMonth) {
+              week.push(null);
+            } else {
+              week.push(currentDay);
+              currentDay++;
+            }
+          }
+          weeks.push(week);
+        }
+  
+        const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        let html = `<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:11px; color:#a0a4b8;">`;
+        weekdays.forEach((w) => {
+          html += `<div style="text-align:center; padding:4px 0;">${w}</div>`;
+        });
+        html += `</div>`;
+  
+        html += `<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:4px;">`;
+  
+        weeks.forEach((week) => {
+          week.forEach((day) => {
+            if (!day) {
+              html += `<div style="height:40px; border-radius:10px; background:#0b0d14;"></div>`;
+            } else {
+              const dateStr = new Date(calYear, calMonth, day)
+                .toISOString()
+                .slice(0, 10);
+              const evts = getEventsForDate(dateStr);
+              const hasEvents = evts.length > 0;
+              const isToday =
+                dateStr === new Date().toISOString().slice(0, 10);
+  
+              html += `<div
+                data-date="${dateStr}"
+                style="
+                  height:40px;
+                  border-radius:10px;
+                  background:${isToday ? "#151827" : "#101320"};
+                  border:1px solid ${
+                    hasEvents ? "rgba(0,188,212,0.6)" : "#26293a"
+                  };
+                  display:flex;
+                  flex-direction:column;
+                  align-items:center;
+                  justify-content:center;
+                  font-size:12px;
+                  cursor:pointer;
+                  position:relative;
+                "
+              >
+                <span>${day}</span>
+                ${
+                  hasEvents
+                    ? `<span style="width:6px;height:6px;border-radius:999px;background:#00bcd4;position:absolute;bottom:5px;"></span>`
+                    : ""
+                }
+              </div>`;
+            }
+          });
+        });
+  
+        html += `</div>`;
+  
+        calendarGrid.innerHTML = html;
+  
+        calendarGrid.querySelectorAll("[data-date]").forEach((cell) => {
+          cell.addEventListener("click", () => {
+            const dateStr = cell.getAttribute("data-date");
+            const existing = getEventsForDate(dateStr);
+            let promptMsg = `Events on ${dateStr}:\n`;
+            if (existing.length === 0) {
+              promptMsg += "(none yet)\n\nAdd a new event (leave blank to cancel):";
+            } else {
+              existing.forEach((e, idx) => {
+                promptMsg += `${idx + 1}. ${e.text}\n`;
+              });
+              promptMsg +=
+                "\nAdd another event for this date (leave blank to cancel):";
+            }
+            const text = prompt(promptMsg);
+            if (!text) return;
+            state.calendarEvents.push({
+              id: makeId("event"),
+              date: dateStr,
+              text: text.trim(),
+            });
+            saveState();
+            renderCalendar();
+          });
+        });
+      }
+  
+      if (calPrevMonthBtn) {
+        calPrevMonthBtn.addEventListener("click", () => {
+          calMonth--;
+          if (calMonth < 0) {
+            calMonth = 11;
+            calYear--;
+          }
+          renderCalendar();
+        });
+      }
+  
+      if (calNextMonthBtn) {
+        calNextMonthBtn.addEventListener("click", () => {
+          calMonth++;
+          if (calMonth > 11) {
+            calMonth = 0;
+            calYear++;
+          }
+          renderCalendar();
+        });
+      }
+  
+      renderCalendar();
+    }
+  
+    // Initial renders
+    renderTodos();
+    renderShopping();
   });
   </script>
 </body>
 </html>
+
 
 
 
