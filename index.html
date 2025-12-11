@@ -774,13 +774,14 @@
               <button id="todoFiltersToggle" class="btn btn-secondary btn-icon" title="Filters">
                 ⚙️
               </button>
-              <!--testline
-              <button id="addTodoBtn" class="btn">➕ Add task</button>-->
-            </div>
-            
-            <div class="input-row" style="flex: 1; display: flex; justify-content: flex-end;">
+              <!--testline-->
               <button id="addTodoBtn" class="btn">➕ Add task</button>
             </div>
+
+            <!--Test
+            <div class="input-row" style="flex: 1; display: flex; justify-content: flex-end;">
+              <button id="addTodoBtn" class="btn">➕ Add task</button>
+            </div>-->
           </div>
 
           <!-- Filters panel (hidden by default) -->
@@ -1001,7 +1002,8 @@
             </div>
           </div>
 
-          <div id="financeSummary" class="empty-msg"></div>
+          <!--REMOVE
+          <div id="financeSummary" class="empty-msg"></div>-->
 
           <div id="noFinanceMsg" class="empty-msg">
             No transactions yet.
@@ -1645,14 +1647,21 @@
         todoListContainer.appendChild(item);
       });
     }
-  
+    
     if (todoListSelect) {
       todoListSelect.addEventListener("change", () => {
         currentTodoListId = todoListSelect.value;
+    
+        // keep the "List" filter in sync with the dropdown on top
+        if (todoFilterList) {
+          todoFilterList.value = currentTodoListId;
+        }
+    
+        saveState();
         renderTodos();
       });
     }
-  
+    
     if (addTodoBtn) {
       addTodoBtn.addEventListener("click", () => {
         const title = (todoTitleInput?.value || "").trim();
@@ -2412,7 +2421,7 @@
     const financeFilterCategory = document.getElementById(
       "financeFilterCategory"
     );
-    const financeSummary = document.getElementById("financeSummary");
+    //const financeSummary = document.getElementById("financeSummary");
     const noFinanceMsg = document.getElementById("noFinanceMsg");
     const financeListContainer = document.getElementById("financeList");
   
@@ -3502,6 +3511,7 @@
   </script>
 </body>
 </html>
+
 
 
 
