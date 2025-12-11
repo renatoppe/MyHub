@@ -767,21 +767,14 @@
                 <input id="todoDueDate" type="date" />
               </div>
             </div>
-
+          <!-- x -->
           <!-- Row 5: Filters + Add button on same line -->
-          <div class="input-row-inline" style="align-items: flex-end; margin-bottom: 8px;">
-            <div class="input-row" style="flex: 0 0 auto;">
-              <button id="todoFiltersToggle" class="btn btn-secondary btn-icon" title="Filters">
-                ⚙️
-              </button>
-              <!--testline-->
-              <button id="addTodoBtn" class="btn">➕ Add task</button>
-            </div>
-
-            <!--Test
-            <div class="input-row" style="flex: 1; display: flex; justify-content: flex-end;">
-              <button id="addTodoBtn" class="btn">➕ Add task</button>
-            </div>-->
+          <!-- Row 5: Filters + Add button on the same line -->
+          <div class="input-row-inline" style="align-items: flex-end; margin-top: 4px;">
+            <button id="todoFiltersToggle" class="btn btn-secondary btn-icon">
+              ⚙️ Filters
+            </button>
+            <button id="addTodoBtn" class="btn">➕ Add task</button>
           </div>
 
           <!-- Filters panel (hidden by default) -->
@@ -2422,8 +2415,8 @@
       "financeFilterCategory"
     );
     //const financeSummary = document.getElementById("financeSummary");
-    const noFinanceMsg = document.getElementById("noFinanceMsg");
-    const financeListContainer = document.getElementById("financeList");
+    //const noFinanceMsg = document.getElementById("noFinanceMsg");
+    //const financeListContainer = document.getElementById("financeList");
   
     const addAccountBtn = document.getElementById("addAccountBtn");
     const noAccountsMsg = document.getElementById("noAccountsMsg");
@@ -3511,6 +3504,7 @@
   </script>
 </body>
 </html>
+
 
 
 
