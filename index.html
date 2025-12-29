@@ -770,11 +770,15 @@
           <!-- x -->
           <!-- Row 5: Filters + Add button on same line -->
           <!-- Row 5: Filters + Add button on the same line -->
-          <div class="input-row-inline" style="align-items: flex-end; margin-top: 4px;">
-            <button id="todoFiltersToggle" class="btn btn-secondary btn-icon">
-              ⚙️ Filters
-            </button>
-            <button id="addTodoBtn" class="btn">➕ Add task</button>
+          <div class="input-row-inline" style="margin-bottom: 8px; align-items: flex-end; flex-wrap:nowrap;">
+          <button id="todoFiltersToggle"
+                  class="btn btn-secondary btn-icon"
+                  style="flex:0 0 auto; width:42px; padding:8px 0;">
+              ⚙️
+          </button>
+          <button id="addTodoBtn" class="btn" style="flex:1 1 auto;">
+              ➕ Add task
+          </button>
           </div>
 
           <!-- Filters panel (hidden by default) -->
@@ -1429,6 +1433,8 @@
       const fp = todoFilterPriority?.value || "all";
       const fs = todoFilterStatus?.value || "all";
       const fl = todoFilterList?.value || "all";
+      const effectiveListId =
+        fl !== "all" ? fl : (todoListSelect?.value || currentTodoListId);
   
       if (search) {
         const hay = task.title.toLowerCase();
@@ -1437,6 +1443,7 @@
       if (fp !== "all" && task.priority !== fp) return false;
       if (fs !== "all" && task.status !== fs) return false;
       if (fl !== "all" && task.listId !== fl) return false;
+      if (effectiveListId && task.listId !== effectiveListId) return false;
       return true;
     }
   
@@ -2414,9 +2421,9 @@
     const financeFilterCategory = document.getElementById(
       "financeFilterCategory"
     );
-    //const financeSummary = document.getElementById("financeSummary");
-    //const noFinanceMsg = document.getElementById("noFinanceMsg");
-    //const financeListContainer = document.getElementById("financeList");
+    const financeSummary = document.getElementById("financeSummary");
+    const noFinanceMsg = document.getElementById("noFinanceMsg");
+    const financeListContainer = document.getElementById("financeList");
   
     const addAccountBtn = document.getElementById("addAccountBtn");
     const noAccountsMsg = document.getElementById("noAccountsMsg");
@@ -2736,8 +2743,6 @@
     renderFinance();
   
     // -----------------------------
-    // NOTES (tabs: Text + Canvas)
-   // -----------------------------
     // NOTES (tabs: Text + Canvas)
     // -----------------------------
     const notesPage = document.querySelector('.page[data-page="notes"]');
@@ -3504,13 +3509,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
