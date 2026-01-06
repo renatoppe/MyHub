@@ -523,7 +523,25 @@
       gap: 6px;
     }
 
-    .workout-row-bottom input[type="number"] {
+    
+    .workout-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 4px 0;
+    }
+
+    .workout-setline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .workout-setline input[type="number"] {
+      flex: 1;
+      min-width: 0;
+    }
+.workout-row-bottom input[type="number"] {
       padding: 6px 7px;
       font-size: 12px;
     }
@@ -902,10 +920,38 @@
           <div class="input-row-inline" style="margin-bottom: 8px;">
             <button id="startWorkoutBtn" class="btn btn-secondary">▶ Start workout</button>
             <button id="saveWorkoutBtn" class="btn">💾 Finish & save</button>
-            <button id="addExerciseRowBtn" class="btn btn-secondary">➕ Add exercise row</button>
-          </div>
+</div>
 
           <div id="workoutExercises" class="list"></div>
+          
+          
+          <div style="display:flex; justify-content:center; margin:10px 0 6px;">
+            <button id="addExerciseRowBtn" class="btn btn-secondary">➕ Add exercise row</button>
+          </div>
+<!-- Rest timer -->
+          <div id="restTimerWrap" style="display:flex; justify-content:center; margin-top:12px;">
+            <div style="width:180px; border-radius:18px; border:1px solid #26293a; background:#101320; padding:10px; position:relative;">
+
+              <button id="timerMode0" class="icon-btn" title="Count up (0)"
+                style="position:absolute; top:8px; left:8px; width:28px; height:28px;">0</button>
+
+              <button id="timerMode30" class="icon-btn" title="Countdown (+30s)"
+                style="position:absolute; top:8px; right:8px; width:34px; height:28px;">30</button>
+
+              <div id="timerCircle"
+                style="width:140px; height:140px; margin:18px auto 8px; border-radius:999px;
+                      border:2px solid rgba(0,188,212,0.35); display:flex; flex-direction:column;
+                      align-items:center; justify-content:center; gap:4px;">
+                <div id="timerDisplay" style="font-size:22px; font-weight:700;">00:00</div>
+                <div id="timerModeLabel" style="font-size:11px; color:#a0a4b8;">0 mode</div>
+              </div>
+
+              <div style="display:flex; gap:8px; justify-content:center;">
+                <button id="timerPlayPause" class="btn btn-secondary btn-icon" title="Play / Pause">▶</button>
+                <button id="timerReset" class="btn btn-secondary btn-icon" title="Reset">⟲</button>
+              </div>
+            </div>
+          </div>
 
           <!-- Notes moved to bottom -->
           <div class="input-grid">
@@ -1108,7 +1154,16 @@
       financeTransactions: [], // {id, accountId, type, amount, date, category, method, note}
       notesText: "",
       meals: [], // {id, date, food, amount, unit, protein, carbs, fat}
+      foodLibrary: [], // {id, name, baseAmount, baseUnit, kcal, protein, carbs, fat}
       calendarEvents: [], // {id, date, text}
+      workoutTimer: {
+        mode: "up",          // "up" or "down"
+        baseDownSeconds: 30, // 30, 60, 90...
+        running: false,
+        elapsedMs: 0,        // para mode "up"
+        remainingMs: 30000,  // para mode "down"
+        lastTick: null
+      },
     };
   
     function loadState() {
@@ -1139,6 +1194,511 @@
     }
   
     let state = loadState();
+
+
+    // ---- Seed food library (only if it's empty) ----
+    if (!state.foodLibrary || !Array.isArray(state.foodLibrary) || state.foodLibrary.length === 0) {
+      state.foodLibrary = [
+        {
+          id: "food_1",
+          name: "Bread slice",
+          baseAmount: 1,
+          baseUnit: "slice",
+          kcal: 70,
+          protein: 2,
+          carbs: 12.5,
+          fat: 1,
+          fiber: 1,
+          category: "Grains",
+          notes: "standard Thai toast size"
+        },
+        {
+          id: "food_2",
+          name: "Peanut butter sachet",
+          baseAmount: 1,
+          baseUnit: "sachet",
+          kcal: 110,
+          protein: 4,
+          carbs: 3,
+          fat: 9,
+          fiber: 1,
+          category: "Fat",
+          notes: "label you provided"
+        },
+        {
+          id: "food_3",
+          name: "Honey protein shake",
+          baseAmount: 1,
+          baseUnit: "bottle",
+          kcal: 190,
+          protein: 30,
+          carbs: 16,
+          fat: 0.5,
+          fiber: 0,
+          category: "Supplement",
+          notes: "your honey protein drink"
+        },
+        {
+          id: "food_4",
+          name: "Yogurt drink",
+          baseAmount: 1,
+          baseUnit: "bottle",
+          kcal: 120,
+          protein: 12,
+          carbs: 14,
+          fat: 2,
+          fiber: 0,
+          category: "Dairy",
+          notes: "label you provided"
+        },
+        {
+          id: "food_5",
+          name: "Yogurt cup",
+          baseAmount: 1,
+          baseUnit: "cup",
+          kcal: 140,
+          protein: 10,
+          carbs: 19,
+          fat: 2,
+          fiber: 0,
+          category: "Dairy",
+          notes: "label you provided"
+        },
+        {
+          id: "food_6",
+          name: "Banana",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 89,
+          protein: 1,
+          carbs: 23,
+          fat: 0.3,
+          fiber: 2.6,
+          category: "Fruit",
+          notes: "medium banana ≈ 118g"
+        },
+        {
+          id: "food_7",
+          name: "Mixed berries",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 57,
+          protein: 0.7,
+          carbs: 14,
+          fat: 0.3,
+          fiber: 3.1,
+          category: "Fruit",
+          notes: ""
+        },
+        {
+          id: "food_8",
+          name: "Kiwi",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 61,
+          protein: 1.1,
+          carbs: 15,
+          fat: 0.5,
+          fiber: 3,
+          category: "Fruit",
+          notes: ""
+        },
+        {
+          id: "food_9",
+          name: "Tangerine juice",
+          baseAmount: 150,
+          baseUnit: "ml",
+          kcal: 60,
+          protein: 0,
+          carbs: 15,
+          fat: 0,
+          fiber: 0,
+          category: "Drink",
+          notes: "combined with coffee in morning"
+        },
+        {
+          id: "food_10",
+          name: "Coffee",
+          baseAmount: 50,
+          baseUnit: "ml",
+          kcal: 2,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+          category: "Drink",
+          notes: "black coffee"
+        },
+        {
+          id: "food_11",
+          name: "Chicken breast",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 165,
+          protein: 31,
+          carbs: 0,
+          fat: 3.5,
+          fiber: 0,
+          category: "Meat",
+          notes: "cooked"
+        },
+        {
+          id: "food_12",
+          name: "Chicken minced",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 189,
+          protein: 23,
+          carbs: 0,
+          fat: 10,
+          fiber: 0,
+          category: "Meat",
+          notes: "cooked 85% lean estimate"
+        },
+        {
+          id: "food_13",
+          name: "Chicken skewer fillet",
+          baseAmount: 1,
+          baseUnit: "skewer",
+          kcal: 99,
+          protein: 18,
+          carbs: 0,
+          fat: 2,
+          fiber: 0,
+          category: "Meat",
+          notes: "your morning skewers (3 per breakfast)"
+        },
+        {
+          id: "food_14",
+          name: "Tilapia (grilled)",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 96,
+          protein: 20,
+          carbs: 0,
+          fat: 2,
+          fiber: 0,
+          category: "Fish",
+          notes: ""
+        },
+        {
+          id: "food_15",
+          name: "Pork loin",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 160,
+          protein: 29,
+          carbs: 0,
+          fat: 5,
+          fiber: 0,
+          category: "Meat",
+          notes: "lean pork"
+        },
+        {
+          id: "food_16",
+          name: "Salami",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 336,
+          protein: 22,
+          carbs: 2,
+          fat: 26,
+          fiber: 0,
+          category: "Fat",
+          notes: "cured"
+        },
+        {
+          id: "food_17",
+          name: "Sticky rice",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 200,
+          protein: 3.5,
+          carbs: 45,
+          fat: 0.5,
+          fiber: 0.5,
+          category: "Grains",
+          notes: ""
+        },
+        {
+          id: "food_18",
+          name: "Jasmine rice (purple)",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 130,
+          protein: 2.4,
+          carbs: 28,
+          fat: 0.3,
+          fiber: 0.4,
+          category: "Grains",
+          notes: ""
+        },
+        {
+          id: "food_19",
+          name: "Pasta (plain cooked)",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 158,
+          protein: 5.8,
+          carbs: 31,
+          fat: 0.9,
+          fiber: 1.8,
+          category: "Grains",
+          notes: ""
+        },
+        {
+          id: "food_20",
+          name: "Broccoli",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 35,
+          protein: 2.8,
+          carbs: 7,
+          fat: 0.4,
+          fiber: 3.3,
+          category: "Vegetable",
+          notes: ""
+        },
+        {
+          id: "food_21",
+          name: "Pumpkin",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 26,
+          protein: 1,
+          carbs: 7,
+          fat: 0.1,
+          fiber: 0.5,
+          category: "Vegetable",
+          notes: "you eat peel as well"
+        },
+        {
+          id: "food_22",
+          name: "Carrot",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 41,
+          protein: 1,
+          carbs: 10,
+          fat: 0.2,
+          fiber: 2.8,
+          category: "Vegetable",
+          notes: ""
+        },
+        {
+          id: "food_23",
+          name: "Potato",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 77,
+          protein: 2,
+          carbs: 17,
+          fat: 0.1,
+          fiber: 2.2,
+          category: "Vegetable",
+          notes: ""
+        },
+        {
+          id: "food_24",
+          name: "Olive oil",
+          baseAmount: 1,
+          baseUnit: "g",
+          kcal: 9,
+          protein: 0,
+          carbs: 0,
+          fat: 1,
+          fiber: 0,
+          category: "Fat",
+          notes: ""
+        },
+        {
+          id: "food_25",
+          name: "Olives",
+          baseAmount: 10,
+          baseUnit: "g",
+          kcal: 14,
+          protein: 0.1,
+          carbs: 0.8,
+          fat: 1.3,
+          fiber: 0.3,
+          category: "Fat",
+          notes: "your typical handful ≈ 20 olives = 40g"
+        },
+        {
+          id: "food_26",
+          name: "Cottage cheese",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 98,
+          protein: 11,
+          carbs: 3.6,
+          fat: 4.3,
+          fiber: 0,
+          category: "Dairy",
+          notes: ""
+        },
+        {
+          id: "food_27",
+          name: "Parmesan",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 431,
+          protein: 38,
+          carbs: 4,
+          fat: 29,
+          fiber: 0,
+          category: "Dairy",
+          notes: ""
+        },
+        {
+          id: "food_28",
+          name: "Mozzarella",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 280,
+          protein: 28,
+          carbs: 3,
+          fat: 17,
+          fiber: 0,
+          category: "Dairy",
+          notes: ""
+        },
+        {
+          id: "food_29",
+          name: "Gouda",
+          baseAmount: 100,
+          baseUnit: "g",
+          kcal: 356,
+          protein: 25,
+          carbs: 2,
+          fat: 27,
+          fiber: 0,
+          category: "Dairy",
+          notes: ""
+        },
+        {
+          id: "food_30",
+          name: "Milk powder",
+          baseAmount: 20,
+          baseUnit: "g",
+          kcal: 75,
+          protein: 2.5,
+          carbs: 12,
+          fat: 2.5,
+          fiber: 0,
+          category: "Dairy",
+          notes: "½ scoop"
+        },
+        {
+          id: "food_31",
+          name: "Whey protein (dark chocolate)",
+          baseAmount: 30,
+          baseUnit: "g",
+          kcal: 130,
+          protein: 25,
+          carbs: 3,
+          fat: 2.5,
+          fiber: 0,
+          category: "Supplement",
+          notes: "label you sent"
+        },
+        {
+          id: "food_32",
+          name: "Cocoa powder",
+          baseAmount: 10,
+          baseUnit: "g",
+          kcal: 12,
+          protein: 1,
+          carbs: 2,
+          fat: 0.5,
+          fiber: 0,
+          category: "Fat",
+          notes: "100% cacao"
+        },
+        {
+          id: "food_33",
+          name: "Gelatin",
+          baseAmount: 5,
+          baseUnit: "g",
+          kcal: 12,
+          protein: 3,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+          category: "Protein",
+          notes: ""
+        },
+        {
+          id: "food_34",
+          name: "Bang Bang chocolate",
+          baseAmount: 1,
+          baseUnit: "bar",
+          kcal: 100,
+          protein: 1,
+          carbs: 13,
+          fat: 5,
+          fiber: 0,
+          category: "Snack",
+          notes: "your label"
+        },
+        {
+          id: "food_35",
+          name: "Snickers small",
+          baseAmount: 1,
+          baseUnit: "bar",
+          kcal: 90,
+          protein: 1.5,
+          carbs: 12,
+          fat: 4.5,
+          fiber: 0,
+          category: "Snack",
+          notes: ""
+        },
+        {
+          id: "food_36",
+          name: "Chips (small bag)",
+          baseAmount: 1,
+          baseUnit: "bag",
+          kcal: 150,
+          protein: 2,
+          carbs: 15,
+          fat: 9,
+          fiber: 1,
+          category: "Snack",
+          notes: "typical Thai small pack"
+        },
+        {
+          id: "food_37",
+          name: "Roadside grilled chicken (no skin)",
+          baseAmount: 280,
+          baseUnit: "g",
+          kcal: 462,
+          protein: 60,
+          carbs: 0,
+          fat: 18,
+          fiber: 0,
+          category: "Meat",
+          notes: "half chicken without skin"
+        },
+        {
+          id: "food_38",
+          name: "Khao Soi soup (small ladle)",
+          baseAmount: 1,
+          baseUnit: "ladle",
+          kcal: 80,
+          protein: 4,
+          carbs: 6,
+          fat: 4,
+          fiber: 0,
+          category: "Soup",
+          notes: "estimate from Thai nutrition data"
+        }
+      ];
+
+      // Persist immediately so it survives refresh
+      saveState();
+    }
+
   
     if (!state.todoLists || state.todoLists.length === 0) {
       state.todoLists = structuredClone(defaultState.todoLists);
@@ -2014,93 +2574,304 @@
       if (workoutTimer) clearInterval(workoutTimer);
       workoutTimer = null;
     }
+
+    function fmtMMSS(ms) {
+      ms = Math.max(0, ms | 0);
+      const total = Math.floor(ms / 1000);
+      const m = String(Math.floor(total / 60)).padStart(2, "0");
+      const s = String(total % 60).padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    function initWorkoutRestTimerUI() {
+      const mode0 = document.getElementById("timerMode0");
+      const mode30 = document.getElementById("timerMode30");
+      const play = document.getElementById("timerPlayPause");
+      const reset = document.getElementById("timerReset");
+      const disp = document.getElementById("timerDisplay");
+      const label = document.getElementById("timerModeLabel");
+      const circle = document.getElementById("timerCircle");
+
+      if (!mode0 || !mode30 || !play || !reset || !disp || !label || !circle) return;
+
+      // Ensure state exists (and is migrated safely)
+      state.workoutTimer = state.workoutTimer || {
+        mode: "up",
+        baseDownSeconds: 30,
+        running: false,
+        elapsedMs: 0,
+        remainingMs: 30000,
+        lastTick: null
+      };
+
+      function renderTimerUI() {
+        const isUp = state.workoutTimer.mode === "up";
+
+        mode0.style.border = isUp ? "1px solid rgba(0,188,212,0.85)" : "";
+        mode30.style.border = !isUp ? "1px solid rgba(0,188,212,0.85)" : "";
+
+        if (isUp) {
+          disp.textContent = fmtMMSS(state.workoutTimer.elapsedMs);
+          label.textContent = "0 mode";
+        } else {
+          disp.textContent = fmtMMSS(state.workoutTimer.remainingMs);
+          label.textContent = `${state.workoutTimer.baseDownSeconds}s mode`;
+        }
+
+        play.textContent = state.workoutTimer.running ? "⏸" : "▶";
+        circle.style.boxShadow = state.workoutTimer.running
+          ? "0 0 14px rgba(0,188,212,0.35)"
+          : "none";
+      }
+
+      function setModeUp() {
+        state.workoutTimer.mode = "up";
+        state.workoutTimer.running = false;
+        state.workoutTimer.lastTick = null;
+        saveState();
+        renderTimerUI();
+      }
+
+      function add30Countdown() {
+        const prevMode = state.workoutTimer.mode;
+        state.workoutTimer.mode = "down";
+        // If switching from count-up to countdown, start fresh from 0 before adding 30s
+        if (prevMode !== "down") state.workoutTimer.baseDownSeconds = 0;
+        state.workoutTimer.baseDownSeconds = (state.workoutTimer.baseDownSeconds || 0) + 30;
+
+        const baseMs = state.workoutTimer.baseDownSeconds * 1000;
+
+        // By default (not running), set to base time.
+        // If running, add +30s to remaining.
+        if (!state.workoutTimer.running) {
+          state.workoutTimer.remainingMs = baseMs;
+        } else {
+          state.workoutTimer.remainingMs += 30000;
+        }
+
+        state.workoutTimer.lastTick = null;
+        saveState();
+        renderTimerUI();
+      }
+
+      function tick() {
+        if (!state.workoutTimer.running) return;
+
+        const now = Date.now();
+        const last = state.workoutTimer.lastTick || now;
+        const dt = now - last;
+        state.workoutTimer.lastTick = now;
+
+        if (state.workoutTimer.mode === "up") {
+          state.workoutTimer.elapsedMs += dt;
+        } else {
+          state.workoutTimer.remainingMs -= dt;
+          if (state.workoutTimer.remainingMs <= 0) {
+            state.workoutTimer.remainingMs = 0;
+            state.workoutTimer.running = false;
+            state.workoutTimer.lastTick = null;
+          }
+        }
+
+        saveState();
+        renderTimerUI();
+        requestAnimationFrame(tick);
+      }
+
+      function togglePlay() {
+        state.workoutTimer.running = !state.workoutTimer.running;
+
+        if (state.workoutTimer.running) {
+          state.workoutTimer.lastTick = Date.now();
+          requestAnimationFrame(tick);
+        } else {
+          state.workoutTimer.lastTick = null;
+        }
+
+        saveState();
+        renderTimerUI();
+      }
+
+      function doReset() {
+        state.workoutTimer.running = false;
+        state.workoutTimer.lastTick = null;
+
+        if (state.workoutTimer.mode === "up") {
+          state.workoutTimer.elapsedMs = 0;
+        } else {
+          state.workoutTimer.baseDownSeconds = 30;
+          state.workoutTimer.remainingMs = 30000;
+        }
+
+        saveState();
+        renderTimerUI();
+      }
+
+      mode0.addEventListener("click", setModeUp);
+      mode30.addEventListener("click", add30Countdown);
+      play.addEventListener("click", togglePlay);
+      reset.addEventListener("click", doReset);
+
+      renderTimerUI();
+    }
+
   
     function createExerciseRow(data) {
       const row = document.createElement("div");
       row.className = "workout-row";
       const id = data?.id || makeId("ex");
-  
+
+      // --- Top (exercise name) ---
       const top = document.createElement("div");
       top.className = "workout-row-top";
+
       const exNameInput = document.createElement("input");
       exNameInput.type = "text";
       exNameInput.placeholder = "Exercise name";
       exNameInput.value = data?.name || "";
       top.appendChild(exNameInput);
-  
-      const bottom = document.createElement("div");
-      bottom.className = "workout-row-bottom";
-  
-      const setsInput = document.createElement("input");
-      setsInput.type = "number";
-      setsInput.min = "0";
-      setsInput.placeholder = "Sets";
-      setsInput.value = data?.sets ?? "";
-  
-      const repsInput = document.createElement("input");
-      repsInput.type = "number";
-      repsInput.min = "0";
-      repsInput.placeholder = "Reps";
-      repsInput.value = data?.reps ?? "";
-  
-      const weightInput = document.createElement("input");
-      weightInput.type = "number";
-      weightInput.min = "0";
-      weightInput.placeholder = "Weight";
-      weightInput.value = data?.weight ?? "";
-  
+
+      // --- Lines (set / reps / weight) ---
+      const linesWrap = document.createElement("div");
+      linesWrap.className = "workout-lines";
+
+      // Normalize input data (backward compatible)
+      const initialLines = Array.isArray(data?.lines) && data.lines.length
+        ? data.lines
+        : ((data?.sets ?? data?.reps ?? data?.weight) != null
+            ? [{ set: data?.sets ?? "", reps: data?.reps ?? "", weight: data?.weight ?? "" }]
+            : [{ set: "", reps: "", weight: "" }]);
+
+      // --- Footer controls (done / add line / delete) ---
+      const footer = document.createElement("div");
+      footer.className = "workout-row-bottom";
+
       const doneCheckbox = document.createElement("input");
       doneCheckbox.type = "checkbox";
       doneCheckbox.className = "workout-done";
       doneCheckbox.checked = !!data?.done;
-  
+
+      const addLineBtn = document.createElement("button");
+      addLineBtn.className = "icon-btn";
+      addLineBtn.textContent = "➕";
+      addLineBtn.title = "Add set line";
+
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "icon-btn danger";
       deleteBtn.textContent = "🗑";
       deleteBtn.title = "Remove exercise";
-  
-      deleteBtn.addEventListener("click", () => {
-        row.remove();
-        currentWorkout.exercises = currentWorkout.exercises.filter(
-          (e) => e.id !== id
-        );
-      });
-  
-      bottom.appendChild(setsInput);
-      bottom.appendChild(repsInput);
-      bottom.appendChild(weightInput);
-      bottom.appendChild(doneCheckbox);
-      bottom.appendChild(deleteBtn);
-  
+
+      footer.appendChild(doneCheckbox);
+      footer.appendChild(addLineBtn);
+      footer.appendChild(deleteBtn);
+
       row.appendChild(top);
-      row.appendChild(bottom);
+      row.appendChild(linesWrap);
+      row.appendChild(footer);
       workoutExercisesContainer.appendChild(row);
-  
-      const updateData = () => {
+
+      // Ensure exercise exists in state
+      const exObj = {
+        id,
+        name: (data?.name || "").trim(),
+        done: !!data?.done,
+        lines: []
+      };
+      currentWorkout.exercises.push(exObj);
+
+      function syncNameDone() {
         const ex = currentWorkout.exercises.find((e) => e.id === id);
         if (!ex) return;
         ex.name = exNameInput.value.trim();
-        ex.sets = setsInput.value ? parseInt(setsInput.value, 10) : null;
-        ex.reps = repsInput.value ? parseInt(repsInput.value, 10) : null;
-        ex.weight = weightInput.value ? parseFloat(weightInput.value) : null;
         ex.done = doneCheckbox.checked;
-      };
-  
-      currentWorkout.exercises.push({
-        id,
-        name: data?.name || "",
-        sets: data?.sets ?? null,
-        reps: data?.reps ?? null,
-        weight: data?.weight ?? null,
-        done: !!data?.done,
+      }
+
+      function rebuildLinesFromDOM() {
+        const ex = currentWorkout.exercises.find((e) => e.id === id);
+        if (!ex) return;
+
+        const rows = Array.from(linesWrap.querySelectorAll("[data-line-row='1']"));
+        ex.lines = rows.map((r) => {
+          const setEl = r.querySelector("[data-k='set']");
+          const repsEl = r.querySelector("[data-k='reps']");
+          const weightEl = r.querySelector("[data-k='weight']");
+          return {
+            set: setEl?.value ? parseInt(setEl.value, 10) : null,
+            reps: repsEl?.value ? parseInt(repsEl.value, 10) : null,
+            weight: weightEl?.value ? parseFloat(weightEl.value) : null,
+          };
+        });
+      }
+
+      function addLine(lineData) {
+        const lineRow = document.createElement("div");
+        lineRow.className = "workout-setline";
+        lineRow.setAttribute("data-line-row", "1");
+
+        const setInput = document.createElement("input");
+        setInput.type = "number";
+        setInput.min = "0";
+        setInput.placeholder = "Set";
+        setInput.value = (lineData?.set ?? "") === null ? "" : (lineData?.set ?? "");
+        setInput.setAttribute("data-k", "set");
+
+        const repsInput = document.createElement("input");
+        repsInput.type = "number";
+        repsInput.min = "0";
+        repsInput.placeholder = "Reps";
+        repsInput.value = (lineData?.reps ?? "") === null ? "" : (lineData?.reps ?? "");
+        repsInput.setAttribute("data-k", "reps");
+
+        const weightInput = document.createElement("input");
+        weightInput.type = "number";
+        weightInput.min = "0";
+        weightInput.placeholder = "Weight";
+        weightInput.value = (lineData?.weight ?? "") === null ? "" : (lineData?.weight ?? "");
+        weightInput.setAttribute("data-k", "weight");
+
+        const removeLineBtn = document.createElement("button");
+        removeLineBtn.className = "icon-btn danger";
+        removeLineBtn.textContent = "✕";
+        removeLineBtn.title = "Remove set line";
+        removeLineBtn.addEventListener("click", () => {
+          // Keep at least 1 line
+          const rows = linesWrap.querySelectorAll("[data-line-row='1']");
+          if (rows.length <= 1) return;
+          lineRow.remove();
+          rebuildLinesFromDOM();
+        });
+
+        [setInput, repsInput, weightInput].forEach((el) => {
+          el.addEventListener("input", () => {
+            rebuildLinesFromDOM();
+          });
+        });
+
+        lineRow.appendChild(setInput);
+        lineRow.appendChild(repsInput);
+        lineRow.appendChild(weightInput);
+        lineRow.appendChild(removeLineBtn);
+
+        linesWrap.appendChild(lineRow);
+      }
+
+      // Render initial lines
+      initialLines.forEach((ln) => addLine(ln));
+      rebuildLinesFromDOM();
+
+      // Events
+      exNameInput.addEventListener("input", syncNameDone);
+      doneCheckbox.addEventListener("change", syncNameDone);
+
+      addLineBtn.addEventListener("click", () => {
+        addLine({ set: "", reps: "", weight: "" });
+        rebuildLinesFromDOM();
       });
-  
-      [exNameInput, setsInput, repsInput, weightInput, doneCheckbox].forEach(
-        (el) => {
-          el.addEventListener("input", updateData);
-          el.addEventListener("change", updateData);
-        }
-      );
+
+      deleteBtn.addEventListener("click", () => {
+        row.remove();
+        currentWorkout.exercises = currentWorkout.exercises.filter((e) => e.id !== id);
+      });
     }
   
     function clearCurrentWorkoutUI() {
@@ -2139,9 +2910,7 @@
           fav.exercises.forEach((ex) => {
             createExerciseRow({
               name: ex.name,
-              sets: ex.sets,
-              reps: ex.reps,
-              weight: ex.weight,
+              lines: Array.isArray(ex.lines) && ex.lines.length ? ex.lines : [{ set: ex.sets, reps: ex.reps, weight: ex.weight }],
               done: false,
             });
           });
@@ -2406,6 +3175,7 @@
   
     renderWorkoutFavorites();
     renderWorkoutsList();
+    initWorkoutRestTimerUI();
   
     // -----------------------------
     // FINANCE
@@ -3048,9 +3818,10 @@
     if (mealsPage) {
       mealsPage.innerHTML = `
         <h2 class="section-title">Meals</h2>
+
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Add meal</div>
+            <div class="card-title">Add meal (from library)</div>
           </div>
           <div class="input-grid">
             <div class="input-row-inline">
@@ -3060,9 +3831,14 @@
               </div>
               <div class="input-row">
                 <label for="mealFood">Food</label>
-                <input id="mealFood" type="text" placeholder="e.g. Chicken breast, yogurt..." />
+                <input id="mealFood" type="text" placeholder="Type and pick from library…" list="foodSuggestions" />
+                <datalist id="foodSuggestions"></datalist>
+                <div id="mealFoodHint" class="muted" style="margin-top:6px; font-size:12px;">
+                  Pick a food from your library to auto-calc macros.
+                </div>
               </div>
             </div>
+
             <div class="input-row-inline">
               <div class="input-row">
                 <label for="mealAmount">Amount</label>
@@ -3074,6 +3850,7 @@
                   <option value="g">g</option>
                   <option value="ml">ml</option>
                   <option value="piece">piece</option>
+                  <option value="scoop">scoop</option>
                   <option value="sachet">sachet</option>
                   <option value="cup">cup</option>
                   <option value="slice">slice</option>
@@ -3081,67 +3858,338 @@
                 </select>
               </div>
             </div>
+
             <div class="input-row-inline">
               <div class="input-row">
+                <label for="mealKcal">Kcal</label>
+                <input id="mealKcal" type="number" step="0.1" min="0" disabled />
+              </div>
+              <div class="input-row">
                 <label for="mealProtein">Protein (g)</label>
-                <input id="mealProtein" type="number" step="0.1" min="0" />
+                <input id="mealProtein" type="number" step="0.1" min="0" disabled />
               </div>
               <div class="input-row">
                 <label for="mealCarbs">Carbs (g)</label>
-                <input id="mealCarbs" type="number" step="0.1" min="0" />
+                <input id="mealCarbs" type="number" step="0.1" min="0" disabled />
               </div>
               <div class="input-row">
                 <label for="mealFat">Fat (g)</label>
-                <input id="mealFat" type="number" step="0.1" min="0" />
+                <input id="mealFat" type="number" step="0.1" min="0" disabled />
               </div>
             </div>
+
             <div class="input-row" style="align-items:flex-end;">
               <button id="addMealBtn" class="btn">➕ Add meal</button>
             </div>
           </div>
         </div>
-  
+
         <div class="card">
           <div class="card-header">
             <div class="card-title">Daily log</div>
           </div>
           <div class="input-grid">
-            <div class="input-row-inline">
-              <div class="input-row">
-                <label for="mealViewDate">View date</label>
-                <input id="mealViewDate" type="date" />
-              </div>
+            <div class="input-row">
+              <label for="mealViewDate">View date</label>
+              <input id="mealViewDate" type="date" />
             </div>
           </div>
-          <div id="mealsEmptyMsg" class="empty-msg">No meals logged for this date.</div>
+          <div id="mealsEmptyMsg" class="empty-msg">No meals yet.</div>
           <div id="mealsList" class="list"></div>
-          <div id="mealsTotals" class="empty-msg"></div>
+          <div id="mealsTotals" class="empty-msg" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Food library</div>
+          </div>
+
+          <div class="input-grid">
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="libFoodName">Name</label>
+                <input id="libFoodName" type="text" placeholder="e.g. Chicken breast" />
+              </div>
+              <div class="input-row">
+                <label for="libBaseAmount">Base amount</label>
+                <input id="libBaseAmount" type="number" step="0.01" min="0" placeholder="e.g. 100" />
+              </div>
+              <div class="input-row">
+                <label for="libBaseUnit">Base unit</label>
+                <select id="libBaseUnit">
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="piece">piece</option>
+                  <option value="scoop">scoop</option>
+                  <option value="sachet">sachet</option>
+                  <option value="cup">cup</option>
+                  <option value="slice">slice</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-row-inline">
+              <div class="input-row">
+                <label for="libKcal">Kcal (per base)</label>
+                <input id="libKcal" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="libProtein">Protein (g)</label>
+                <input id="libProtein" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="libCarbs">Carbs (g)</label>
+                <input id="libCarbs" type="number" step="0.1" min="0" />
+              </div>
+              <div class="input-row">
+                <label for="libFat">Fat (g)</label>
+                <input id="libFat" type="number" step="0.1" min="0" />
+              </div>
+            </div>
+
+            <div class="input-row-inline">
+              <button id="addFoodBtn" class="btn btn-secondary" style="flex:1;">➕ Add to library</button>
+              <button id="updateFoodBtn" class="btn" style="flex:1; display:none;">✅ Update food</button>
+              <button id="cancelEditFoodBtn" class="btn btn-secondary" style="flex:1; display:none;">✖ Cancel</button>
+            </div>
+          </div>
+
+          <div id="foodLibraryEmptyMsg" class="empty-msg">No foods yet. Add your first one above.</div>
+          <div id="foodLibraryList" class="list"></div>
         </div>
       `;
-  
+
       const mealDateInput = document.getElementById("mealDate");
       const mealFoodInput = document.getElementById("mealFood");
       const mealAmountInput = document.getElementById("mealAmount");
       const mealUnitSelect = document.getElementById("mealUnit");
+      const mealKcalInput = document.getElementById("mealKcal");
       const mealProteinInput = document.getElementById("mealProtein");
       const mealCarbsInput = document.getElementById("mealCarbs");
       const mealFatInput = document.getElementById("mealFat");
+      const mealFoodHint = document.getElementById("mealFoodHint");
+      const foodSuggestions = document.getElementById("foodSuggestions");
       const addMealBtn = document.getElementById("addMealBtn");
-  
+
       const mealViewDateInput = document.getElementById("mealViewDate");
       const mealsEmptyMsg = document.getElementById("mealsEmptyMsg");
       const mealsListContainer = document.getElementById("mealsList");
       const mealsTotals = document.getElementById("mealsTotals");
-  
+
+      // Library controls
+      const libFoodName = document.getElementById("libFoodName");
+      const libBaseAmount = document.getElementById("libBaseAmount");
+      const libBaseUnit = document.getElementById("libBaseUnit");
+      const libKcal = document.getElementById("libKcal");
+      const libProtein = document.getElementById("libProtein");
+      const libCarbs = document.getElementById("libCarbs");
+      const libFat = document.getElementById("libFat");
+      const addFoodBtn = document.getElementById("addFoodBtn");
+      const updateFoodBtn = document.getElementById("updateFoodBtn");
+      const cancelEditFoodBtn = document.getElementById("cancelEditFoodBtn");
+      const foodLibraryEmptyMsg = document.getElementById("foodLibraryEmptyMsg");
+      const foodLibraryList = document.getElementById("foodLibraryList");
+
       const todayStr = new Date().toISOString().slice(0, 10);
       if (mealDateInput) mealDateInput.value = todayStr;
       if (mealViewDateInput) mealViewDateInput.value = todayStr;
-  
+
+      state.foodLibrary = state.foodLibrary || [];
+      state.meals = state.meals || [];
+
+      let editingFoodId = null;
+      let selectedFoodId = null;
+
+      function normName(s) {
+        return String(s || "").trim().toLowerCase();
+      }
+
+      function findFoodByName(name) {
+        const n = normName(name);
+        if (!n) return null;
+        return (state.foodLibrary || []).find(f => normName(f.name) === n) || null;
+      }
+
+      function foodMultiplier(food, amount, unit) {
+        const baseAmt = parseFloat(food.baseAmount || 0);
+        if (!baseAmt || baseAmt <= 0) return 0;
+
+        const baseUnit = food.baseUnit || "g";
+        if (unit !== baseUnit) {
+          // For now, require matching units (simple + safe)
+          return null;
+        }
+        return (amount || 0) / baseAmt;
+      }
+
+      function setMealMacrosFromFood(food) {
+        const amt = parseFloat(mealAmountInput?.value || "0") || 0;
+        const unit = mealUnitSelect?.value || (food?.baseUnit || "g");
+
+        if (!food) {
+          selectedFoodId = null;
+          if (mealKcalInput) mealKcalInput.value = "";
+          if (mealProteinInput) mealProteinInput.value = "";
+          if (mealCarbsInput) mealCarbsInput.value = "";
+          if (mealFatInput) mealFatInput.value = "";
+          if (mealFoodHint) mealFoodHint.textContent = "Pick a food from your library to auto-calc macros.";
+          return;
+        }
+
+        selectedFoodId = food.id;
+
+        // Align unit with food's base unit
+        if (mealUnitSelect) mealUnitSelect.value = food.baseUnit || "g";
+
+        const mult = foodMultiplier(food, amt, mealUnitSelect?.value || "g");
+        if (mult === null) {
+          if (mealFoodHint) mealFoodHint.textContent = `Unit mismatch: this food is stored per ${food.baseAmount}${food.baseUnit}.`;
+          if (mealKcalInput) mealKcalInput.value = "";
+          if (mealProteinInput) mealProteinInput.value = "";
+          if (mealCarbsInput) mealCarbsInput.value = "";
+          if (mealFatInput) mealFatInput.value = "";
+          return;
+        }
+
+        const kcal = (parseFloat(food.kcal || 0) * mult);
+        const p = (parseFloat(food.protein || 0) * mult);
+        const c = (parseFloat(food.carbs || 0) * mult);
+        const f = (parseFloat(food.fat || 0) * mult);
+
+        if (mealKcalInput) mealKcalInput.value = kcal ? kcal.toFixed(0) : "0";
+        if (mealProteinInput) mealProteinInput.value = p ? p.toFixed(1) : "0";
+        if (mealCarbsInput) mealCarbsInput.value = c ? c.toFixed(1) : "0";
+        if (mealFatInput) mealFatInput.value = f ? f.toFixed(1) : "0";
+
+        if (mealFoodHint) mealFoodHint.textContent = `Library: ${food.name} (${food.kcal} kcal / ${food.baseAmount}${food.baseUnit})`;
+      }
+
+      function renderFoodSuggestions() {
+        if (!foodSuggestions) return;
+        foodSuggestions.innerHTML = "";
+        const foods = (state.foodLibrary || []).slice().sort((a,b) => normName(a.name).localeCompare(normName(b.name)));
+        foods.forEach(f => {
+          const opt = document.createElement("option");
+          opt.value = f.name;
+          foodSuggestions.appendChild(opt);
+        });
+      }
+
+      function clearFoodForm() {
+        editingFoodId = null;
+        if (libFoodName) libFoodName.value = "";
+        if (libBaseAmount) libBaseAmount.value = "100";
+        if (libBaseUnit) libBaseUnit.value = "g";
+        if (libKcal) libKcal.value = "";
+        if (libProtein) libProtein.value = "";
+        if (libCarbs) libCarbs.value = "";
+        if (libFat) libFat.value = "";
+
+        if (addFoodBtn) addFoodBtn.style.display = "";
+        if (updateFoodBtn) updateFoodBtn.style.display = "none";
+        if (cancelEditFoodBtn) cancelEditFoodBtn.style.display = "none";
+      }
+
+      function renderFoodLibrary() {
+        if (!foodLibraryList || !foodLibraryEmptyMsg) return;
+        const foods = (state.foodLibrary || []);
+        foodLibraryList.innerHTML = "";
+
+        if (foods.length === 0) {
+          foodLibraryEmptyMsg.style.display = "block";
+          return;
+        }
+        foodLibraryEmptyMsg.style.display = "none";
+
+        foods
+          .slice()
+          .sort((a,b) => normName(a.name).localeCompare(normName(b.name)))
+          .forEach(food => {
+            const item = document.createElement("div");
+            item.className = "item";
+
+            const main = document.createElement("div");
+            main.className = "item-main";
+
+            const title = document.createElement("div");
+            title.className = "item-title";
+            title.textContent = food.name;
+
+            const meta = document.createElement("div");
+            meta.className = "item-meta";
+            meta.textContent = `${food.kcal} kcal | P ${food.protein}g | C ${food.carbs}g | F ${food.fat}g (per ${food.baseAmount}${food.baseUnit})`;
+
+            main.appendChild(title);
+            main.appendChild(meta);
+
+            const actions = document.createElement("div");
+            actions.className = "item-actions";
+
+            const useBtn = document.createElement("button");
+            useBtn.className = "icon-btn";
+            useBtn.textContent = "➕";
+            useBtn.title = "Use this food";
+            useBtn.addEventListener("click", () => {
+              if (mealFoodInput) mealFoodInput.value = food.name;
+              selectedFoodId = food.id;
+              if (mealUnitSelect) mealUnitSelect.value = food.baseUnit || "g";
+              setMealMacrosFromFood(food);
+            });
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "icon-btn";
+            editBtn.textContent = "✏️";
+            editBtn.title = "Edit food";
+            editBtn.addEventListener("click", () => {
+              editingFoodId = food.id;
+              if (libFoodName) libFoodName.value = food.name || "";
+              if (libBaseAmount) libBaseAmount.value = food.baseAmount != null ? String(food.baseAmount) : "100";
+              if (libBaseUnit) libBaseUnit.value = food.baseUnit || "g";
+              if (libKcal) libKcal.value = food.kcal != null ? String(food.kcal) : "";
+              if (libProtein) libProtein.value = food.protein != null ? String(food.protein) : "";
+              if (libCarbs) libCarbs.value = food.carbs != null ? String(food.carbs) : "";
+              if (libFat) libFat.value = food.fat != null ? String(food.fat) : "";
+
+              if (addFoodBtn) addFoodBtn.style.display = "none";
+              if (updateFoodBtn) updateFoodBtn.style.display = "";
+              if (cancelEditFoodBtn) cancelEditFoodBtn.style.display = "";
+            });
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "icon-btn danger";
+            delBtn.textContent = "🗑️";
+            delBtn.title = "Delete food";
+            delBtn.addEventListener("click", () => {
+              if (!confirm(`Delete "${food.name}" from library?`)) return;
+              state.foodLibrary = (state.foodLibrary || []).filter(f => f.id !== food.id);
+              // Unselect if it was selected
+              if (selectedFoodId === food.id) {
+                selectedFoodId = null;
+                if (mealFoodInput) mealFoodInput.value = "";
+                setMealMacrosFromFood(null);
+              }
+              saveState();
+              renderFoodSuggestions();
+              renderFoodLibrary();
+              renderMeals();
+            });
+
+            actions.appendChild(useBtn);
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
+
+            item.appendChild(main);
+            item.appendChild(actions);
+            foodLibraryList.appendChild(item);
+          });
+      }
+
       function renderMeals() {
         if (!mealsListContainer || !mealsEmptyMsg || !mealsTotals) return;
         const date = mealViewDateInput?.value || todayStr;
         mealsListContainer.innerHTML = "";
-  
+
         const entries = (state.meals || []).filter((m) => m.date === date);
         if (entries.length === 0) {
           mealsEmptyMsg.style.display = "block";
@@ -3149,181 +4197,210 @@
           return;
         }
         mealsEmptyMsg.style.display = "none";
-  
-        let totals = { protein: 0, carbs: 0, fat: 0 };
-  
+
+        const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+
         entries.forEach((m) => {
+          totals.kcal += (m.kcal || 0);
+          totals.protein += (m.protein || 0);
+          totals.carbs += (m.carbs || 0);
+          totals.fat += (m.fat || 0);
+
           const item = document.createElement("div");
           item.className = "item";
-  
+
           const main = document.createElement("div");
           main.className = "item-main";
-  
-          const textWrap = document.createElement("div");
-          textWrap.className = "item-text";
-  
+
           const title = document.createElement("div");
           title.className = "item-title";
-          title.textContent = `${m.food} – ${m.amount} ${m.unit}`;
-  
+          title.textContent = `${m.foodName || m.food || "Meal"} – ${m.amount || 0}${m.unit || ""}`;
+
           const meta = document.createElement("div");
           meta.className = "item-meta";
-  
-          if (m.protein != null) {
-            const p = document.createElement("span");
-            p.className = "tag";
-            p.textContent = `P: ${m.protein}g`;
-            meta.appendChild(p);
-            totals.protein += m.protein;
-          }
-          if (m.carbs != null) {
-            const c = document.createElement("span");
-            c.className = "tag";
-            c.textContent = `C: ${m.carbs}g`;
-            meta.appendChild(c);
-            totals.carbs += m.carbs;
-          }
-          if (m.fat != null) {
-            const f = document.createElement("span");
-            f.className = "tag";
-            f.textContent = `F: ${m.fat}g`;
-            meta.appendChild(f);
-            totals.fat += m.fat;
-          }
-  
-          textWrap.appendChild(title);
-          if (meta.childNodes.length > 0) textWrap.appendChild(meta);
-          main.appendChild(textWrap);
-  
+          meta.textContent = `${(m.kcal || 0).toFixed(0)} kcal | P ${(m.protein || 0).toFixed(1)}g | C ${(m.carbs || 0).toFixed(1)}g | F ${(m.fat || 0).toFixed(1)}g`;
+
+          main.appendChild(title);
+          main.appendChild(meta);
+
           const actions = document.createElement("div");
           actions.className = "item-actions";
-  
-          const editBtn = document.createElement("button");
-          editBtn.className = "icon-btn";
-          editBtn.textContent = "✏️";
-          editBtn.title = "Edit meal";
-  
-          editBtn.addEventListener("click", () => {
-            const newFood = prompt("Food:", m.food || "");
-            if (newFood === null) return;
-            m.food = newFood.trim() || m.food;
-  
-            const newAmtStr = prompt(
-              "Amount:",
-              m.amount != null ? String(m.amount) : ""
-            );
-            if (newAmtStr !== null) {
-              const val = parseFloat(newAmtStr);
-              if (!isNaN(val) && val >= 0) m.amount = val;
-            }
-  
-            const newProtStr = prompt(
-              "Protein (g):",
-              m.protein != null ? String(m.protein) : ""
-            );
-            if (newProtStr !== null) {
-              const val = parseFloat(newProtStr);
-              m.protein = !isNaN(val) && val >= 0 ? val : m.protein;
-            }
-  
-            const newCarbStr = prompt(
-              "Carbs (g):",
-              m.carbs != null ? String(m.carbs) : ""
-            );
-            if (newCarbStr !== null) {
-              const val = parseFloat(newCarbStr);
-              m.carbs = !isNaN(val) && val >= 0 ? val : m.carbs;
-            }
-  
-            const newFatStr = prompt(
-              "Fat (g):",
-              m.fat != null ? String(m.fat) : ""
-            );
-            if (newFatStr !== null) {
-              const val = parseFloat(newFatStr);
-              m.fat = !isNaN(val) && val >= 0 ? val : m.fat;
-            }
-  
-            saveState();
-            renderMeals();
-          });
-  
+
           const delBtn = document.createElement("button");
           delBtn.className = "icon-btn danger";
-          delBtn.textContent = "🗑";
+          delBtn.textContent = "🗑️";
           delBtn.title = "Delete meal";
-  
           delBtn.addEventListener("click", () => {
-            if (!confirm("Delete this meal entry?")) return;
-            state.meals = state.meals.filter((x) => x.id !== m.id);
+            state.meals = (state.meals || []).filter((x) => x.id !== m.id);
             saveState();
             renderMeals();
           });
-  
-          actions.appendChild(editBtn);
+
           actions.appendChild(delBtn);
-  
           item.appendChild(main);
           item.appendChild(actions);
-  
           mealsListContainer.appendChild(item);
         });
-  
-        const kcal =
-          totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
-  
-        mealsTotals.textContent = `Totals – Protein: ${totals.protein.toFixed(
+
+        mealsTotals.textContent = `Totals – ${(totals.kcal).toFixed(0)} kcal | Protein: ${totals.protein.toFixed(
           1
-        )}g | Carbs: ${totals.carbs.toFixed(
-          1
-        )}g | Fat: ${totals.fat.toFixed(1)}g | ~${kcal.toFixed(0)} kcal`;
+        )}g | Carbs: ${totals.carbs.toFixed(1)}g | Fat: ${totals.fat.toFixed(1)}g`;
       }
-  
+
+      function readFoodForm() {
+        const name = (libFoodName?.value || "").trim();
+        const baseAmount = parseFloat(libBaseAmount?.value || "0") || 0;
+        const baseUnit = libBaseUnit?.value || "g";
+        const kcal = parseFloat(libKcal?.value || "0") || 0;
+        const protein = parseFloat(libProtein?.value || "0") || 0;
+        const carbs = parseFloat(libCarbs?.value || "0") || 0;
+        const fat = parseFloat(libFat?.value || "0") || 0;
+
+        if (!name) return { error: "Name is required." };
+        if (!baseAmount || baseAmount <= 0) return { error: "Base amount must be > 0." };
+        return { name, baseAmount, baseUnit, kcal, protein, carbs, fat };
+      }
+
+      if (addFoodBtn) {
+        addFoodBtn.addEventListener("click", () => {
+          const data = readFoodForm();
+          if (data.error) return alert(data.error);
+
+          const exists = findFoodByName(data.name);
+          if (exists) {
+            if (!confirm(`"${data.name}" already exists. Update it?`)) return;
+            exists.baseAmount = data.baseAmount;
+            exists.baseUnit = data.baseUnit;
+            exists.kcal = data.kcal;
+            exists.protein = data.protein;
+            exists.carbs = data.carbs;
+            exists.fat = data.fat;
+          } else {
+            state.foodLibrary.push({
+              id: makeId("food"),
+              ...data
+            });
+          }
+
+          saveState();
+          renderFoodSuggestions();
+          renderFoodLibrary();
+          clearFoodForm();
+        });
+      }
+
+      if (updateFoodBtn) {
+        updateFoodBtn.addEventListener("click", () => {
+          const data = readFoodForm();
+          if (data.error) return alert(data.error);
+          const idx = (state.foodLibrary || []).findIndex(f => f.id === editingFoodId);
+          if (idx < 0) return alert("Food not found.");
+          state.foodLibrary[idx] = { ...state.foodLibrary[idx], ...data };
+          saveState();
+          renderFoodSuggestions();
+          renderFoodLibrary();
+          clearFoodForm();
+        });
+      }
+
+      if (cancelEditFoodBtn) {
+        cancelEditFoodBtn.addEventListener("click", () => clearFoodForm());
+      }
+
+      function resolveSelectedFood() {
+        const foodName = (mealFoodInput?.value || "").trim();
+        if (!foodName) return null;
+        const food = findFoodByName(foodName);
+        return food;
+      }
+
+      if (mealFoodInput) {
+        mealFoodInput.addEventListener("change", () => {
+          const food = resolveSelectedFood();
+          setMealMacrosFromFood(food);
+        });
+        mealFoodInput.addEventListener("blur", () => {
+          const food = resolveSelectedFood();
+          setMealMacrosFromFood(food);
+        });
+      }
+
+      if (mealAmountInput) {
+        mealAmountInput.addEventListener("input", () => {
+          const food = resolveSelectedFood();
+          setMealMacrosFromFood(food);
+        });
+      }
+
+      if (mealUnitSelect) {
+        mealUnitSelect.addEventListener("change", () => {
+          const food = resolveSelectedFood();
+          setMealMacrosFromFood(food);
+        });
+      }
+
       if (addMealBtn) {
         addMealBtn.addEventListener("click", () => {
           const date = mealDateInput?.value || todayStr;
-          const food = (mealFoodInput?.value || "").trim();
-          const amtStr = mealAmountInput?.value || "";
-          const unit = mealUnitSelect?.value || "g";
-          if (!food) return;
-          const amount = parseFloat(amtStr || "0") || 0;
-          const prot = mealProteinInput?.value
-            ? parseFloat(mealProteinInput.value)
-            : null;
-          const carbs = mealCarbsInput?.value
-            ? parseFloat(mealCarbsInput.value)
-            : null;
-          const fat = mealFatInput?.value
-            ? parseFloat(mealFatInput.value)
-            : null;
-  
+          const foodName = (mealFoodInput?.value || "").trim();
+          if (!foodName) return;
+
+          const food = findFoodByName(foodName);
+          if (!food) {
+            alert("This food is not in your library yet. Add it in the Food library section first.");
+            return;
+          }
+
+          const amount = parseFloat(mealAmountInput?.value || "0") || 0;
+          const unit = mealUnitSelect?.value || (food.baseUnit || "g");
+
+          const mult = foodMultiplier(food, amount, unit);
+          if (mult === null) {
+            alert(`Unit mismatch. This food is stored per ${food.baseAmount}${food.baseUnit}. Please use the same unit.`);
+            return;
+          }
+
+          const kcal = parseFloat(food.kcal || 0) * mult;
+          const p = parseFloat(food.protein || 0) * mult;
+          const c = parseFloat(food.carbs || 0) * mult;
+          const f = parseFloat(food.fat || 0) * mult;
+
           state.meals.push({
             id: makeId("meal"),
             date,
-            food,
+            foodId: food.id,
+            foodName: food.name,
             amount,
             unit,
-            protein: prot,
-            carbs,
-            fat,
+            kcal,
+            protein: p,
+            carbs: c,
+            fat: f,
+            createdAt: Date.now(),
           });
+
           saveState();
-  
+
+          // clear inputs (keep date)
           if (mealFoodInput) mealFoodInput.value = "";
           if (mealAmountInput) mealAmountInput.value = "";
-          if (mealProteinInput) mealProteinInput.value = "";
-          if (mealCarbsInput) mealCarbsInput.value = "";
-          if (mealFatInput) mealFatInput.value = "";
-  
+          selectedFoodId = null;
+          setMealMacrosFromFood(null);
+
           if (mealViewDateInput) mealViewDateInput.value = date;
           renderMeals();
         });
       }
-  
+
       if (mealViewDateInput) {
         mealViewDateInput.addEventListener("change", renderMeals);
       }
-  
+
+      // Defaults
+      if (libBaseAmount && !libBaseAmount.value) libBaseAmount.value = "100";
+      renderFoodSuggestions();
+      renderFoodLibrary();
+      clearFoodForm();
       renderMeals();
     }
   
@@ -3851,6 +4928,7 @@
     // Initial
     renderCalendar();
     }
+
   
     // Initial renders
     renderTodos();
@@ -3859,4 +4937,3 @@
   </script>
 </body>
 </html>
-
