@@ -3899,7 +3899,7 @@
                 <input id="mealFood" type="text" placeholder="Type and pick from library…" list="foodSuggestions" />
                 <datalist id="foodSuggestions"></datalist>
                 <div id="mealFoodHint" class="muted" style="margin-top:6px; font-size:12px;">
-                  Pick a food (from your saved library) to auto-calc macros.
+                  Pick a food.
                 </div>
                 <button id="quickAddFoodBtn" class="btn btn-secondary" style="margin-top:10px; display:none;">➕ Add this food to library</button>
 
@@ -4113,7 +4113,7 @@
           if (mealProteinInput) mealProteinInput.value = "";
           if (mealCarbsInput) mealCarbsInput.value = "";
           if (mealFatInput) mealFatInput.value = "";
-          if (mealFoodHint) mealFoodHint.textContent = "Pick a food (from your saved library) to auto-calc macros.";
+          if (mealFoodHint) mealFoodHint.textContent = "Pick a food.";
           if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
           if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
           return;
@@ -4493,7 +4493,7 @@ function resolveSelectedFood() {
             } else {
               if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
               if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
-              if (mealFoodHint) mealFoodHint.textContent = "Pick a food (from your saved library) to auto-calc macros.";
+              if (mealFoodHint) mealFoodHint.textContent = "Pick a food.";
             }
             // clear calculated fields
             if (mealKcalInput) mealKcalInput.value = "";
@@ -5126,3 +5126,4 @@ function resolveSelectedFood() {
   </script>
 </body>
 </html>
+
