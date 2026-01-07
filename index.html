@@ -3,6 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <title>MyHub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" /><!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MyHub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -675,37 +680,55 @@
         background: transparent;
         border: none;
         padding: 0;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
 
       .card-header {
         padding: 0;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .section-title {
-        font-size: 14px;
-        margin-bottom: 8px;
+        font-size: 13px;
+        margin-bottom: 6px;
       }
 
-      .input-row-inline {
-        flex-direction: column;
+      .card-title {
+        font-size: 13px;
+      }
+
+      .input-grid {
         gap: 8px;
       }
 
+      .input-row label {
+        font-size: 11px;
+      }
+
+      .input-row-inline {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      /* for rows with many fields, allow wrap */
+      .input-row-inline > .input-row {
+        min-width: 0;
+      }
+
       input, select, textarea {
-        padding: 9px 10px;
-        font-size: 13px;
+        padding: 7px 8px;
+        font-size: 12px;
       }
 
       .btn {
-        padding: 10px 12px;
-        font-size: 13px;
+        padding: 9px 10px;
+        font-size: 12px;
       }
 
       .icon-btn {
-        width: 34px;
-        height: 34px;
+        width: 32px;
+        height: 32px;
       }
     }
 </style>
@@ -3876,8 +3899,66 @@
                 <input id="mealFood" type="text" placeholder="Type and pick from library…" list="foodSuggestions" />
                 <datalist id="foodSuggestions"></datalist>
                 <div id="mealFoodHint" class="muted" style="margin-top:6px; font-size:12px;">
-                  Pick a food
+                  Pick a food (from your saved library) to auto-calc macros.
                 </div>
+                <button id="quickAddFoodBtn" class="btn btn-secondary" style="margin-top:10px; display:none;">➕ Add this food to library</button>
+
+                <div id="quickAddFoodPanel" class="card" style="margin-top:10px; display:none;">
+                  <div class="card-header">
+                    <div class="card-title">Add food to library</div>
+                  </div>
+                  <div class="input-grid">
+                    <div class="input-row-inline">
+                      <div class="input-row">
+                        <label for="quickBaseAmount">Base amount</label>
+                        <input id="quickBaseAmount" type="number" step="0.01" min="0" value="1" />
+                      </div>
+                      <div class="input-row">
+                        <label for="quickBaseUnit">Base unit</label>
+                        <select id="quickBaseUnit">
+                          <option value="g">g</option>
+                          <option value="ml">ml</option>
+                          <option value="piece">piece</option>
+                          <option value="scoop">scoop</option>
+                          <option value="sachet">sachet</option>
+                          <option value="cup">cup</option>
+                          <option value="slice">slice</option>
+                          <option value="bottle">bottle</option>
+                          <option value="bar">bar</option>
+                          <option value="bag">bag</option>
+                          <option value="skewer">skewer</option>
+                          <option value="ladle">ladle</option>
+                          <option value="other">other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="input-row-inline">
+                      <div class="input-row">
+                        <label for="quickKcal">Kcal (per base)</label>
+                        <input id="quickKcal" type="number" step="0.1" min="0" />
+                      </div>
+                      <div class="input-row">
+                        <label for="quickProtein">Protein (g)</label>
+                        <input id="quickProtein" type="number" step="0.1" min="0" />
+                      </div>
+                      <div class="input-row">
+                        <label for="quickCarbs">Carbs (g)</label>
+                        <input id="quickCarbs" type="number" step="0.1" min="0" />
+                      </div>
+                      <div class="input-row">
+                        <label for="quickFat">Fat (g)</label>
+                        <input id="quickFat" type="number" step="0.1" min="0" />
+                      </div>
+                    </div>
+
+                    <div class="input-row-inline">
+                      <button id="quickSaveFoodBtn" class="btn" style="flex:1;">✅ Save to library</button>
+                      <button id="quickCancelFoodBtn" class="btn btn-secondary" style="flex:1;">✖ Cancel</button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -3896,6 +3977,11 @@
                   <option value="sachet">sachet</option>
                   <option value="cup">cup</option>
                   <option value="slice">slice</option>
+                  <option value="bottle">bottle</option>
+                  <option value="bar">bar</option>
+                  <option value="bag">bag</option>
+                  <option value="skewer">skewer</option>
+                  <option value="ladle">ladle</option>
                   <option value="other">other</option>
                 </select>
               </div>
@@ -3951,6 +4037,18 @@
       const mealCarbsInput = document.getElementById("mealCarbs");
       const mealFatInput = document.getElementById("mealFat");
       const mealFoodHint = document.getElementById("mealFoodHint");
+
+      const quickAddFoodBtn = document.getElementById("quickAddFoodBtn");
+      const quickAddFoodPanel = document.getElementById("quickAddFoodPanel");
+      const quickBaseAmount = document.getElementById("quickBaseAmount");
+      const quickBaseUnit = document.getElementById("quickBaseUnit");
+      const quickKcal = document.getElementById("quickKcal");
+      const quickProtein = document.getElementById("quickProtein");
+      const quickCarbs = document.getElementById("quickCarbs");
+      const quickFat = document.getElementById("quickFat");
+      const quickSaveFoodBtn = document.getElementById("quickSaveFoodBtn");
+      const quickCancelFoodBtn = document.getElementById("quickCancelFoodBtn");
+
       const foodSuggestions = document.getElementById("foodSuggestions");
       const addMealBtn = document.getElementById("addMealBtn");
 
@@ -4015,7 +4113,9 @@
           if (mealProteinInput) mealProteinInput.value = "";
           if (mealCarbsInput) mealCarbsInput.value = "";
           if (mealFatInput) mealFatInput.value = "";
-          if (mealFoodHint) mealFoodHint.textContent = "Pick a food";
+          if (mealFoodHint) mealFoodHint.textContent = "Pick a food (from your saved library) to auto-calc macros.";
+          if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+          if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
           return;
         }
 
@@ -4026,6 +4126,8 @@
 
         const mult = foodMultiplier(food, amt, mealUnitSelect?.value || "g");
         if (mult === null) {
+          if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+          if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
           if (mealFoodHint) mealFoodHint.textContent = `Unit mismatch: this food is stored per ${food.baseAmount}${food.baseUnit}.`;
           if (mealKcalInput) mealKcalInput.value = "";
           if (mealProteinInput) mealProteinInput.value = "";
@@ -4045,6 +4147,8 @@
         if (mealFatInput) mealFatInput.value = f ? f.toFixed(1) : "0";
 
         if (mealFoodHint) mealFoodHint.textContent = `Library: ${food.name} (${food.kcal} kcal / ${food.baseAmount}${food.baseUnit})`;
+        if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+        if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
       }
 
       function renderFoodSuggestions() {
@@ -4289,7 +4393,86 @@
         cancelEditFoodBtn.addEventListener("click", () => clearFoodForm());
       }
 
-      function resolveSelectedFood() {
+      
+      function openQuickAddFood() {
+        if (!quickAddFoodPanel) return;
+        const name = (mealFoodInput?.value || "").trim();
+        if (!name) return;
+
+        // Prefill base unit from current selection (or default)
+        const unit = mealUnitSelect?.value || "g";
+        if (quickBaseUnit) quickBaseUnit.value = unit;
+        if (quickBaseAmount) quickBaseAmount.value = (unit === "g" || unit === "ml") ? "100" : "1";
+
+        // If user already has calculated fields (manual), prefill from them
+        if (quickKcal && mealKcalInput?.value) quickKcal.value = mealKcalInput.value;
+        if (quickProtein && mealProteinInput?.value) quickProtein.value = mealProteinInput.value;
+        if (quickCarbs && mealCarbsInput?.value) quickCarbs.value = mealCarbsInput.value;
+        if (quickFat && mealFatInput?.value) quickFat.value = mealFatInput.value;
+
+        quickAddFoodPanel.style.display = "block";
+        if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+      }
+
+      function closeQuickAddFood() {
+        if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
+        // keep button visible if name typed and still not found
+        const food = resolveSelectedFood();
+        const name = (mealFoodInput?.value || "").trim();
+        if (!food && name) {
+          if (quickAddFoodBtn) quickAddFoodBtn.style.display = "";
+        }
+      }
+
+      function saveQuickFood() {
+        const name = (mealFoodInput?.value || "").trim();
+        if (!name) return;
+
+        const baseAmount = parseFloat(quickBaseAmount?.value || "0") || 0;
+        const baseUnit = quickBaseUnit?.value || "g";
+        const kcal = parseFloat(quickKcal?.value || "0") || 0;
+        const protein = parseFloat(quickProtein?.value || "0") || 0;
+        const carbs = parseFloat(quickCarbs?.value || "0") || 0;
+        const fat = parseFloat(quickFat?.value || "0") || 0;
+
+        if (!baseAmount || baseAmount <= 0) return alert("Base amount must be > 0.");
+        // Prevent duplicates by exact name match
+        const exists = findFoodByName(name);
+        if (exists) {
+          // update existing
+          exists.baseAmount = baseAmount;
+          exists.baseUnit = baseUnit;
+          exists.kcal = kcal;
+          exists.protein = protein;
+          exists.carbs = carbs;
+          exists.fat = fat;
+        } else {
+          state.foodLibrary.push({
+            id: makeId("food"),
+            name,
+            baseAmount,
+            baseUnit,
+            kcal,
+            protein,
+            carbs,
+            fat
+          });
+        }
+
+        saveState();
+        renderFoodSuggestions();
+
+        // Select and calculate now
+        if (mealUnitSelect) mealUnitSelect.value = baseUnit;
+        setMealMacrosFromFood(findFoodByName(name));
+        closeQuickAddFood();
+      }
+
+      if (quickAddFoodBtn) quickAddFoodBtn.addEventListener("click", openQuickAddFood);
+      if (quickCancelFoodBtn) quickCancelFoodBtn.addEventListener("click", closeQuickAddFood);
+      if (quickSaveFoodBtn) quickSaveFoodBtn.addEventListener("click", saveQuickFood);
+
+function resolveSelectedFood() {
         const foodName = (mealFoodInput?.value || "").trim();
         if (!foodName) return null;
         const food = findFoodByName(foodName);
@@ -4297,6 +4480,28 @@
       }
 
       if (mealFoodInput) {
+        mealFoodInput.addEventListener("input", () => {
+          const food = resolveSelectedFood();
+          if (food) {
+            setMealMacrosFromFood(food);
+          } else {
+            // If user typed a name that is not in the library yet, offer quick add
+            const name = (mealFoodInput.value || "").trim();
+            if (name) {
+              if (quickAddFoodBtn) quickAddFoodBtn.style.display = "";
+              if (mealFoodHint) mealFoodHint.textContent = "Not in library yet. You can add it to calculate macros.";
+            } else {
+              if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+              if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
+              if (mealFoodHint) mealFoodHint.textContent = "Pick a food (from your saved library) to auto-calc macros.";
+            }
+            // clear calculated fields
+            if (mealKcalInput) mealKcalInput.value = "";
+            if (mealProteinInput) mealProteinInput.value = "";
+            if (mealCarbsInput) mealCarbsInput.value = "";
+            if (mealFatInput) mealFatInput.value = "";
+          }
+        });
         mealFoodInput.addEventListener("change", () => {
           const food = resolveSelectedFood();
           setMealMacrosFromFood(food);
@@ -4338,6 +4543,8 @@
 
           const mult = foodMultiplier(food, amount, unit);
           if (mult === null) {
+          if (quickAddFoodBtn) quickAddFoodBtn.style.display = "none";
+          if (quickAddFoodPanel) quickAddFoodPanel.style.display = "none";
             alert(`Unit mismatch. This food is stored per ${food.baseAmount}${food.baseUnit}. Please use the same unit.`);
             return;
           }
