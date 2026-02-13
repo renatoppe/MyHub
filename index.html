@@ -3,11 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <title>MyHub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" /><!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>MyHub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -731,6 +726,133 @@
         height: 32px;
       }
     }
+
+    /* ------------------------------
+       AI Chat (v1)
+    ------------------------------ */
+    .chat-shell { display:flex; flex-direction:column; gap:10px; }
+    .chat-messages {
+      height: min(52vh, 520px);
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      background: rgba(0,0,0,.22);
+    }
+    .msg { display:flex; margin: 8px 0; }
+    .msg.user { justify-content:flex-end; }
+    .bubble {
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(255,255,255,.04);
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.35;
+      font-size: 14px;
+    }
+    .msg.user .bubble { background: var(--accent-soft); border-color: rgba(76,175,80,.35); }
+    .msg.assistant .bubble { background: rgba(0,188,212,.12); border-color: rgba(0,188,212,.30); }
+    .msg.system .bubble { background: rgba(255,255,255,.03); color: var(--text-muted); }
+    .chat-compose {
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .icon-btn{
+      width:42px; height:42px;
+      border-radius: 14px;
+      border:1px solid var(--border-subtle);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      cursor:pointer;
+    }
+    .icon-btn:active{ transform: scale(.98); }
+    .hint{ font-size: 12px; color: var(--text-muted); padding-left: 4px; }
+
+    .voice-fab{
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 62px;
+      height: 62px;
+      border-radius: 22px;
+      border: 1px solid rgba(0,188,212,.35);
+      background: radial-gradient(circle at 20% 0, #00e676, #00bcd4);
+      box-shadow: 0 14px 40px rgba(0,188,212,.28);
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index: 999;
+      color: #020308;
+      font-weight: 900;
+      letter-spacing: .5px;
+    }
+    .voice-fab:active{ transform: scale(.98); }
+    .voice-fab-inner{
+      width: 46px; height: 46px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.18);
+      display:flex; align-items:center; justify-content:center;
+      border: 1px solid rgba(0,0,0,.15);
+    }
+
+  
+    /* --- UI simplification: remove redundant frames / headers --- */
+    .section-title { display: none !important; }
+    .card {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 0 14px 0 !important;
+    }
+    .card-header { display: none !important; }
+    .input-grid { padding: 0 !important; background: transparent !important; border: none !important; }
+    .ai-compose-top{
+      display:flex; gap:10px; align-items:center;
+      position: sticky; top: 0;
+      padding: 10px 0 10px 0;
+      background: radial-gradient(circle at top, #151827 0, #050608 45%);
+      z-index: 5;
+    }
+
+    .ai-input{
+      flex: 1;
+      min-height: 120px;
+      max-height: 240px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #26293a;
+      background: #101320;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      resize: vertical;
+      line-height: 1.35;
+    }
+    .ai-input:focus{
+      border-color: var(--accent-alt);
+      box-shadow: 0 0 0 1px rgba(0, 188, 212, 0.4);
+    }
+    .ai-messages{
+      padding-top: 6px;
+      min-height: calc(100vh - 220px);
+    }
+    .ai-conn{ margin-top: 10px; }
+
+  
+.notes-top-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin: 6px 0 10px;
+}
+
+
+.btn.pulse{ transform: scale(0.98); }
+
 </style>
 </head>
 <body>
@@ -763,8 +885,8 @@
         <button class="nav-item" data-page="calendar" title="Calendar">
           <span class="nav-emoji">📅</span><span class="nav-label">Calendar</span>
         </button>
-        <button class="nav-item" data-page="analytics" title="Analytics">
-          <span class="nav-emoji">📊</span><span class="nav-label">Analytics</span>
+        <button class="nav-item" data-page="ai" title="AI">
+          <span class="nav-emoji">🧠</span><span class="nav-label">AI</span>
         </button>
       </nav>
       <div class="version">v<span id="appVersion">0.8.0</span></div>
@@ -1148,8 +1270,15 @@
           </div>
       
           <!-- TEXT MODE -->
-          <div id="notesTextPane">
+          <div class="notes-top-actions">
+  <button id="openNotesCanvasBtn" class="btn btn-secondary btn-icon" title="Open canvas">✏️ Canvas</button>
+</div>
+
+<div id="notesTextPane">
             <textarea id="notesTextArea" placeholder="Write your notes here…"></textarea>
+            <div class="notes-save-row">
+              <button id="notesSaveTextBtn" class="btn btn-primary">💾 Save notes</button>
+            </div>
           </div>
       
           <!-- CANVAS MODE -->
@@ -1161,6 +1290,15 @@
               <button id="notesBoardLight" class="btn btn-secondary btn-icon" title="Light board">
                 ⬜
               </button>
+              <div id="notesColorPalette" title="Pen color">
+                <button type="button" data-color="#ffffff" style="background:#ffffff"></button>
+                <button type="button" data-color="#00e5ff" style="background:#00e5ff"></button>
+                <button type="button" data-color="#00ff7a" style="background:#00ff7a"></button>
+                <button type="button" data-color="#ffe600" style="background:#ffe600"></button>
+                <button type="button" data-color="#ff5cf4" style="background:#ff5cf4"></button>
+                <button type="button" data-color="#ff3b30" style="background:#ff3b30"></button>
+              </div>
+
               <button id="notesCanvasClear" class="btn btn-secondary btn-icon" title="Clear">
                 🧹
               </button>
@@ -1186,9 +1324,43 @@
         <h2 class="section-title">Calendar</h2>
       </section>
 
-      <!-- ANALYTICS (placeholder) -->
-      <section class="page hidden" data-page="analytics">
-        <h2 class="section-title">Analytics</h2>
+      
+      <!-- AI -->
+      <section class="page hidden" data-page="ai">
+        <div class="ai-compose-top">
+          <button class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+          <textarea id="aiInput" class="ai-input" placeholder="Digite aqui…"></textarea>
+          <button class="btn" id="aiSendBtn">Send</button>
+          <button class="btn btn-secondary" id="aiClearBtn" title="Clear chat">Clear</button>
+          <input type="file" id="aiFileInput" multiple hidden />
+        </div>
+
+        <div id="aiMessages" class="chat-messages ai-messages"></div>
+
+        <details class="ai-conn">
+          <summary style="cursor:pointer; user-select:none; color: var(--text-muted);">
+            Conexão (Brain URL + API Key)
+          </summary>
+
+          <div style="margin-top:10px;">
+            <div class="input-grid">
+              <div class="input-row">
+                <label for="brainUrl">Brain URL</label>
+                <input id="brainUrl" type="text" placeholder="http://100.x.y.z:8000" />
+              </div>
+              <div class="input-row">
+                <label for="brainKey">X-API-Key</label>
+                <input id="brainKey" type="text" placeholder="vAIcORINTHIANS" />
+              </div>
+            </div>
+
+            <div class="input-row-inline" style="align-items:flex-end;">
+              <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
+              <button class="btn btn-secondary" id="brainTestBtn">Test /chat</button>
+              <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
+            </div>
+          </div>
+        </details>
       </section>
     </main>
   </div>
@@ -1221,6 +1393,16 @@
       meals: [], // {id, date, food, amount, unit, protein, carbs, fat}
       foodLibrary: [], // {id, name, baseAmount, baseUnit, kcal, protein, carbs, fat}
       calendarEvents: [], // {id, date, text}
+
+      // Brain / AI (v1)
+      brain: {
+        url: "",          // e.g. http://localhost:8000 or http://100.x.y.z:8000
+        apiKey: "",       // X-API-Key value
+        useTailscale: true
+      },
+      aiChat: {
+        messages: []      // {role:'user'|'assistant'|'system', text, ts}
+      },
       workoutTimer: {
         mode: "up",          // "up" or "down"
         baseDownSeconds: 30, // 30, 60, 90...
@@ -1259,6 +1441,12 @@
     }
   
     let state = loadState();
+
+
+    // ---- Ensure Brain / AI fields exist (for older saved states) ----
+    if (!state.brain) state.brain = structuredClone(defaultState.brain);
+    if (!state.aiChat) state.aiChat = structuredClone(defaultState.aiChat);
+
 
 
     // ---- Seed food library (only if it's empty) ----
@@ -1906,6 +2094,12 @@
         pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
       }
   
+
+
+      // Hook: when opening AI page, refresh UI
+      if (pageId === "ai") {
+        try { renderAIPage(); } catch (e) { console.error(e); }
+      }
       // Leaving notes canvas mode
       if (pageId !== "notes") {
         disableCanvasSidebarMode();
@@ -3578,306 +3772,236 @@
     renderFinance();
   
     // -----------------------------
-    // NOTES (tabs: Text + Canvas)
     // -----------------------------
-    const notesPage = document.querySelector('.page[data-page="notes"]');
-    if (notesPage) {
-      notesPage.innerHTML = `
-        <h2 class="section-title">Notes</h2>
-        <div class="card">
-          <div class="card-header" style="justify-content:space-between; align-items:center;">
-            <div class="card-title">Notes</div>
-            <div style="display:flex; gap:6px;">
-              <button id="notesTabText" class="btn btn-secondary btn-icon" title="Text notes">📝</button>
-              <button id="notesTabCanvas" class="btn btn-secondary btn-icon" title="Canvas">✏️</button>
-            </div>
-          </div>
-    
-          <!-- TEXT NOTES -->
-          <div id="notesTextSection" class="input-grid">
-            <div class="input-row">
-              <textarea id="notesText"
-                        placeholder="Write anything you don't want to forget..."
-                        style="min-height:200px;"></textarea>
-            </div>
-            <div class="input-row" style="display:flex; justify-content:space-between; align-items:center;">
-              <span id="notesSavedMsg" class="empty-msg" style="display:none;">Saved ✓</span>
-              <button id="saveNotesTextBtn" class="btn">💾 Save notes</button>
-            </div>
-          </div>
-    
-          <!-- CANVAS NOTES -->
-          <div id="notesCanvasSection" class="input-grid" style="display:none;">
-            <div class="input-row-inline">
-              <!-- Pen color palette -->
-              <div class="input-row">
-                <label>Pen color</label>
-                <div id="notesColorPalette" style="display:flex; gap:6px; flex-wrap:wrap;">
-                  <button data-color="#ffffff" class="icon-btn" title="White pen">⬜</button>
-                  <button data-color="#000000" class="icon-btn" title="Black pen">⬛</button>
-                  <button data-color="#f44336" class="icon-btn" title="Red pen">🟥</button>
-                  <button data-color="#2196f3" class="icon-btn" title="Blue pen">🟦</button>
-                  <button data-color="#4caf50" class="icon-btn" title="Green pen">🟩</button>
-                  <button data-color="erase" class="icon-btn" title="Eraser">🧽</button>
-                </div>
-              </div>
-    
-              <!-- Board controls -->
-              <div class="input-row" style="display:flex; gap:6px; align-items:flex-end;">
-                <div style="display:flex; gap:4px;">
-                  <button id="notesBoardDark" class="icon-btn" title="Black board">⬛</button>
-                  <button id="notesBoardLight" class="icon-btn" title="White board">⬜</button>
-                </div>
-                <button id="notesClearCanvas" class="btn btn-secondary" title="Clear canvas">🧹</button>
-                <!-- Expand / shrink icon-only button -->
-                <button id="notesToggleCanvasSize"
-                        class="btn btn-secondary btn-icon"
-                        title="Expand canvas">⤢</button>
-                <!-- Save canvas as image -->
-                <button id="notesSaveCanvas"
-                        class="btn btn-secondary btn-icon"
-                        title="Save canvas as image">💾</button>
-              </div>
-            </div>
-    
-            <div class="input-row">
-              <div id="notesCanvasWrapper" style="width:100%; max-height:400px; overflow:hidden;">
-                <canvas id="notesCanvas"
-                        style="border-radius:12px; background:#050608; border:1px solid #26293a; display:block;"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    
-      const notesTabText = document.getElementById("notesTabText");
-      const notesTabCanvas = document.getElementById("notesTabCanvas");
-      const notesTextSection = document.getElementById("notesTextSection");
-      const notesCanvasSection = document.getElementById("notesCanvasSection");
-    
-      const notesText = document.getElementById("notesText");
-      const saveNotesTextBtn = document.getElementById("saveNotesTextBtn");
-      const notesSavedMsg = document.getElementById("notesSavedMsg");
-    
-      const notesCanvas = document.getElementById("notesCanvas");
-      const notesCanvasWrapper = document.getElementById("notesCanvasWrapper");
-      const notesColorPalette = document.getElementById("notesColorPalette");
-      const notesClearCanvas = document.getElementById("notesClearCanvas");
-      const notesToggleCanvasSize = document.getElementById("notesToggleCanvasSize");
-      const notesSaveCanvas = document.getElementById("notesSaveCanvas");
-      const notesBoardDark = document.getElementById("notesBoardDark");
-      const notesBoardLight = document.getElementById("notesBoardLight");
-    
-      // Restore text notes
-      if (notesText) {
-        notesText.value = state.notesText || "";
-      }
-    
-      if (saveNotesTextBtn && notesText) {
-        saveNotesTextBtn.addEventListener("click", () => {
-          state.notesText = notesText.value;
-          saveState();
-          if (notesSavedMsg) {
-            notesSavedMsg.style.display = "inline";
-            setTimeout(() => {
-              notesSavedMsg.style.display = "none";
-            }, 1500);
-          }
+    // NOTES (Text + Canvas in-place)
+    // -----------------------------
+    const notesTextArea = document.getElementById("notesTextArea");
+    const notesTextPane = document.getElementById("notesTextPane");
+    const notesCanvasPane = document.getElementById("notesCanvasPane");
+    const openNotesCanvasBtn = document.getElementById("openNotesCanvasBtn");
+
+    // Canvas controls (IDs in HTML)
+    const notesCanvas = document.getElementById("notesCanvas");
+    const notesCanvasWrapper = document.querySelector(".notes-canvas-wrapper");
+    const notesBoardDark = document.getElementById("notesBoardDark");
+    const notesBoardLight = document.getElementById("notesBoardLight");
+    const notesCanvasClear = document.getElementById("notesCanvasClear");
+    const notesCanvasSave = document.getElementById("notesCanvasSave");
+
+    function showNotesText() {
+      if (notesTextPane) notesTextPane.classList.remove("hidden");
+      if (notesCanvasPane) notesCanvasPane.classList.add("hidden");
+      // restore normal sidebar if you have a special canvas mode
+      if (typeof disableCanvasSidebarMode === "function") disableCanvasSidebarMode();
+    }
+
+    function showNotesCanvas() {
+      if (notesTextPane) notesTextPane.classList.add("hidden");
+      if (notesCanvasPane) notesCanvasPane.classList.remove("hidden");
+
+      // canvas becomes visible → resize after layout settles
+      requestAnimationFrame(() => {
+        if (typeof window.__notesCanvasResize === "function") window.__notesCanvasResize();
+        requestAnimationFrame(() => {
+          if (typeof window.__notesCanvasResize === "function") window.__notesCanvasResize();
         });
-      }
+      });
+    }
+
+    // Restore notes text from state
+    if (notesTextArea) {
+      notesTextArea.value = state.notesText || "";
+      notesTextArea.addEventListener("input", () => {
+        state.notesText = notesTextArea.value;
+        saveState();
+      });
+    }
+
     
-      function activateNotesTab(tab) {
-        if (tab === "text") {
-          notesTextSection.style.display = "block";
-          notesCanvasSection.style.display = "none";
-          // canvas mode off → sidebar normal
-          if (typeof disableCanvasSidebarMode === "function") {
-            disableCanvasSidebarMode();
-          }
-        } else {
-          notesTextSection.style.display = "none";
-          notesCanvasSection.style.display = "block";
-          // just opening canvas doesn't collapse sidebar;
-          // collapse only when user presses expand button
-        }
-      }
-    
-      if (notesTabText) {
-        notesTabText.addEventListener("click", () => activateNotesTab("text"));
-      }
-      if (notesTabCanvas) {
-        notesTabCanvas.addEventListener("click", () => activateNotesTab("canvas"));
-      }
-    
-      // Default tab
-      activateNotesTab("text");
-    
-      // CANVAS LOGIC
-      if (notesCanvas && notesCanvasWrapper) {
-        const ctx = notesCanvas.getContext("2d");
-        let drawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let strokeColor = "#ffffff"; // default pen color
-        let expanded = false;
-        let boardBg = "#050608"; // default black-ish board
-    
-        function fillBoardBackground() {
-          ctx.save();
-          ctx.globalCompositeOperation = "source-over";
-          ctx.fillStyle = boardBg;
-          ctx.fillRect(0, 0, notesCanvas.width, notesCanvas.height);
-          ctx.restore();
-        }
-    
-        function resizeCanvas() {
-          const rect = notesCanvasWrapper.getBoundingClientRect();
-          notesCanvas.width = Math.floor(rect.width - 4);
-          const maxHeight = Math.min(380, window.innerHeight - 200);
-          notesCanvas.height = expanded
-            ? Math.min(380, maxHeight)
-            : Math.min(240, maxHeight);
-    
-          // Whenever we resize, refill the board background
-          fillBoardBackground();
-        }
-    
-        resizeCanvas();
-        window.addEventListener("resize", resizeCanvas);
-    
-        function startDraw(x, y) {
-          drawing = true;
-          lastX = x;
-          lastY = y;
-        }
-    
-        function drawTo(x, y) {
-          if (!drawing) return;
-          ctx.lineJoin = "round";
-          ctx.lineCap = "round";
-          if (strokeColor === "erase") {
-            ctx.globalCompositeOperation = "destination-out";
-            ctx.strokeStyle = "rgba(0,0,0,1)";
-            ctx.lineWidth = 12;
-          } else {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 3;
-          }
-          ctx.beginPath();
-          ctx.moveTo(lastX, lastY);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-          lastX = x;
-          lastY = y;
-        }
-    
-        function endDraw() {
-          drawing = false;
-        }
-    
-        // Mouse
-        notesCanvas.addEventListener("mousedown", (e) => {
-          const rect = notesCanvas.getBoundingClientRect();
-          startDraw(e.clientX - rect.left, e.clientY - rect.top);
-        });
-    
-        notesCanvas.addEventListener("mousemove", (e) => {
-          const rect = notesCanvas.getBoundingClientRect();
-          drawTo(e.clientX - rect.left, e.clientY - rect.top);
-        });
-    
-        notesCanvas.addEventListener("mouseup", endDraw);
-        notesCanvas.addEventListener("mouseleave", endDraw);
-    
-        // Touch
-        notesCanvas.addEventListener("touchstart", (e) => {
-          e.preventDefault();
-          const t = e.touches[0];
-          const rect = notesCanvas.getBoundingClientRect();
-          startDraw(t.clientX - rect.left, t.clientY - rect.top);
-        });
-    
-        notesCanvas.addEventListener("touchmove", (e) => {
-          e.preventDefault();
-          const t = e.touches[0];
-          const rect = notesCanvas.getBoundingClientRect();
-          drawTo(t.clientX - rect.left, t.clientY - rect.top);
-        });
-    
-        notesCanvas.addEventListener("touchend", endDraw);
-        notesCanvas.addEventListener("touchcancel", endDraw);
-    
-        // Pen colors
-        if (notesColorPalette) {
-          notesColorPalette.querySelectorAll("button").forEach((btn) => {
-            btn.addEventListener("click", () => {
-              const color = btn.getAttribute("data-color");
-              strokeColor = color;
-            });
-          });
-        }
-    
-        // Board background black
-        if (notesBoardDark) {
-          notesBoardDark.addEventListener("click", () => {
-            boardBg = "#050608";
-            resizeCanvas(); // refills background
-            // default pen to white on dark board
-            strokeColor = "#ffffff";
-          });
-        }
-    
-        // Board background white
-        if (notesBoardLight) {
-          notesBoardLight.addEventListener("click", () => {
-            boardBg = "#ffffff";
-            resizeCanvas(); // refills background
-            // default pen to black on light board
-            strokeColor = "#000000";
-          });
-        }
-    
-        // Clear canvas
-        if (notesClearCanvas) {
-          notesClearCanvas.addEventListener("click", () => {
-            ctx.clearRect(0, 0, notesCanvas.width, notesCanvas.height);
-            fillBoardBackground();
-          });
-        }
-    
-        // Expand / shrink canvas (icon only) + collapse sidebar only in expanded mode
-        if (notesToggleCanvasSize) {
-          notesToggleCanvasSize.addEventListener("click", () => {
-            expanded = !expanded;
-            notesToggleCanvasSize.textContent = expanded ? "⤡" : "⤢";
-            if (expanded && typeof enableCanvasSidebarMode === "function") {
-              enableCanvasSidebarMode();
-            } else if (!expanded && typeof disableCanvasSidebarMode === "function") {
-              disableCanvasSidebarMode();
-            }
-            resizeCanvas();
-          });
-        }
-    
-        // Save canvas as PNG
-        if (notesSaveCanvas) {
-          notesSaveCanvas.addEventListener("click", () => {
-            const dataURL = notesCanvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.href = dataURL;
-            link.download = "notes_canvas.png";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          });
-        }
+    // Manual save button (some users prefer a visible save)
+    if (notesSaveTextBtn) {
+      notesSaveTextBtn.addEventListener("click", () => {
+        if (notesTextArea) state.notesText = notesTextArea.value;
+        saveState();
+        // tiny feedback
+        notesSaveTextBtn.classList.add("pulse");
+        setTimeout(() => notesSaveTextBtn.classList.remove("pulse"), 250);
+      });
+    }
+
+// Button: open canvas (top-right above textarea)
+    if (openNotesCanvasBtn) {
+      openNotesCanvasBtn.addEventListener("click", showNotesCanvas);
+    }
+
+    // Add a quick "Back to text" button inside canvas toolbar (if not already there)
+    if (notesCanvasPane) {
+      const toolbar = notesCanvasPane.querySelector(".notes-toolbar");
+      if (toolbar && !document.getElementById("notesCanvasBackToText")) {
+        const backBtn = document.createElement("button");
+        backBtn.id = "notesCanvasBackToText";
+        backBtn.className = "btn btn-secondary btn-icon";
+        backBtn.title = "Back to text";
+        backBtn.textContent = "📝";
+        backBtn.addEventListener("click", showNotesText);
+        toolbar.insertBefore(backBtn, toolbar.firstChild);
       }
     }
 
-  
-    // -----------------------------
-    // MEALS – basic macros per day
+    // Default: start in text mode
+    showNotesText();
+
+    // --- CANVAS LOGIC ---
+    if (notesCanvas && notesCanvasWrapper) {
+      const ctx = notesCanvas.getContext("2d");
+      let drawing = false;
+      let lastX = 0;
+      let lastY = 0;
+      let strokeColor = "#ffffff"; // default pen color
+      let expanded = false;
+      let boardBg = "#050608"; // default black-ish board
+
+      function fillBoardBackground() {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = boardBg;
+        ctx.fillRect(0, 0, notesCanvas.width, notesCanvas.height);
+        ctx.restore();
+      }
+
+      function resizeCanvas() {
+        const rect = notesCanvasWrapper.getBoundingClientRect();
+        notesCanvas.width = Math.floor(rect.width);
+        const maxHeight = Math.min(420, window.innerHeight - 220);
+        notesCanvas.height = expanded ? Math.min(420, maxHeight) : Math.min(260, maxHeight);
+        fillBoardBackground();
+      }
+
+      // expose for tab switch (canvas is hidden when inactive)
+      window.__notesCanvasResize = resizeCanvas;
+
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      function getPosFromEvent(e) {
+        const rect = notesCanvas.getBoundingClientRect();
+        if (e.touches && e.touches[0]) {
+          return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      }
+
+      function startDraw(x, y) {
+        drawing = true;
+        lastX = x;
+        lastY = y;
+      }
+
+      function drawTo(x, y) {
+        if (!drawing) return;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        if (strokeColor === "erase") {
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.strokeStyle = "rgba(0,0,0,1)";
+          ctx.lineWidth = 12;
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 3;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        lastX = x;
+        lastY = y;
+      }
+
+      function endDraw() {
+        drawing = false;
+      }
+
+      // Mouse
+      notesCanvas.addEventListener("mousedown", (e) => {
+        const p = getPosFromEvent(e);
+        startDraw(p.x, p.y);
+      });
+      notesCanvas.addEventListener("mousemove", (e) => {
+        const p = getPosFromEvent(e);
+        drawTo(p.x, p.y);
+      });
+      notesCanvas.addEventListener("mouseup", endDraw);
+      notesCanvas.addEventListener("mouseleave", endDraw);
+
+      // Touch
+      notesCanvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        const p = getPosFromEvent(e);
+        startDraw(p.x, p.y);
+      }, { passive: false });
+
+      notesCanvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        const p = getPosFromEvent(e);
+        drawTo(p.x, p.y);
+      }, { passive: false });
+
+      notesCanvas.addEventListener("touchend", endDraw);
+      notesCanvas.addEventListener("touchcancel", endDraw);
+
+      // Board background buttons
+      if (notesBoardDark) {
+        notesBoardDark.addEventListener("click", () => {
+          boardBg = "#050608";
+          strokeColor = "#ffffff";
+          resizeCanvas();
+        });
+      }
+      if (notesBoardLight) {
+        notesBoardLight.addEventListener("click", () => {
+          boardBg = "#ffffff";
+          strokeColor = "#000000";
+          resizeCanvas();
+        });
+      }
+
+      // Clear canvas
+      if (notesCanvasClear) {
+        notesCanvasClear.addEventListener("click", () => {
+          ctx.clearRect(0, 0, notesCanvas.width, notesCanvas.height);
+          fillBoardBackground();
+        });
+      }
+
+      // Save canvas as PNG
+      if (notesCanvasSave) {
+        notesCanvasSave.addEventListener("click", () => {
+          const dataURL = notesCanvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = dataURL;
+          link.download = "notes_canvas.png";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
+      }
+
+      // Optional: if you still have a color palette somewhere else
+      const notesColorPalette = document.getElementById("notesColorPalette");
+      if (notesColorPalette) {
+        notesColorPalette.querySelectorAll("button").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const color = btn.getAttribute("data-color");
+            strokeColor = color;
+          });
+        });
+      }
+    }
+
+// MEALS – basic macros per day
     // -----------------------------
     const mealsPage = document.querySelector('.page[data-page="meals"]');
     if (mealsPage) {
@@ -5110,7 +5234,201 @@ function resolveSelectedFood() {
         cursor.setDate(cursor.getDate() + 7);
         } else {
         cursor.setDate(cursor.getDate() + 1);
+     
+    // -----------------------------
+    // AI PAGE (replaces Analytics)
+    // -----------------------------
+    const aiMessagesEl = document.getElementById("aiMessages");
+    const aiInputEl = document.getElementById("aiInput");
+    const aiSendBtn = document.getElementById("aiSendBtn");
+    const aiAttachBtn = document.getElementById("aiAttachBtn");
+    const aiFileInput = document.getElementById("aiFileInput");
+    const aiClearBtn = document.getElementById("aiClearBtn");
+
+    
+
+    // AI textarea auto-grow (comfort for long prompts)
+    if (aiInputEl) {
+      const autoGrow = () => {
+        aiInputEl.style.height = "auto";
+        aiInputEl.style.height = Math.min(aiInputEl.scrollHeight, 240) + "px";
+      };
+      aiInputEl.addEventListener("input", autoGrow);
+      setTimeout(autoGrow, 0);
+    }
+const brainUrlEl = document.getElementById("brainUrl");
+    const brainKeyEl = document.getElementById("brainKey");
+    const brainSaveBtn = document.getElementById("brainSaveBtn");
+    const brainTestBtn = document.getElementById("brainTestBtn");
+    const brainStatusEl = document.getElementById("brainStatus");
+
+    const aiQuickBtn = document.getElementById("aiQuickBtn");
+
+    function nowTs() { return new Date().toISOString(); }
+
+    function aiPush(role, text) {
+      state.aiChat.messages.push({ role, text, ts: nowTs() });
+      // keep last 200 messages to avoid huge localStorage
+      if (state.aiChat.messages.length > 200) {
+        state.aiChat.messages = state.aiChat.messages.slice(-200);
+      }
+      saveState();
+      renderAIMessages();
+    }
+
+    function renderAIMessages() {
+      if (!aiMessagesEl) return;
+      const msgs = state.aiChat?.messages || [];
+      aiMessagesEl.innerHTML = "";
+      for (const m of msgs) {
+        const wrap = document.createElement("div");
+        wrap.className = "msg " + (m.role || "system");
+        const b = document.createElement("div");
+        b.className = "bubble";
+        b.textContent = m.text || "";
+        wrap.appendChild(b);
+        aiMessagesEl.appendChild(wrap);
+      }
+      // auto scroll to bottom
+      aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
+    }
+
+    function renderAIConfig() {
+      if (brainUrlEl) brainUrlEl.value = state.brain?.url || "";
+      if (brainKeyEl) brainKeyEl.value = state.brain?.apiKey || "";
+      if (brainStatusEl) {
+        brainStatusEl.textContent = state.brain?.url
+          ? "Configured: " + state.brain.url
+          : "Not configured yet.";
+      }
+    }
+
+    function renderAIPage() {
+      renderAIConfig();
+      renderAIMessages();
+    }
+
+    async function callBrain(message) {
+      const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
+      const key = (state.brain?.apiKey || "").trim();
+
+      if (!base) {
+        alert("Configure Brain URL first (AI > Connection).");
+        return null;
+      }
+      if (!key) {
+        alert("Configure X-API-Key first (AI > Connection).");
+        return null;
+      }
+
+      const url = base + "/chat";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": key
+        },
+        body: JSON.stringify({ message })
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error("Brain error " + res.status + " " + t);
+      }
+
+      const data = await res.json().catch(() => ({}));
+      // expected: { reply: "..." }
+      return data.reply || data.response || data.text || JSON.stringify(data);
+    }
+
+    async function sendAI() {
+      const msg = (aiInputEl?.value || "").trim();
+      if (!msg) return;
+
+      aiInputEl.value = "";
+      aiPush("user", msg);
+
+      aiPush("system", "…thinking");
+      const thinkingIndex = state.aiChat.messages.length - 1;
+
+      try {
+        const reply = await callBrain(msg);
+        // replace thinking message
+        state.aiChat.messages.splice(thinkingIndex, 1);
+        saveState();
+        aiPush("assistant", reply || "(no reply)");
+      } catch (e) {
+        // replace thinking message
+        state.aiChat.messages.splice(thinkingIndex, 1);
+        saveState();
+        aiPush("assistant", "Error: " + (e?.message || String(e)));
+      }
+    }
+
+    if (aiSendBtn) aiSendBtn.addEventListener("click", sendAI);
+    if (aiInputEl) aiInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendAI();
+      }
+    });
+
+    if (aiAttachBtn && aiFileInput) {
+      aiAttachBtn.addEventListener("click", () => aiFileInput.click());
+      aiFileInput.addEventListener("change", () => {
+        const files = Array.from(aiFileInput.files || []);
+        if (files.length) {
+          aiPush("system", "Attached (not uploaded yet): " + files.map(f => f.name).join(", "));
         }
+        aiFileInput.value = "";
+      });
+    }
+
+    if (brainSaveBtn) {
+      brainSaveBtn.addEventListener("click", () => {
+        state.brain.url = (brainUrlEl?.value || "").trim();
+        state.brain.apiKey = (brainKeyEl?.value || "").trim();
+        saveState();
+        renderAIConfig();
+        alert("Saved.");
+      });
+    }
+
+    if (brainTestBtn) {
+      brainTestBtn.addEventListener("click", async () => {
+        try {
+          state.brain.url = (brainUrlEl?.value || "").trim();
+          state.brain.apiKey = (brainKeyEl?.value || "").trim();
+          saveState();
+          renderAIConfig();
+          const reply = await callBrain("Hello! Quick test.");
+          alert("OK: " + reply);
+        } catch (e) {
+          alert("Test failed: " + (e?.message || String(e)));
+        }
+      });
+    }
+
+    if (aiClearBtn) {
+      aiClearBtn.addEventListener("click", () => {
+        if (!confirm("Clear chat history?")) return;
+        state.aiChat.messages = [];
+        saveState();
+        renderAIMessages();
+      });
+    }
+
+    if (aiQuickBtn) {
+      aiQuickBtn.addEventListener("click", () => {
+        showPage("ai");
+        setTimeout(() => aiInputEl?.focus(), 50);
+      });
+    }
+
+    // initial render (in case AI is first page opened)
+    renderAIPage();
+
+   }
         renderCalendar();
     });
 
@@ -5124,6 +5442,11 @@ function resolveSelectedFood() {
     renderShopping();
   });
   </script>
+
+  <!-- Quick AI button (acts as “voice” shortcut for now) -->
+  <button class="voice-fab" id="aiQuickBtn" title="Talk to AI">
+    <span class="voice-fab-inner">MH</span>
+  </button>
+
 </body>
 </html>
-
