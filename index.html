@@ -943,10 +943,6 @@
 .logo:hover{ filter: brightness(1.05); transform: translateY(-1px); }
 
 
-/* ==========================
-   AI TAB INPUT (Mobile-first improvement)
-   ========================== */
-
 .ai-input-wrapper {
   position: relative;
   width: 100%;
@@ -991,10 +987,56 @@
 }
 
 
-/* --- Fix: ensure AI buttons are clickable above textarea --- */
 .ai-input-wrapper textarea{ position: relative; z-index: 1; }
 .ai-input-buttons{ z-index: 2; }
 .ai-input-buttons button{ position: relative; z-index: 3; pointer-events: auto; }
+
+
+/* ==========================
+   AI TAB INPUT (Buttons below textarea)
+   ========================== */
+.ai-input-block{
+  width: 100%;
+}
+.ai-input-block textarea{
+  width: 100%;
+  min-height: 140px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #26293a;
+  background: #101320;
+  color: var(--text);
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.ai-actions-row{
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ai-actions-row .btn,
+.ai-actions-row .icon-btn{
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-actions-row #aiSendBtn{
+  flex: 1; /* send bigger */
+  min-width: 120px;
+}
+.ai-actions-row .icon-btn{
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+@media (max-width: 768px){
+  .ai-input-block textarea{
+    min-height: 180px;
+  }
+}
 
 </style>
 </head>
@@ -1471,15 +1513,18 @@
       <!-- AI -->
       <section class="page hidden" data-page="ai">
         
-  <div class="ai-compose-top">
-    <div class="ai-input-wrapper">
-      <textarea id="aiInput" placeholder="Type your message..."></textarea>
-      <div class="ai-input-buttons">
-        <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-        <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
-        <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
-      </div>
+  
+<div class="ai-compose-top">
+  <div class="ai-input-block">
+    <textarea id="aiInput" placeholder="Type your message..."></textarea>
+    <div class="ai-actions-row">
+      <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
+      <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+      <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
     </div>
+  </div>
+</div>
+
   </div>
 </div>
 
