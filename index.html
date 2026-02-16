@@ -942,6 +942,54 @@
 .logo{ cursor:pointer; }
 .logo:hover{ filter: brightness(1.05); transform: translateY(-1px); }
 
+
+/* ==========================
+   AI TAB INPUT (Mobile-first improvement)
+   ========================== */
+
+.ai-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ai-input-wrapper textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px 80px 14px 14px; /* space for buttons on right */
+  border-radius: 16px;
+  border: 1px solid #26293a;
+  background: #101320;
+  color: var(--text);
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.ai-input-buttons {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-input-buttons .icon-btn,
+.ai-input-buttons .btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .ai-input-wrapper textarea {
+    min-height: 150px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1416,32 +1464,19 @@
       
       <!-- AI -->
       <section class="page hidden" data-page="ai">
-        <div class="ai-compose-top">
-          <button class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-          <textarea id="aiInput" class="ai-input" placeholder="Digite aqui…"></textarea>
-          <button class="btn" id="aiSendBtn">Send</button>
-          <button class="btn btn-secondary" id="aiClearBtn" title="Clear chat">Clear</button>
-          <input type="file" id="aiFileInput" multiple hidden />
-        </div>
+        
+  <div class="ai-compose-top">
+    <div class="ai-input-wrapper">
+      <textarea id="aiInput" placeholder="Type your message..."></textarea>
+      <div class="ai-input-buttons">
+        <button class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+        <button class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
+        <button class="btn btn-primary" id="aiSendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div id="aiMessages" class="chat-messages ai-messages"></div>
-
-        <details class="ai-conn">
-          <summary style="cursor:pointer; user-select:none; color: var(--text-muted);">
-            Conexão (Brain URL + API Key)
-          </summary>
-
-          <div style="margin-top:10px;">
-            <div class="input-grid">
-              <div class="input-row">
-                <label for="brainUrl">Brain URL</label>
-                <input id="brainUrl" type="text" placeholder="http://100.x.y.z:8000" />
-              </div>
-              <div class="input-row">
-                <label for="brainKey">X-API-Key</label>
-                <input id="brainKey" type="text" placeholder="vAIcORINTHIANS" />
-              </div>
-            </div>
 
             <div class="input-row-inline" style="align-items:flex-end;">
               <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
@@ -5433,32 +5468,119 @@ const brainUrlEl = document.getElementById("brainUrl");
     
     // Send a message to Brain and store it in the shared AI chat history.
     // Used by BOTH: full AI page and the small corner "chat head".
-    async function aiSendMessage(msg, { statusEl } = {}) {
-      const text = (msg || "").trim();
-      if (!text) return;
+        // ==========================
+        // Brain v1 prompt (Option A): system + small app state summary + last 10 messages
+        // ==========================
+        const BRAIN_SYSTEM_PROMPT = `You are MyHub AI.
+You run inside my personal productivity web app called MyHub.
 
-      aiPush("user", text);
+Rules:
+- Be concise, practical, and structured when helpful.
+- Use only the STATE SUMMARY below for app data (do not invent).
+- If something is missing, ask a short clarification.
+- Prefer actionable suggestions.
 
-      // show thinking
-      aiPush("system", "…thinking");
-      const thinkingIndex = state.aiChat.messages.length - 1;
+Language rules:
+- Detect the language of the user's message.
+- Reply in the same language.
+- If Chinese is detected, use Traditional Chinese (繁體中文).
+- Also include an English translation below, prefixed with "EN:".
+`;
 
-      try {
-        if (statusEl) statusEl.textContent = "Sending…";
-        const reply = await callBrain(text);
+        function getAppStateSummary() {
+          // Notes are intentionally excluded for now (privacy + stability).
+          const todosTotal = Array.isArray(state.todos) ? state.todos.length : 0;
+          const todosPending = Array.isArray(state.todos)
+            ? state.todos.filter(t => (t.status || "").toLowerCase() !== "done").length
+            : 0;
 
-        // replace thinking message
-        state.aiChat.messages.splice(thinkingIndex, 1);
-        saveState();
-        aiPush("assistant", reply || "(no reply)");
-        if (statusEl) statusEl.textContent = "OK";
-      } catch (e) {
-        state.aiChat.messages.splice(thinkingIndex, 1);
-        saveState();
-        aiPush("assistant", "Error: " + (e?.message || String(e)));
-        if (statusEl) statusEl.textContent = "Error";
-      }
+          const shoppingLists = Array.isArray(state.shoppingLists) ? state.shoppingLists : [];
+          const shoppingListsCount = shoppingLists.length;
+          const shoppingUnchecked = shoppingLists.reduce((acc, list) => {
+            const items = Array.isArray(list.items) ? list.items : [];
+            return acc + items.filter(i => !i.checked).length;
+          }, 0);
+
+          const workoutsLogged = Array.isArray(state.workouts) ? state.workouts.length : 0;
+
+          const accounts = Array.isArray(state.financeAccounts) ? state.financeAccounts.length : 0;
+          const txs = Array.isArray(state.financeTransactions) ? state.financeTransactions.length : 0;
+
+          const mealsLogged = Array.isArray(state.meals) ? state.meals.length : 0;
+          const eventsCount = Array.isArray(state.calendarEvents) ? state.calendarEvents.length : 0;
+
+          const lines = [
+            `- todos: ${todosTotal} total, ${todosPending} pending`,
+            `- shopping lists: ${shoppingListsCount}, unchecked items: ${shoppingUnchecked}`,
+            `- workouts logged: ${workoutsLogged}`,
+            `- finance: ${accounts} accounts, ${txs} transactions`,
+            `- meals logged: ${mealsLogged}`,
+            `- calendar events: ${eventsCount}`,
+          ];
+          return lines.join("\n");
+        }
+
+        function buildBrainV1Prompt(newUserText) {
+          // last 10 non-system messages (user + assistant), excluding the "…thinking" system marker
+          const msgs = Array.isArray(state.aiChat?.messages) ? state.aiChat.messages : [];
+          const usable = msgs
+            .filter(m => m && (m.role === "user" || m.role === "assistant"))
+            .slice(-10);
+
+          const contextLines = usable.map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`);
+
+          return [
+            "SYSTEM:",
+            BRAIN_SYSTEM_PROMPT.trim(),
+            "",
+            "STATE SUMMARY:",
+            getAppStateSummary(),
+            "",
+            "CONTEXT (last 10 messages):",
+            ...(contextLines.length ? contextLines : ["(none)"]),
+            "",
+            "NEW MESSAGE:",
+            `User: ${newUserText}`,
+          ].join("\n");
+        }
+
+
+    
+async function aiSendMessage(msg, { statusEl } = {}) {
+  const text = (msg || "").trim();
+  if (!text) return;
+
+  // store user message first (so it becomes part of history)
+  aiPush("user", text);
+
+  // Build Brain v1 prompt (system + small state + last 10 msgs)
+  const prompt = buildBrainV1Prompt(text);
+
+  // show thinking
+  aiPush("system", "…thinking");
+  const thinkingIndex = (state.aiChat?.messages || []).length - 1;
+
+  try {
+    if (statusEl) statusEl.textContent = "Sending…";
+    const reply = await callBrain(prompt);
+
+    // remove thinking message
+    if (state.aiChat?.messages && thinkingIndex >= 0) {
+      state.aiChat.messages.splice(thinkingIndex, 1);
+      saveState();
     }
+
+    aiPush("assistant", reply || "(no reply)");
+    if (statusEl) statusEl.textContent = "OK";
+  } catch (e) {
+    if (state.aiChat?.messages && thinkingIndex >= 0) {
+      state.aiChat.messages.splice(thinkingIndex, 1);
+      saveState();
+    }
+    aiPush("assistant", "Error: " + (e?.message || String(e)));
+    if (statusEl) statusEl.textContent = "Error";
+  }
+}
 
 async function sendAI() {
       const msg = (aiInputEl?.value || "").trim();
