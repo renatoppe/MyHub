@@ -990,6 +990,12 @@
   }
 }
 
+
+/* --- Fix: ensure AI buttons are clickable above textarea --- */
+.ai-input-wrapper textarea{ position: relative; z-index: 1; }
+.ai-input-buttons{ z-index: 2; }
+.ai-input-buttons button{ position: relative; z-index: 3; pointer-events: auto; }
+
 </style>
 </head>
 <body>
@@ -1469,9 +1475,9 @@
     <div class="ai-input-wrapper">
       <textarea id="aiInput" placeholder="Type your message..."></textarea>
       <div class="ai-input-buttons">
-        <button class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-        <button class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
-        <button class="btn btn-primary" id="aiSendBtn">Send</button>
+        <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+        <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
+        <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
       </div>
     </div>
   </div>
