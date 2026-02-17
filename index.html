@@ -1562,9 +1562,6 @@
       <section class="page hidden" data-page="ai">
         <h2 class="section-title">AI</h2>
 
-        <!-- Messages -->
-        <div id="aiMessages" class="ai-messages"></div>
-
         <!-- Composer -->
         <div class="ai-compose-top">
           <div class="ai-input-block">
@@ -1577,6 +1574,10 @@
             <input id="aiFileInput" type="file" multiple style="display:none" />
           </div>
         </div>
+
+        <!-- Messages -->
+        <div id="aiMessages" class="ai-messages"></div>
+
 
         <!-- Connection -->
         <details class="brain-conn" style="margin-top:12px;">
@@ -1607,8 +1608,8 @@
             </div>
 
             <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
-              <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
-              <button class="btn btn-secondary" id="brainTestBtn">Test connection</button>
+              <button type="button" class="btn btn-secondary" id="brainSaveBtn" onclick="window.brainUI && window.brainUI.save && window.brainUI.save()">Save</button>
+              <button type="button" class="btn btn-secondary" id="brainTestBtn" onclick="window.brainUI && window.brainUI.test && window.brainUI.test()">Test connection</button>
               <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
             </div>
 
@@ -5908,7 +5909,57 @@ async function sendAI() {
       });
     }
 
-    if (brainSaveBtn) {
+    
+    // ---- Connection Layer v1: UI helpers (safe, no key logging) ----
+    window.brainUI = {
+      save: () => {
+        try {
+          state.brain.mode = (brainModeEl?.value || "auto").trim();
+          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
+          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+          state.brain.apiKey = (brainKeyEl?.value || "").trim();
+          saveState();
+          renderAIConfig();
+          alert("Saved.");
+        } catch (e) {
+          console.error("Brain save failed:", e);
+          alert("Save failed (see console).");
+        }
+      },
+      test: async () => {
+        try {
+          // sync UI -> state
+          state.brain.mode = (brainModeEl?.value || "auto").trim();
+          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
+          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+          state.brain.apiKey = (brainKeyEl?.value || "").trim();
+          saveState();
+          renderAIConfig();
+
+          if (!state.brain.apiKey) {
+            if (brainStatusEl) brainStatusEl.textContent = "Missing API key.";
+            alert("Missing API key.");
+            return;
+          }
+
+          if (brainStatusEl) brainStatusEl.textContent = "Testing...";
+          const ok = await BrainClient.tryHealth();
+          if (ok.ok) {
+            if (brainStatusEl) brainStatusEl.textContent = "Connected (" + ok.mode + ").";
+            alert("Connected (" + ok.mode + ").");
+          } else {
+            if (brainStatusEl) brainStatusEl.textContent = ok.error || "Failed.";
+            alert(ok.error || "Connection failed.");
+          }
+        } catch (e) {
+          console.error("Brain test failed:", e);
+          if (brainStatusEl) brainStatusEl.textContent = "Test failed.";
+          alert("Test failed (see console).");
+        }
+      }
+    };
+
+if (brainSaveBtn) {
       brainSaveBtn.addEventListener("click", () => {
         state.brain.mode = (brainModeEl?.value || "auto").trim();
         state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
