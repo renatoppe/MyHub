@@ -1039,6 +1039,53 @@
   }
 }
 
+
+    /* ============================
+       Layout overrides (no frames + independent scroll)
+       Build: 2026-02-17 layout-v1.2
+       ============================ */
+
+    html, body { height: 100%; }
+    body { overflow: hidden; }
+
+    .app { height: 100vh; }
+
+    /* Sidebar stays fixed; right side scrolls */
+    .sidebar { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+
+    /* Main column becomes the viewport for pages */
+    .main { height: 100vh; overflow: hidden; padding: 10px 12px; gap: 10px; }
+
+    /* Pages scroll, not the whole document */
+    .page { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Remove “frames” / card chrome to reclaim space */
+    .header {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 6px 0 !important;
+    }
+
+    .page {
+      background: transparent !important;
+      border: none !important;
+      padding: 8px 0 !important;
+      border-radius: 0 !important;
+    }
+
+    .card, .favorite-card {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 8px 0 !important;
+      margin-bottom: 10px !important;
+      border-radius: 0 !important;
+    }
+
+    /* Tighten common controls a bit */
+    .btn, button { border-radius: 12px; }
+
 </style>
 </head>
 <body>
@@ -1513,59 +1560,63 @@
       
       <!-- AI -->
       <section class="page hidden" data-page="ai">
-        <div class="chat-shell">
-          <div id="aiMessages" class="chat-messages ai-messages" aria-live="polite"></div>
+        <h2 class="section-title">AI</h2>
 
-          <div class="ai-compose-top">
-            <div class="ai-input-block">
-              <textarea id="aiInput" class="ai-input" placeholder="Type your message..."></textarea>
-              <div class="ai-actions-row">
-                <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
-                <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-                <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
-              </div>
-              <div class="hint" id="aiInlineStatus" style="margin-top:6px;"></div>
+        <!-- Messages -->
+        <div id="aiMessages" class="ai-messages"></div>
+
+        <!-- Composer -->
+        <div class="ai-compose-top">
+          <div class="ai-input-block">
+            <textarea id="aiInput" placeholder="Type your message..."></textarea>
+            <div class="ai-actions-row">
+              <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
+              <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+              <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
             </div>
-          </div>
-
-          <div class="ai-conn">
-            <details open>
-              <summary style="cursor:pointer; color: var(--text-muted); font-size: 12px; margin: 8px 0;">Connection</summary>
-              <div class="input-grid">
-                <div class="input-row">
-                  <label for="brainHomeUrl">HOME (LAN) URL</label>
-                  <input id="brainHomeUrl" type="text" placeholder="http://192.168.x.x:8000" inputmode="url" />
-                </div>
-
-                <div class="input-row">
-                  <label for="brainAwayUrl">AWAY (Tailscale) URL</label>
-                  <input id="brainAwayUrl" type="text" placeholder="http://100.x.y.z:8000" inputmode="url" />
-                </div>
-
-                <div class="input-row-inline">
-                  <div class="input-row">
-                    <label for="brainMode">Mode</label>
-                    <select id="brainMode">
-                      <option value="auto" selected>auto</option>
-                      <option value="home">home</option>
-                      <option value="away">away</option>
-                    </select>
-                  </div>
-                  <div class="input-row">
-                    <label for="brainKey">Device API Key (X-API-Key)</label>
-                    <input id="brainKey" type="text" placeholder="DEVICE key only" autocomplete="off" autocapitalize="none" spellcheck="false" />
-                  </div>
-                </div>
-
-                <div class="input-row-inline" style="align-items:flex-end;">
-                  <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
-                  <button class="btn btn-secondary" id="brainTestBtn">Test connection</button>
-                  <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
-                </div>
-              </div>
-            </details>
+            <input id="aiFileInput" type="file" multiple style="display:none" />
           </div>
         </div>
+
+        <!-- Connection -->
+        <details class="brain-conn" style="margin-top:12px;">
+          <summary style="cursor:pointer; user-select:none;">Connection</summary>
+          <div style="margin-top:10px;">
+            <div class="input-row">
+              <label class="small-label" for="brainMode">Mode</label>
+              <select id="brainMode" class="input">
+                <option value="auto">auto (HOME → AWAY)</option>
+                <option value="home">home (LAN)</option>
+                <option value="away">away (Tailscale)</option>
+              </select>
+            </div>
+
+            <div class="input-row">
+              <label class="small-label" for="brainHomeUrl">HOME URL (LAN)</label>
+              <input id="brainHomeUrl" class="input" placeholder="http://192.168.x.x:8000" />
+            </div>
+
+            <div class="input-row">
+              <label class="small-label" for="brainAwayUrl">AWAY URL (Tailscale)</label>
+              <input id="brainAwayUrl" class="input" placeholder="http://100.x.y.z:8000" />
+            </div>
+
+            <div class="input-row">
+              <label class="small-label" for="brainKey">DEVICE API Key</label>
+              <input id="brainKey" class="input" type="password" placeholder="X-API-Key (device)" />
+            </div>
+
+            <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
+              <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
+              <button class="btn btn-secondary" id="brainTestBtn">Test connection</button>
+              <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
+            </div>
+
+            <div class="empty-msg" style="margin-top:8px;">
+              Tip: In <b>auto</b>, MyHub tries HOME first (short timeout). If it fails, it falls back to AWAY.
+            </div>
+          </div>
+        </details>
       </section>
     </main>
   </div>
@@ -1601,22 +1652,15 @@ console.log("MyHub build:", APP_BUILD);
       foodLibrary: [], // {id, name, baseAmount, baseUnit, kcal, protein, carbs, fat}
       calendarEvents: [], // {id, date, text}
 
-      // Brain / AI (v1)
+      // Brain / AI (Connection Layer v1)
       brain: {
-        // New Connection Layer v1 fields
-        homeUrl: "",          // e.g. http://192.168.x.x:8000
-        awayUrl: "",          // e.g. http://100.x.y.z:8000
-        mode: "auto",         // "auto" | "home" | "away"
-        apiKey: "",           // X-API-Key (DEVICE key)
-
-        // runtime telemetry (safe to store)
+        mode: "auto",       // "auto" | "home" | "away"
+        homeUrl: "",        // e.g. http://192.168.x.x:8000
+        awayUrl: "",        // e.g. http://100.x.y.z:8000
+        apiKey: "",         // DEVICE X-API-Key value
         lastSuccessfulMode: "", // "home" | "away"
-        lastPingTs: "",         // ISO timestamp
-        lastError: "",          // last error message (no secrets)
-
-        // Legacy fields (kept for backward compatibility)
-        url: "",
-        useTailscale: true
+        lastPingTs: "",        // ISO string
+        lastError: ""          // last error label/message (no secrets)
       },
       aiChat: {
         messages: []      // {role:'user'|'assistant'|'system', text, ts}
@@ -1636,7 +1680,34 @@ console.log("MyHub build:", APP_BUILD);
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return structuredClone(defaultState);
         const parsed = JSON.parse(raw);
-        return {
+        
+        // --- Brain settings migration (old -> new)
+        if (parsed && parsed.brain) {
+          // v0: brain.url + apiKey
+          if (!parsed.brain.homeUrl && parsed.brain.url) {
+            const u = String(parsed.brain.url || "").trim();
+            // If it's a tailscale IP, place it in awayUrl; else in homeUrl
+            if (/^https?:\/\/100\./.test(u) || /^100\./.test(u)) {
+              parsed.brain.awayUrl = u;
+              parsed.brain.homeUrl = parsed.brain.homeUrl || "";
+            } else {
+              parsed.brain.homeUrl = u;
+              parsed.brain.awayUrl = parsed.brain.awayUrl || "";
+            }
+            parsed.brain.mode = parsed.brain.mode || "auto";
+          }
+          // ensure new keys exist
+          parsed.brain.mode = parsed.brain.mode || "auto";
+          parsed.brain.homeUrl = parsed.brain.homeUrl || "";
+          parsed.brain.awayUrl = parsed.brain.awayUrl || "";
+          parsed.brain.lastSuccessfulMode = parsed.brain.lastSuccessfulMode || "";
+          parsed.brain.lastPingTs = parsed.brain.lastPingTs || "";
+          parsed.brain.lastError = parsed.brain.lastError || "";
+          // keep apiKey (if present)
+          parsed.brain.apiKey = parsed.brain.apiKey || "";
+        }
+
+      return {
           ...structuredClone(defaultState),
           ...parsed,
         };
@@ -2316,7 +2387,13 @@ console.log("MyHub build:", APP_BUILD);
 
       // Hook: when opening AI page, refresh UI
       if (pageId === "ai") {
-        try { renderAIPage(); } catch (e) { console.error(e); }
+        try {
+          if (typeof renderAIPage === "function") {
+            renderAIPage();
+          } else if (typeof window.renderAIPage === "function") {
+            window.renderAIPage();
+          }
+        } catch (e) { console.error(e); }
       }
       // Leaving notes canvas mode
       if (pageId !== "notes") {
@@ -5457,7 +5534,6 @@ function resolveSelectedFood() {
     // AI PAGE (replaces Analytics)
     // -----------------------------
     const aiMessagesEl = document.getElementById("aiMessages");
-    const aiInlineStatusEl = document.getElementById("aiInlineStatus");
     const aiInputEl = document.getElementById("aiInput");
     const aiSendBtn = document.getElementById("aiSendBtn");
     const aiAttachBtn = document.getElementById("aiAttachBtn");
@@ -5475,14 +5551,10 @@ function resolveSelectedFood() {
       aiInputEl.addEventListener("input", autoGrow);
       setTimeout(autoGrow, 0);
     }
-const brainHomeUrlEl = document.getElementById("brainHomeUrl");
+const brainModeEl = document.getElementById("brainMode");
+    const brainHomeUrlEl = document.getElementById("brainHomeUrl");
     const brainAwayUrlEl = document.getElementById("brainAwayUrl");
-    const brainModeEl = document.getElementById("brainMode");
     const brainKeyEl = document.getElementById("brainKey");
-
-    // legacy (older builds used a single brainUrl)
-    const brainUrlEl = brainHomeUrlEl;
-
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
     const brainStatusEl = document.getElementById("brainStatus");
@@ -5518,245 +5590,182 @@ const brainHomeUrlEl = document.getElementById("brainHomeUrl");
       aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
     }
 
-    function renderAIConfig() {
-      const b = state.brain || (state.brain = {});
-      // migration: if old single url exists and homeUrl empty, treat it as homeUrl
-      if (!b.homeUrl && b.url) b.homeUrl = b.url;
-      if (!("awayUrl" in b)) b.awayUrl = "";
-      if (!("mode" in b) || !b.mode) b.mode = "auto";
-      if (!("apiKey" in b)) b.apiKey = "";
-      if (!("lastSuccessfulMode" in b)) b.lastSuccessfulMode = "";
-      if (!("lastPingTs" in b)) b.lastPingTs = "";
-      if (!("lastError" in b)) b.lastError = "";
+    
+function renderAIConfig() {
+      if (brainModeEl) brainModeEl.value = state.brain?.mode || "auto";
+      if (brainHomeUrlEl) brainHomeUrlEl.value = state.brain?.homeUrl || "";
+      if (brainAwayUrlEl) brainAwayUrlEl.value = state.brain?.awayUrl || "";
+      if (brainKeyEl) brainKeyEl.value = state.brain?.apiKey || "";
 
-      // persist migration quietly
-      state.brain = b;
-      saveState();
-
-      if (brainHomeUrlEl) brainHomeUrlEl.value = (b.homeUrl || "").trim();
-      if (brainAwayUrlEl) brainAwayUrlEl.value = (b.awayUrl || "").trim();
-      if (brainModeEl) brainModeEl.value = (b.mode || "auto");
-      if (brainKeyEl) brainKeyEl.value = (b.apiKey || "").trim();
-
-      const configured = !!((b.homeUrl || b.awayUrl) && b.apiKey);
       if (brainStatusEl) {
-        const last = b.lastSuccessfulMode ? ` | last ok: ${b.lastSuccessfulMode}` : "";
-        const ping = b.lastPingTs ? ` | ping: ${b.lastPingTs.replace("T"," ").replace("Z","")}` : "";
-        const err = b.lastError ? ` | last err: ${b.lastError}` : "";
-        brainStatusEl.textContent = configured
-          ? `Configured (${b.mode || "auto"})${last}${ping}${err}`
-          : "Not configured yet.";
+        const mode = state.brain?.mode || "auto";
+        const lastOk = state.brain?.lastSuccessfulMode || "";
+        const lastPing = state.brain?.lastPingTs ? new Date(state.brain.lastPingTs).toLocaleString() : "";
+        const err = state.brain?.lastError || "";
+
+        let line = "";
+        if (!state.brain?.apiKey) line = "Not configured (missing API key).";
+        else if (mode === "home" && !state.brain?.homeUrl) line = "Not configured (missing HOME URL).";
+        else if (mode === "away" && !state.brain?.awayUrl) line = "Not configured (missing AWAY URL).";
+        else if (mode === "auto" && !state.brain?.homeUrl && !state.brain?.awayUrl) line = "Not configured (missing URLs).";
+        else line = "Configured.";
+
+        if (lastOk) line += " Last OK: " + lastOk.toUpperCase();
+        if (lastPing) line += " @ " + lastPing;
+        if (err) line += " | Last error: " + err;
+
+        brainStatusEl.textContent = line;
       }
-
-      // for other parts of the UI still checking state.brain.url, keep a best-effort value
-      b.url = (b.mode === "away" ? b.awayUrl : b.homeUrl) || b.homeUrl || b.awayUrl || "";
-    }
-
-    function renderAIPage() { {
-      renderAIConfig();
-      renderAIMessages();
     }
 
     // -----------------------------
     // BrainClient (Connection Layer v1)
     // -----------------------------
-    const BrainClient = (() => {
-      const DEFAULT_TIMEOUTS = {
-        healthAutoMs: 1800,
-        healthForcedMs: 3500,
-        chatAutoMs: 18000,
-        chatForcedMs: 22000
-      };
-
-      function normalizeBase(u) {
-        return (u || "").trim().replace(/\/+$/, "");
-      }
-
-      function getConfig() {
-        const b = state.brain || (state.brain = {});
-        // migration for older builds
-        if (!b.homeUrl && b.url) b.homeUrl = b.url;
-        if (!("awayUrl" in b)) b.awayUrl = "";
-        if (!b.mode) b.mode = "auto";
-        if (!("apiKey" in b)) b.apiKey = "";
-        if (!("lastSuccessfulMode" in b)) b.lastSuccessfulMode = "";
-        if (!("lastPingTs" in b)) b.lastPingTs = "";
-        if (!("lastError" in b)) b.lastError = "";
-        return b;
-      }
-
-      function persistTelemetry({ okMode, pingTs, errorMsg } = {}) {
-        const b = getConfig();
-        if (okMode) b.lastSuccessfulMode = okMode;
-        if (pingTs) b.lastPingTs = pingTs;
-        if (typeof errorMsg === "string") b.lastError = errorMsg.slice(0, 240);
-        // keep legacy url best-effort
-        b.url = (b.mode === "away" ? b.awayUrl : b.homeUrl) || b.homeUrl || b.awayUrl || "";
-        state.brain = b;
+    const BrainClient = {
+      _strip(url) {
+        return String(url || "").trim().replace(/\/+$/, "");
+      },
+      _timeoutsFor(mode) {
+        // Short timeout for HOME; a bit longer for AWAY.
+        if (mode === "home") return { health: 1200, chat: 6000 };
+        if (mode === "away") return { health: 2200, chat: 9000 };
+        return { health: 1500, chat: 8000 };
+      },
+      _classifyFetchError(err) {
+        if (err && err.name === "AbortError") return { type: "TIMEOUT", message: "Request timed out." };
+        // fetch() network errors usually surface as TypeError
+        return { type: "NETWORK", message: "Network error / server unreachable." };
+      },
+      _rememberSuccess(mode) {
+        state.brain.lastSuccessfulMode = mode;
+        state.brain.lastPingTs = new Date().toISOString();
+        state.brain.lastError = "";
         saveState();
-      }
-
-      async function fetchWithTimeout(url, opts = {}, timeoutMs = 5000) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeoutMs);
+        renderAIConfig();
+      },
+      _rememberError(label) {
+        state.brain.lastError = label;
+        saveState();
+        renderAIConfig();
+      },
+      _pickUrl(mode) {
+        if (mode === "home") return this._strip(state.brain?.homeUrl);
+        if (mode === "away") return this._strip(state.brain?.awayUrl);
+        return "";
+      },
+      _hasConfig() {
+        const key = String(state.brain?.apiKey || "").trim();
+        const mode = state.brain?.mode || "auto";
+        const h = this._strip(state.brain?.homeUrl);
+        const a = this._strip(state.brain?.awayUrl);
+        if (!key) return { ok: false, why: "Missing API key." };
+        if (mode === "home" && !h) return { ok: false, why: "Missing HOME URL." };
+        if (mode === "away" && !a) return { ok: false, why: "Missing AWAY URL." };
+        if (mode === "auto" && !h && !a) return { ok: false, why: "Missing HOME/AWAY URL." };
+        return { ok: true };
+      },
+      async _fetchWithTimeout(url, options, timeoutMs) {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
         try {
-          const res = await fetch(url, { ...opts, signal: controller.signal });
+          const res = await fetch(url, { ...options, signal: ctrl.signal });
           return res;
         } finally {
-          clearTimeout(id);
+          clearTimeout(t);
         }
-      }
+      },
+      async health(mode) {
+        const base = this._pickUrl(mode);
+        const key = String(state.brain?.apiKey || "").trim();
+        const timeouts = this._timeoutsFor(mode);
 
-      function classifyError(err, res) {
-        if (res) {
-          if (res.status === 401) return "INVALID_API_KEY";
-          return "HTTP_ERROR";
-        }
-        if (err?.name === "AbortError") return "TIMEOUT";
-        return "NETWORK";
-      }
-
-      function candidates(mode, homeUrl, awayUrl) {
-        const home = normalizeBase(homeUrl);
-        const away = normalizeBase(awayUrl);
-        if (mode === "home") return home ? [{ mode: "home", base: home }] : [];
-        if (mode === "away") return away ? [{ mode: "away", base: away }] : [];
-        const arr = [];
-        if (home) arr.push({ mode: "home", base: home });
-        if (away) arr.push({ mode: "away", base: away });
-        return arr;
-      }
-
-      async function healthCheck(base, apiKey, timeoutMs) {
+        if (!base) throw { type: "HTTP_ERROR", message: "Missing base URL for " + mode };
         const url = base + "/health";
+
         let res;
         try {
-          res = await fetchWithTimeout(url, {
-            method: "GET",
-            headers: apiKey ? { "X-API-Key": apiKey } : {}
-          }, timeoutMs);
-
-          if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            return { ok: false, kind: classifyError(null, res), status: res.status, detail: t };
-          }
-
-          const data = await res.json().catch(() => ({}));
-          return { ok: true, data };
+          res = await this._fetchWithTimeout(url, { method: "GET", headers: { "X-API-Key": key } }, timeouts.health);
         } catch (err) {
-          return { ok: false, kind: classifyError(err, null), error: err };
+          throw this._classifyFetchError(err);
         }
-      }
+        if (res.status === 401) throw { type: "INVALID_API_KEY", message: "Invalid API Key (401)." };
+        if (!res.ok) throw { type: "HTTP_ERROR", message: "Health error HTTP " + res.status };
+        return await res.json().catch(() => ({}));
+      },
+      async chat(mode, message) {
+        const base = this._pickUrl(mode);
+        const key = String(state.brain?.apiKey || "").trim();
+        const timeouts = this._timeoutsFor(mode);
 
-      async function chat(base, apiKey, message, timeoutMs) {
+        if (!base) throw { type: "HTTP_ERROR", message: "Missing base URL for " + mode };
         const url = base + "/chat";
+
         let res;
         try {
-          res = await fetchWithTimeout(url, {
+          res = await this._fetchWithTimeout(url, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              ...(apiKey ? { "X-API-Key": apiKey } : {})
+              "X-API-Key": key
             },
-            body: JSON.stringify({ message, scope: "global" })
-          }, timeoutMs);
-
-          if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            return { ok: false, kind: classifyError(null, res), status: res.status, detail: t };
-          }
-
-          const data = await res.json().catch(() => ({}));
-          return { ok: true, data };
+            body: JSON.stringify({ message: String(message || ""), scope: "global" })
+          }, timeouts.chat);
         } catch (err) {
-          return { ok: false, kind: classifyError(err, null), error: err };
-        }
-      }
-
-      function formatError(kind, status) {
-        if (kind === "INVALID_API_KEY") return "Invalid API Key (401).";
-        if (kind === "TIMEOUT") return "Server unreachable (timeout).";
-        if (kind === "NETWORK") return "Server unreachable (network).";
-        if (kind === "HTTP_ERROR") return `HTTP error${status ? " " + status : ""}.`;
-        return "Unknown error.";
-      }
-
-      async function tryConnectAndChat(message, { forceMode } = {}) {
-        const b = getConfig();
-        const mode = forceMode || b.mode || "auto";
-        const apiKey = (b.apiKey || "").trim();
-        const cands = candidates(mode, b.homeUrl, b.awayUrl);
-
-        if (!apiKey) {
-          const errMsg = "Invalid API Key: missing.";
-          persistTelemetry({ errorMsg: errMsg });
-          return { ok: false, kind: "INVALID_API_KEY", userMessage: "Invalid API Key." };
-        }
-        if (!cands.length) {
-          const errMsg = "Server URL not configured.";
-          persistTelemetry({ errorMsg: errMsg });
-          return { ok: false, kind: "NETWORK", userMessage: "Configure HOME/AWAY URL first." };
+          throw this._classifyFetchError(err);
         }
 
-        const now = () => new Date().toISOString();
+        if (res.status === 401) throw { type: "INVALID_API_KEY", message: "Invalid API Key (401)." };
+        if (!res.ok) throw { type: "HTTP_ERROR", message: "Chat error HTTP " + res.status };
+        const data = await res.json().catch(() => ({}));
+        return data?.reply ?? "";
+      },
+      async tryConnectAndChat(message) {
+        const conf = this._hasConfig();
+        if (!conf.ok) {
+          this._rememberError(conf.why);
+          throw { type: "HTTP_ERROR", message: conf.why };
+        }
 
-        const healthTimeout = (mode === "auto") ? DEFAULT_TIMEOUTS.healthAutoMs : DEFAULT_TIMEOUTS.healthForcedMs;
-        const chatTimeout = (mode === "auto") ? DEFAULT_TIMEOUTS.chatAutoMs : DEFAULT_TIMEOUTS.chatForcedMs;
+        const mode = state.brain?.mode || "auto";
+        const tries = (mode === "auto")
+          ? (state.brain?.lastSuccessfulMode === "away" ? ["away", "home"] : ["home", "away"])
+          : [mode];
 
-        let lastFailure = null;
+        let lastErr = null;
 
-        for (const c of cands) {
-          const h = await healthCheck(c.base, apiKey, healthTimeout);
-          if (!h.ok) {
-            lastFailure = { step: "health", cand: c, ...h };
-            continue;
+        for (const m of tries) {
+          const base = this._pickUrl(m);
+          if (!base) continue;
+
+          try {
+            await this.health(m);
+            const reply = await this.chat(m, message);
+            this._rememberSuccess(m);
+            return reply;
+          } catch (e) {
+            lastErr = e;
+            // Save a small label (no secrets)
+            const label = (e?.type ? (e.type + ": ") : "") + (e?.message || String(e));
+            this._rememberError(label);
           }
-
-          persistTelemetry({ okMode: c.mode, pingTs: now(), errorMsg: "" });
-
-          const r = await chat(c.base, apiKey, message, chatTimeout);
-          if (r.ok) {
-            persistTelemetry({ okMode: c.mode, pingTs: now(), errorMsg: "" });
-            const data = r.data || {};
-            return {
-              ok: true,
-              modeUsed: c.mode,
-              reply: data.reply || data.response || data.text || JSON.stringify(data),
-              raw: data
-            };
-          }
-
-          lastFailure = { step: "chat", cand: c, ...r };
-          if (r.kind === "INVALID_API_KEY") break;
         }
 
-        const kind = lastFailure?.kind || "NETWORK";
-        const userMessage = formatError(kind, lastFailure?.status);
-        const safeDetail = lastFailure?.detail ? String(lastFailure.detail).slice(0, 180) : "";
-        const errMsg = `${lastFailure?.step || "request"} failed (${kind}${lastFailure?.status ? " " + lastFailure.status : ""})${safeDetail ? ": " + safeDetail : ""}`;
-        persistTelemetry({ errorMsg: errMsg });
-
-        return { ok: false, kind, userMessage, detail: lastFailure };
+        throw lastErr || { type: "NETWORK", message: "Unable to connect." };
       }
+    };
 
-      async function testConnection() {
-        return await tryConnectAndChat("Hello! Quick test.", { forceMode: getConfig().mode || "auto" });
-      }
-
-      return { getConfig, tryConnectAndChat, testConnection };
-    })();
-
-    async function callBrain(message) {
-      const r = await BrainClient.tryConnectAndChat(message);
-      if (!r.ok) {
-        const msg = r.userMessage || "Brain error.";
-        const e = new Error(msg);
-        e.kind = r.kind;
-        throw e;
-      }
-      return r.reply;
+    function renderAIPage() {
+      renderAIConfig();
+      renderAIMessages();
     }
 
+    async function callBrain(message) {
+      const reply = await BrainClient.tryConnectAndChat(message);
+      return reply;
+    }
+
+
+    
     // Send a message to Brain and store it in the shared AI chat history.
     // Used by BOTH: full AI page and the small corner "chat head".
         // ==========================
@@ -5901,13 +5910,10 @@ async function sendAI() {
 
     if (brainSaveBtn) {
       brainSaveBtn.addEventListener("click", () => {
-        const b = state.brain || (state.brain = {});
-        b.homeUrl = (brainHomeUrlEl?.value || "").trim();
-        b.awayUrl = (brainAwayUrlEl?.value || "").trim();
-        b.mode = (brainModeEl?.value || "auto").trim();
-        b.apiKey = (brainKeyEl?.value || "").trim();
-        b.url = (b.mode === "away" ? b.awayUrl : b.homeUrl) || b.homeUrl || b.awayUrl || "";
-        state.brain = b;
+        state.brain.mode = (brainModeEl?.value || "auto").trim();
+        state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
+        state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+        state.brain.apiKey = (brainKeyEl?.value || "").trim();
         saveState();
         renderAIConfig();
         alert("Saved.");
@@ -5917,25 +5923,28 @@ async function sendAI() {
     if (brainTestBtn) {
       brainTestBtn.addEventListener("click", async () => {
         try {
-          const b = state.brain || (state.brain = {});
-          b.homeUrl = (brainHomeUrlEl?.value || "").trim();
-          b.awayUrl = (brainAwayUrlEl?.value || "").trim();
-          b.mode = (brainModeEl?.value || "auto").trim();
-          b.apiKey = (brainKeyEl?.value || "").trim();
-          b.url = (b.mode === "away" ? b.awayUrl : b.homeUrl) || b.homeUrl || b.awayUrl || "";
-          state.brain = b;
+          // sync UI -> state
+          state.brain.mode = (brainModeEl?.value || "auto").trim();
+          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
+          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+          state.brain.apiKey = (brainKeyEl?.value || "").trim();
           saveState();
           renderAIConfig();
 
-          // spec: /health before /chat (BrainClient enforces this)
-          const res = await BrainClient.testConnection();
-          if (!res.ok) throw new Error(res.userMessage || "Test failed.");
+          if (brainStatusEl) brainStatusEl.textContent = "Testing…";
 
-          alert(`OK (${res.modeUsed}): ${res.reply}`);
+          // This will do /health then /chat according to Connection Layer v1
+          const reply = await BrainClient.tryConnectAndChat("Hello! Quick test.");
+          if (brainStatusEl) brainStatusEl.textContent = "OK ✓";
+          alert("OK: " + (reply || "(no reply)"));
         } catch (e) {
-          alert("Test failed: " + (e?.message || String(e)));
+          const type = e?.type || "ERROR";
+          const msg = e?.message || String(e);
+          if (brainStatusEl) brainStatusEl.textContent = type + ": " + msg;
+          alert("Test failed (" + type + "): " + msg);
         }
-      });}
+      });
+    }
 
     if (aiClearBtn) {
       aiClearBtn.addEventListener("click", () => {
@@ -5968,8 +5977,15 @@ async function sendAI() {
 
     function renderAIChatHeadMessages() {
       if (!aiChMessagesEl) return;
-      const msgs = (state.aiChat?.messages || []).slice(-12);
-      aiChMessagesEl.innerHTML = "";
+      const s = (typeof state !== "undefined"
+        ? state
+        : (typeof loadState === "function"
+            ? loadState()
+            : { aiChat: { messages: [] }, brain: {} }
+          )
+      );
+      const msgs = (s.aiChat?.messages || []).slice(-12);
+aiChMessagesEl.innerHTML = "";
       msgs.forEach((m) => {
         const div = document.createElement("div");
         div.className = "ai-msg " + (m.role === "assistant" ? "ai-ai" : (m.role === "user" ? "ai-user" : "ai-system"));
@@ -5979,7 +5995,7 @@ async function sendAI() {
       aiChMessagesEl.scrollTop = aiChMessagesEl.scrollHeight;
 
       if (aiChStatusEl) {
-        aiChStatusEl.textContent = (state.brain?.url ? "Configured" : "Not configured");
+        aiChStatusEl.textContent = (s.brain?.url ? "Configured" : "Not configured");
       }
     }
 
@@ -6016,9 +6032,32 @@ async function sendAI() {
       const msg = (aiChInputEl?.value || "").trim();
       if (!msg) return;
       aiChInputEl.value = "";
-      await aiSendMessage(msg, { statusEl: aiChStatusEl });
-      renderAIChatHeadMessages();
-      renderAIMessages(); // keep full page in sync
+
+      try {
+        if (typeof aiSendMessage === "function") {
+          await aiSendMessage(msg, { statusEl: aiChStatusEl });
+        } else if (typeof window.aiSendMessage === "function") {
+          await window.aiSendMessage(msg, { statusEl: aiChStatusEl });
+        } else {
+          // Fallback: keep chat head usable even if AI module isn't loaded
+          if (typeof aiPush === "function") {
+            aiPush("user", msg);
+            aiPush("assistant", "(AI not ready yet — open the AI tab or configure Brain first.)");
+          } else if (typeof window.aiPush === "function") {
+            window.aiPush("user", msg);
+            window.aiPush("assistant", "(AI not ready yet — open the AI tab or configure Brain first.)");
+          }
+          if (aiChStatusEl) aiChStatusEl.textContent = "AI not ready";
+        }
+      } catch (err) {
+        console.error(err);
+        if (aiChStatusEl) aiChStatusEl.textContent = "Error";
+      }
+
+      // Refresh both UIs if available
+      try { renderAIChatHeadMessages(); } catch (e) {}
+      try { if (typeof renderAIMessages === "function") renderAIMessages(); } catch (e) {}
+      try { if (typeof window.renderAIMessages === "function") window.renderAIMessages(); } catch (e) {}
     }
 
     if (aiChSendBtn) aiChSendBtn.addEventListener("click", sendFromChatHead);
@@ -6030,15 +6069,17 @@ async function sendAI() {
     });
 
     // Keep chat head synced when messages change
-    const _oldAiPush = aiPush;
-    aiPush = function(role, text) {
-      _oldAiPush(role, text);
-      renderAIChatHeadMessages();
-    };
+    if (typeof aiPush === "function") {
+      const _oldAiPush = aiPush;
+      aiPush = function(role, text) {
+        _oldAiPush(role, text);
+        try { renderAIChatHeadMessages(); } catch (_) {}
+      };
+    }
 
 
     // initial render (in case AI is first page opened)
-    renderAIPage();
+    try { if (typeof renderAIPage === "function") renderAIPage(); } catch (_) {}
 
    }
         renderCalendar();
@@ -6071,9 +6112,16 @@ async function sendAI() {
       if (!aiChatHeadEl) return;
 
       function renderAIChatHeadMessages() {
-        if (!aiChMessagesEl) return;
-        const msgs = (state.aiChat?.messages || []).slice(-12);
-        aiChMessagesEl.innerHTML = "";
+      if (!aiChMessagesEl) return;
+      const s = (typeof state !== "undefined"
+        ? state
+        : (typeof loadState === "function"
+            ? loadState()
+            : { aiChat: { messages: [] }, brain: {} }
+          )
+      );
+      const msgs = (s.aiChat?.messages || []).slice(-12);
+aiChMessagesEl.innerHTML = "";
         msgs.forEach((m) => {
           const div = document.createElement("div");
           div.className =
@@ -6088,7 +6136,7 @@ async function sendAI() {
         aiChMessagesEl.scrollTop = aiChMessagesEl.scrollHeight;
 
         if (aiChStatusEl) {
-          aiChStatusEl.textContent = state.brain?.url ? "Configured" : "Not configured";
+          aiChStatusEl.textContent = (s && s.brain && s.brain.url) ? "Configured" : "Not configured";
         }
       }
 
@@ -6125,9 +6173,32 @@ async function sendAI() {
         const msg = (aiChInputEl?.value || "").trim();
         if (!msg) return;
         aiChInputEl.value = "";
-        await aiSendMessage(msg, { statusEl: aiChStatusEl });
-        renderAIChatHeadMessages();
-        if (typeof renderAIMessages === "function") renderAIMessages();
+
+        try {
+          const sendFn =
+            (typeof aiSendMessage === "function" ? aiSendMessage :
+            (typeof window.aiSendMessage === "function" ? window.aiSendMessage : null));
+
+          if (sendFn) {
+            await sendFn(msg, { statusEl: aiChStatusEl });
+          } else {
+            const pushFn =
+              (typeof aiPush === "function" ? aiPush :
+              (typeof window.aiPush === "function" ? window.aiPush : null));
+
+            if (pushFn) {
+              pushFn("user", msg);
+              pushFn("assistant", "(AI not ready yet — open the AI tab or configure Brain first.)");
+            }
+            if (aiChStatusEl) aiChStatusEl.textContent = "AI not ready";
+          }
+        } catch (err) {
+          console.error(err);
+          if (aiChStatusEl) aiChStatusEl.textContent = "Error";
+        }
+
+        try { renderAIChatHeadMessages(); } catch (_) {}
+        try { if (typeof renderAIMessages === "function") renderAIMessages(); } catch (_) {}
       }
 
       if (aiChSendBtn) aiChSendBtn.addEventListener("click", sendFromChatHead);
@@ -6143,11 +6214,13 @@ async function sendAI() {
       // keep chat head synced whenever aiPush is called
       if (!window.__aiPushWrapped) {
         window.__aiPushWrapped = true;
-        const _oldAiPush = aiPush;
-        aiPush = function (role, text) {
-          _oldAiPush(role, text);
-          try { renderAIChatHeadMessages(); } catch (_) {}
-        };
+        if (typeof aiPush === "function") {
+          const _oldAiPush = aiPush;
+          aiPush = function (role, text) {
+            _oldAiPush(role, text);
+            try { renderAIChatHeadMessages(); } catch (_) {}
+          };
+        }
       }
     }
 
