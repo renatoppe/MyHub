@@ -1599,8 +1599,8 @@
               </div>
 
               <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
-                <button type="button" class="btn btn-secondary" id="brainSaveBtn">Save</button>
-                <button type="button" class="btn btn-secondary" id="brainTestBtn">Test connection</button>
+                <button type="button" class="btn btn-secondary" id="brainSaveBtn" type="button" onclick="brainSaveClick()">Save</button>
+                <button type="button" class="btn btn-secondary" id="brainTestBtn" type="button" onclick="brainTestClick()">Test connection</button>
                 <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
               </div>
 
@@ -5504,7 +5504,10 @@ function resolveSelectedFood() {
         cursor.setDate(cursor.getDate() + 7);
         } else {
         cursor.setDate(cursor.getDate() + 1);
-     
+        }
+        renderCalendar();
+    });
+
     // -----------------------------
     // AI PAGE (replaces Analytics)
     // -----------------------------
@@ -5657,64 +5660,184 @@ async function callBrain(message) {
 }
 
 // Actions engine: execute actions, not reply
+// ==============================
+// Actions engine (MyHub-compatible)
+// ==============================
+
+// Toggle: keep false for now (only log actions)
+const APPLY_ACTIONS = false;
+
+function normalizeText(s) {
+  return String(s || "").trim();
+}
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+function findTodoByTitle(title) {
+  const t = normalizeText(title).toLowerCase();
+  if (!t) return null;
+  return (state.todos || []).find(x => normalizeText(x.title).toLowerCase() === t) || null;
+}
+
+// Handlers must NOT throw; keep app safe.
+const ACTION_HANDLERS = {
+  // payload: { item, qty?, listId? }
+  shopping_add: (p) => {
+    const item = normalizeText(p.item);
+    const qty = Number.isFinite(p.qty) ? p.qty : 1;
+    if (!item) return;
+
+    // Use existing MyHub structure: shoppingLists -> items
+    const list = (typeof getCurrentShoppingList === "function")
+      ? getCurrentShoppingList()
+      : (state.shoppingLists?.[0] || null);
+
+    if (!list) return;
+
+    list.items = list.items || [];
+    list.items.push({
+      id: makeId("sitem"),
+      text: qty > 1 ? `${item} x${qty}` : item,
+      checked: false,
+      note: ""
+    });
+
+    saveState();
+    if (typeof renderShopping === "function") renderShopping();
+  },
+
+  // payload: { item }
+  shopping_remove: (p) => {
+    const item = normalizeText(p.item).toLowerCase();
+    if (!item) return;
+
+    const list = (typeof getCurrentShoppingList === "function")
+      ? getCurrentShoppingList()
+      : (state.shoppingLists?.[0] || null);
+
+    if (!list || !Array.isArray(list.items)) return;
+
+    list.items = list.items.filter(it => normalizeText(it.text).toLowerCase() !== item);
+    saveState();
+    if (typeof renderShopping === "function") renderShopping();
+  },
+
+  // payload: { title, priority?, dueDate?, listId? }
+  task_add: (p) => {
+    const title = normalizeText(p.title);
+    if (!title) return;
+
+    state.todos = state.todos || [];
+    const listId =
+      normalizeText(p.listId) ||
+      (typeof currentTodoListId !== "undefined" ? currentTodoListId : "default");
+
+    state.todos.push({
+      id: makeId("todo"),
+      title,
+      priority: normalizeText(p.priority) || "normal",
+      dueDate: normalizeText(p.dueDate) || "",
+      status: "open",
+      listId,
+      createdAt: nowISO(),
+      link: ""
+    });
+
+    saveState();
+    if (typeof renderTodos === "function") renderTodos();
+  },
+
+  // payload: { title }
+  task_complete: (p) => {
+    const title = normalizeText(p.title);
+    if (!title) return;
+
+    const todo = findTodoByTitle(title);
+    if (!todo) return;
+
+    todo.status = "done";
+    saveState();
+    if (typeof renderTodos === "function") renderTodos();
+  },
+
+  // payload: { text }
+  note_add: (p) => {
+    const text = normalizeText(p.text);
+    if (!text) return;
+
+    const stamp = new Date().toLocaleString();
+    const block = `\n\n[${stamp}]\n${text}`;
+
+    state.notesText = (state.notesText || "") + block;
+    saveState();
+
+    // keep UI synced if element exists
+    const ta = document.getElementById("notesTextArea");
+    if (ta) ta.value = state.notesText;
+  },
+
+  // payload: { text, date? }
+  meal_log: (p) => {
+    const food = normalizeText(p.text);
+    if (!food) return;
+
+    state.meals = state.meals || [];
+    state.meals.push({
+      id: makeId("meal"),
+      date: normalizeText(p.date) || new Date().toISOString().slice(0, 10),
+      food,
+      amount: "",
+      unit: "",
+      protein: "",
+      carbs: "",
+      fat: ""
+    });
+
+    saveState();
+    if (typeof renderMeals === "function") renderMeals();
+  },
+
+  // payload: { text, name? }
+  workout_log: (p) => {
+    const notes = normalizeText(p.text);
+    if (!notes) return;
+
+    state.workouts = state.workouts || [];
+    state.workouts.push({
+      id: makeId("workout"),
+      name: normalizeText(p.name) || "Workout",
+      notes,
+      exercises: [],
+      startTime: nowISO(),
+      durationMs: 0
+    });
+
+    saveState();
+    if (typeof renderWorkoutsList === "function") renderWorkoutsList();
+  }
+};
+
 function applyActions(actions) {
   if (!Array.isArray(actions)) return;
+
   for (const action of actions) {
     if (!action || typeof action.type !== "string") continue;
-    const type = action.type;
-    const payload = action.payload || {};
-    const handler = ACTION_HANDLERS[type];
-    if (handler) {
-      try { handler(payload, action); } catch (e) { console.error("Action handler failed:", type, e); }
-    } else {
-      console.warn("Unknown action:", type, action);
+
+    const handler = ACTION_HANDLERS[action.type];
+    if (!handler) {
+      console.warn("[AI] Unknown action type:", action.type, action);
+      continue;
+    }
+
+    try {
+      handler(action.payload || {}, action);
+    } catch (e) {
+      console.error("[AI] Action handler failed:", action.type, e, action);
     }
   }
 }
-
-const ACTION_HANDLERS = {
-  shopping_add: (p) => {
-    const item = String(p.item || "").trim();
-    const qty = Number.isFinite(p.qty) ? p.qty : 1;
-    if (!item) return;
-    if (typeof window.addShoppingItem === "function") return window.addShoppingItem(item, qty);
-    state.shoppingList = state.shoppingList || [];
-    state.shoppingList.push({ item, qty, ts: new Date().toISOString() });
-    saveState();
-  },
-  shopping_remove: (p) => {
-    const item = String(p.item || "").trim().toLowerCase();
-    if (!item) return;
-    if (typeof window.removeShoppingItem === "function") return window.removeShoppingItem(item);
-    state.shoppingList = (state.shoppingList || []).filter(x => String(x.item||"").toLowerCase() !== item);
-    saveState();
-  },
-  task_add: (p) => {
-    const title = String(p.title || "").trim();
-    if (!title) return;
-    if (typeof window.addTask === "function") return window.addTask(title);
-    state.tasks = state.tasks || [];
-    state.tasks.push({ title, done:false, ts: new Date().toISOString() });
-    saveState();
-  },
-  task_complete: (p) => {
-    const title = String(p.title || "").trim().toLowerCase();
-    if (!title) return;
-    if (typeof window.completeTask === "function") return window.completeTask(title);
-    state.tasks = state.tasks || [];
-    for (const t of state.tasks) if (String(t.title||"").toLowerCase() === title) t.done = true;
-    saveState();
-  },
-  note_add: (p) => {
-    const text = String(p.text || "").trim();
-    if (!text) return;
-    if (typeof window.addNote === "function") return window.addNote(text);
-    state.notes = state.notes || [];
-    state.notes.push({ text, ts: new Date().toISOString() });
-    saveState();
-  },
-};
-
     
     // Send a message to Brain and store it in the shared AI chat history.
     // Used by BOTH: full AI page and the small corner "chat head".
@@ -5800,6 +5923,9 @@ async function aiSendMessage(msg, { statusEl } = {}) {
   const text = (msg || "").trim();
   if (!text) return;
 
+
+  console.log("[AI] sending message:", text);
+
   // store user message first
   aiPush("user", text);
 
@@ -5820,8 +5946,19 @@ async function aiSendMessage(msg, { statusEl } = {}) {
     }
 
     if (res.ok) {
+      console.log("[AI] received reply:", res);
+
       aiPush("assistant", res.reply || "(no reply)");
-      applyActions(res.actions);
+      console.log("[AI] rendered reply");
+
+      console.log("[AI] actions:", res.actions || []);
+      if (APPLY_ACTIONS && Array.isArray(res.actions) && res.actions.length) {
+        console.log("[AI] applying actions...");
+        applyActions(res.actions);
+      } else {
+        console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=false)");
+      }
+
       if (statusEl) statusEl.textContent = "OK";
       if (state.brain) {
         state.brain.lastMeta = { ts: res.meta?.ts || null, scope: res.meta?.scope || scope, actions: res.actions?.length || 0 };
@@ -6051,10 +6188,6 @@ aiChMessagesEl.innerHTML = "";
     // initial render (in case AI is first page opened)
     try { if (typeof renderAIPage === "function") renderAIPage(); } catch (_) {}
 
-   }
-        renderCalendar();
-    });
-
     // Initial
     renderCalendar();
     }
@@ -6229,6 +6362,120 @@ aiChMessagesEl.innerHTML = "";
       <span class="hint">🎙️ audio later</span>
     </div>
   </div>
+
+
+<script>
+/* Minimal debug for Save/Test buttons only.
+   Goal: confirm buttons receive clicks. No other app behavior changes. */
+function brainSaveClick() {
+  try {
+    console.log("[BRAIN_UI] Save clicked");
+
+    var urlInput = document.getElementById("brainUrl");
+    var keyInput = document.getElementById("brainKey");
+
+    if (!urlInput || !keyInput) {
+      alert("Brain inputs not found (brainUrl/brainKey).");
+      return;
+    }
+
+    var url = (urlInput.value || "").trim();
+    var key = (keyInput.value || "").trim();
+
+    // Save to localStorage (separate from app state)
+    var cfg = { url: url, apiKey: key };
+    localStorage.setItem("myhub_brain_config", JSON.stringify(cfg));
+
+    console.log("[BRAIN_UI] Saved config:", { url: url, apiKey: key ? "[set]" : "[empty]" });
+    alert("Saved successfully.");
+  } catch (e) {
+    console.error(e);
+    alert("Save failed: " + (e && e.message ? e.message : String(e)));
+  }
+}
+function brainTestClick() {
+  try {
+    console.log("[BRAIN_UI] Test connection clicked");
+
+    var raw = localStorage.getItem("myhub_brain_config");
+    if (!raw) {
+      alert("No saved Brain config found.");
+      return;
+    }
+
+    var cfg = JSON.parse(raw);
+    var base = (cfg.url || "").trim();
+    var key = (cfg.apiKey || "").trim();
+
+    if (!base || !key) {
+      alert("Brain URL or API key missing.");
+      return;
+    }
+
+    console.log("[BRAIN_UI] Using config:", {
+      url: base,
+      apiKey: key ? "[set]" : "[empty]"
+    });
+
+    alert("Testing connection... check console.");
+
+    // Step 1: Health check
+    fetch(base + "/health")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        console.log("[BRAIN_UI] Health response:", data);
+
+        // Step 2: Chat ping
+        return fetch(base + "/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": key
+          },
+          body: JSON.stringify({
+            message: "ping",
+            scope: "global"
+          })
+        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(chatData) {
+        console.log("[BRAIN_UI] Chat response:", chatData);
+        alert("Health OK + Chat OK.");
+      })
+      .catch(function(err) {
+        console.error("[BRAIN_UI] Test error:", err);
+        alert("Connection test failed. Check console.");
+      });
+
+  } catch (e) {
+    console.error(e);
+    alert("Test failed: " + (e.message || String(e)));
+  }
+}
+// Redundant listeners (in case onclick is removed later)
+document.addEventListener("DOMContentLoaded", function() {
+  // Prefill inputs from localStorage (if available)
+  try {
+    var raw = localStorage.getItem("myhub_brain_config");
+    if (raw) {
+      var cfg = JSON.parse(raw);
+      var urlInput = document.getElementById("brainUrl");
+      var keyInput = document.getElementById("brainKey");
+      if (urlInput && cfg && typeof cfg.url === "string") urlInput.value = cfg.url;
+      if (keyInput && cfg && typeof cfg.apiKey === "string") keyInput.value = cfg.apiKey;
+      console.log("[BRAIN_UI] Prefilled Brain config from localStorage.");
+    }
+  } catch (e) {
+    console.warn("[BRAIN_UI] Prefill failed:", e);
+  }
+
+  var s = document.getElementById("brainSaveBtn");
+  var t = document.getElementById("brainTestBtn");
+  if (s) s.addEventListener("click", function(){ console.log("[BRAIN_UI] Save listener fired"); });
+  if (t) t.addEventListener("click", function(){ console.log("[BRAIN_UI] Test listener fired"); });
+});
+</script>
 
 </body>
 </html>
