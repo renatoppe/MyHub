@@ -1560,61 +1560,28 @@
       
       <!-- AI -->
       <section class="page hidden" data-page="ai">
-        <h2 class="section-title">AI</h2>
+        
+  
+<div class="ai-compose-top">
+  <div class="ai-input-block">
+    <textarea id="aiInput" placeholder="Type your message..."></textarea>
+    <div class="ai-actions-row">
+      <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
+      <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+      <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
+    </div>
+  </div>
+</div>
 
-        <!-- Composer -->
-        <div class="ai-compose-top">
-          <div class="ai-input-block">
-            <textarea id="aiInput" placeholder="Type your message..."></textarea>
-            <div class="ai-actions-row">
-              <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
-              <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-              <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
-            </div>
-            <input id="aiFileInput" type="file" multiple style="display:none" />
-          </div>
-        </div>
-
-        <!-- Messages -->
-        <div id="aiMessages" class="ai-messages"></div>
+  </div>
+</div>
 
 
-        <!-- Connection -->
-        <details class="brain-conn" style="margin-top:12px;">
-          <summary style="cursor:pointer; user-select:none;">Connection</summary>
-          <div style="margin-top:10px;">
-            <div class="input-row">
-              <label class="small-label" for="brainMode">Mode</label>
-              <select id="brainMode" class="input">
-                <option value="auto">auto (HOME → AWAY)</option>
-                <option value="home">home (LAN)</option>
-                <option value="away">away (Tailscale)</option>
-              </select>
-            </div>
-
-            <div class="input-row">
-              <label class="small-label" for="brainHomeUrl">HOME URL (LAN)</label>
-              <input id="brainHomeUrl" class="input" placeholder="http://192.168.x.x:8000" />
-            </div>
-
-            <div class="input-row">
-              <label class="small-label" for="brainAwayUrl">AWAY URL (Tailscale)</label>
-              <input id="brainAwayUrl" class="input" placeholder="http://100.x.y.z:8000" />
-            </div>
-
-            <div class="input-row">
-              <label class="small-label" for="brainKey">DEVICE API Key</label>
-              <input id="brainKey" class="input" type="password" placeholder="X-API-Key (device)" />
-            </div>
-
-            <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
-              <button type="button" class="btn btn-secondary" id="brainSaveBtn" onclick="window.brainUI && window.brainUI.save && window.brainUI.save()">Save</button>
-              <button type="button" class="btn btn-secondary" id="brainTestBtn" onclick="window.brainUI && window.brainUI.test && window.brainUI.test()">Test connection</button>
+            <div class="input-row-inline" style="align-items:flex-end;">
+              <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
+              <button class="btn btn-secondary" id="brainTestBtn">Test /chat</button>
               <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
-            </div>
-
-            <div class="empty-msg" style="margin-top:8px;">
-              Tip: In <b>auto</b>, MyHub tries HOME first (short timeout). If it fails, it falls back to AWAY.
+<div class="empty-msg" style="margin-top:6px;">Tip: If MyHub is on HTTPS (GitHub Pages), calling HTTP Brain may be blocked (Mixed Content). Test using local file / http first, or add HTTPS to Brain later.</div>
             </div>
           </div>
         </details>
@@ -1653,15 +1620,11 @@ console.log("MyHub build:", APP_BUILD);
       foodLibrary: [], // {id, name, baseAmount, baseUnit, kcal, protein, carbs, fat}
       calendarEvents: [], // {id, date, text}
 
-      // Brain / AI (Connection Layer v1)
+      // Brain / AI (v1)
       brain: {
-        mode: "auto",       // "auto" | "home" | "away"
-        homeUrl: "",        // e.g. http://192.168.x.x:8000
-        awayUrl: "",        // e.g. http://100.x.y.z:8000
-        apiKey: "",         // DEVICE X-API-Key value
-        lastSuccessfulMode: "", // "home" | "away"
-        lastPingTs: "",        // ISO string
-        lastError: ""          // last error label/message (no secrets)
+        url: "",          // e.g. http://localhost:8000 or http://100.x.y.z:8000
+        apiKey: "",       // X-API-Key value
+        useTailscale: true
       },
       aiChat: {
         messages: []      // {role:'user'|'assistant'|'system', text, ts}
@@ -1681,34 +1644,7 @@ console.log("MyHub build:", APP_BUILD);
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return structuredClone(defaultState);
         const parsed = JSON.parse(raw);
-        
-        // --- Brain settings migration (old -> new)
-        if (parsed && parsed.brain) {
-          // v0: brain.url + apiKey
-          if (!parsed.brain.homeUrl && parsed.brain.url) {
-            const u = String(parsed.brain.url || "").trim();
-            // If it's a tailscale IP, place it in awayUrl; else in homeUrl
-            if (/^https?:\/\/100\./.test(u) || /^100\./.test(u)) {
-              parsed.brain.awayUrl = u;
-              parsed.brain.homeUrl = parsed.brain.homeUrl || "";
-            } else {
-              parsed.brain.homeUrl = u;
-              parsed.brain.awayUrl = parsed.brain.awayUrl || "";
-            }
-            parsed.brain.mode = parsed.brain.mode || "auto";
-          }
-          // ensure new keys exist
-          parsed.brain.mode = parsed.brain.mode || "auto";
-          parsed.brain.homeUrl = parsed.brain.homeUrl || "";
-          parsed.brain.awayUrl = parsed.brain.awayUrl || "";
-          parsed.brain.lastSuccessfulMode = parsed.brain.lastSuccessfulMode || "";
-          parsed.brain.lastPingTs = parsed.brain.lastPingTs || "";
-          parsed.brain.lastError = parsed.brain.lastError || "";
-          // keep apiKey (if present)
-          parsed.brain.apiKey = parsed.brain.apiKey || "";
-        }
-
-      return {
+        return {
           ...structuredClone(defaultState),
           ...parsed,
         };
@@ -2361,6 +2297,8 @@ console.log("MyHub build:", APP_BUILD);
     }
   
     function showPage(pageId) {
+      window.currentPage = pageId;
+
       pages.forEach((p) => {
         if (p.dataset.page === pageId) {
           p.classList.remove("hidden");
@@ -5552,9 +5490,7 @@ function resolveSelectedFood() {
       aiInputEl.addEventListener("input", autoGrow);
       setTimeout(autoGrow, 0);
     }
-const brainModeEl = document.getElementById("brainMode");
-    const brainHomeUrlEl = document.getElementById("brainHomeUrl");
-    const brainAwayUrlEl = document.getElementById("brainAwayUrl");
+const brainUrlEl = document.getElementById("brainUrl");
     const brainKeyEl = document.getElementById("brainKey");
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
@@ -5591,180 +5527,157 @@ const brainModeEl = document.getElementById("brainMode");
       aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
     }
 
-    
-function renderAIConfig() {
-      if (brainModeEl) brainModeEl.value = state.brain?.mode || "auto";
-      if (brainHomeUrlEl) brainHomeUrlEl.value = state.brain?.homeUrl || "";
-      if (brainAwayUrlEl) brainAwayUrlEl.value = state.brain?.awayUrl || "";
+    function renderAIConfig() {
+      if (brainUrlEl) brainUrlEl.value = state.brain?.url || "";
       if (brainKeyEl) brainKeyEl.value = state.brain?.apiKey || "";
-
       if (brainStatusEl) {
-        const mode = state.brain?.mode || "auto";
-        const lastOk = state.brain?.lastSuccessfulMode || "";
-        const lastPing = state.brain?.lastPingTs ? new Date(state.brain.lastPingTs).toLocaleString() : "";
-        const err = state.brain?.lastError || "";
-
-        let line = "";
-        if (!state.brain?.apiKey) line = "Not configured (missing API key).";
-        else if (mode === "home" && !state.brain?.homeUrl) line = "Not configured (missing HOME URL).";
-        else if (mode === "away" && !state.brain?.awayUrl) line = "Not configured (missing AWAY URL).";
-        else if (mode === "auto" && !state.brain?.homeUrl && !state.brain?.awayUrl) line = "Not configured (missing URLs).";
-        else line = "Configured.";
-
-        if (lastOk) line += " Last OK: " + lastOk.toUpperCase();
-        if (lastPing) line += " @ " + lastPing;
-        if (err) line += " | Last error: " + err;
-
-        brainStatusEl.textContent = line;
+        brainStatusEl.textContent = state.brain?.url
+          ? "Configured: " + state.brain.url
+          : "Not configured yet.";
       }
     }
-
-    // -----------------------------
-    // BrainClient (Connection Layer v1)
-    // -----------------------------
-    const BrainClient = {
-      _strip(url) {
-        return String(url || "").trim().replace(/\/+$/, "");
-      },
-      _timeoutsFor(mode) {
-        // Short timeout for HOME; a bit longer for AWAY.
-        if (mode === "home") return { health: 1200, chat: 6000 };
-        if (mode === "away") return { health: 2200, chat: 9000 };
-        return { health: 1500, chat: 8000 };
-      },
-      _classifyFetchError(err) {
-        if (err && err.name === "AbortError") return { type: "TIMEOUT", message: "Request timed out." };
-        // fetch() network errors usually surface as TypeError
-        return { type: "NETWORK", message: "Network error / server unreachable." };
-      },
-      _rememberSuccess(mode) {
-        state.brain.lastSuccessfulMode = mode;
-        state.brain.lastPingTs = new Date().toISOString();
-        state.brain.lastError = "";
-        saveState();
-        renderAIConfig();
-      },
-      _rememberError(label) {
-        state.brain.lastError = label;
-        saveState();
-        renderAIConfig();
-      },
-      _pickUrl(mode) {
-        if (mode === "home") return this._strip(state.brain?.homeUrl);
-        if (mode === "away") return this._strip(state.brain?.awayUrl);
-        return "";
-      },
-      _hasConfig() {
-        const key = String(state.brain?.apiKey || "").trim();
-        const mode = state.brain?.mode || "auto";
-        const h = this._strip(state.brain?.homeUrl);
-        const a = this._strip(state.brain?.awayUrl);
-        if (!key) return { ok: false, why: "Missing API key." };
-        if (mode === "home" && !h) return { ok: false, why: "Missing HOME URL." };
-        if (mode === "away" && !a) return { ok: false, why: "Missing AWAY URL." };
-        if (mode === "auto" && !h && !a) return { ok: false, why: "Missing HOME/AWAY URL." };
-        return { ok: true };
-      },
-      async _fetchWithTimeout(url, options, timeoutMs) {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), timeoutMs);
-        try {
-          const res = await fetch(url, { ...options, signal: ctrl.signal });
-          return res;
-        } finally {
-          clearTimeout(t);
-        }
-      },
-      async health(mode) {
-        const base = this._pickUrl(mode);
-        const key = String(state.brain?.apiKey || "").trim();
-        const timeouts = this._timeoutsFor(mode);
-
-        if (!base) throw { type: "HTTP_ERROR", message: "Missing base URL for " + mode };
-        const url = base + "/health";
-
-        let res;
-        try {
-          res = await this._fetchWithTimeout(url, { method: "GET", headers: { "X-API-Key": key } }, timeouts.health);
-        } catch (err) {
-          throw this._classifyFetchError(err);
-        }
-        if (res.status === 401) throw { type: "INVALID_API_KEY", message: "Invalid API Key (401)." };
-        if (!res.ok) throw { type: "HTTP_ERROR", message: "Health error HTTP " + res.status };
-        return await res.json().catch(() => ({}));
-      },
-      async chat(mode, message) {
-        const base = this._pickUrl(mode);
-        const key = String(state.brain?.apiKey || "").trim();
-        const timeouts = this._timeoutsFor(mode);
-
-        if (!base) throw { type: "HTTP_ERROR", message: "Missing base URL for " + mode };
-        const url = base + "/chat";
-
-        let res;
-        try {
-          res = await this._fetchWithTimeout(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-API-Key": key
-            },
-            body: JSON.stringify({ message: String(message || ""), scope: "global" })
-          }, timeouts.chat);
-        } catch (err) {
-          throw this._classifyFetchError(err);
-        }
-
-        if (res.status === 401) throw { type: "INVALID_API_KEY", message: "Invalid API Key (401)." };
-        if (!res.ok) throw { type: "HTTP_ERROR", message: "Chat error HTTP " + res.status };
-        const data = await res.json().catch(() => ({}));
-        return data?.reply ?? "";
-      },
-      async tryConnectAndChat(message) {
-        const conf = this._hasConfig();
-        if (!conf.ok) {
-          this._rememberError(conf.why);
-          throw { type: "HTTP_ERROR", message: conf.why };
-        }
-
-        const mode = state.brain?.mode || "auto";
-        const tries = (mode === "auto")
-          ? (state.brain?.lastSuccessfulMode === "away" ? ["away", "home"] : ["home", "away"])
-          : [mode];
-
-        let lastErr = null;
-
-        for (const m of tries) {
-          const base = this._pickUrl(m);
-          if (!base) continue;
-
-          try {
-            await this.health(m);
-            const reply = await this.chat(m, message);
-            this._rememberSuccess(m);
-            return reply;
-          } catch (e) {
-            lastErr = e;
-            // Save a small label (no secrets)
-            const label = (e?.type ? (e.type + ": ") : "") + (e?.message || String(e));
-            this._rememberError(label);
-          }
-        }
-
-        throw lastErr || { type: "NETWORK", message: "Unable to connect." };
-      }
-    };
 
     function renderAIPage() {
       renderAIConfig();
       renderAIMessages();
     }
 
-    async function callBrain(message) {
-      const reply = await BrainClient.tryConnectAndChat(message);
-      return reply;
-    }
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
 
+function classifyBrainError(err, res) {
+  if (err && err.name === "AbortError") return { kind: "TIMEOUT", message: "Server unreachable (timeout)." };
+  if (res && res.status === 401) return { kind: "INVALID_API_KEY", message: "Invalid API Key (401)." };
+  if (res && !res.ok) return { kind: "HTTP_ERROR", message: `HTTP error ${res.status}.` };
+  return { kind: "NETWORK", message: "Network error / blocked request." };
+}
+
+function getScopeFromPage() {
+  const p = String(window.currentPage || "").toLowerCase();
+  if (p.includes("shopping")) return "myhub.shopping";
+  if (p.includes("tasks")) return "myhub.tasks";
+  if (p.includes("notes")) return "myhub.notes";
+  if (p.includes("meals")) return "myhub.meals";
+  if (p.includes("workout")) return "myhub.workouts";
+  return "global";
+}
+
+async function brainHealth(baseUrl, apiKey, timeoutMs = 4000) {
+  const base = String(baseUrl || "").trim().replace(/\/+$/, "");
+  const url = base + "/health";
+  try {
+    const res = await fetchWithTimeout(url, { method: "GET", headers: { "X-API-Key": apiKey } }, timeoutMs);
+    if (!res.ok) return { ok: false, ...classifyBrainError(null, res) };
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, ...classifyBrainError(err, null) };
+  }
+}
+
+async function brainChat(userText, scopeOverride) {
+  const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
+  const key = (state.brain?.apiKey || "").trim();
+  const scope = (scopeOverride || getScopeFromPage() || "global");
+
+  if (!base) return { ok:false, error:{kind:"NETWORK", message:"Configure Brain URL first (AI > Connection)."} };
+  if (!key) return { ok:false, error:{kind:"INVALID_API_KEY", message:"Configure X-API-Key first (AI > Connection)."} };
+
+  const url = base + "/chat";
+
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-API-Key": key },
+      body: JSON.stringify({ message: userText, scope })
+    }, 12000);
+
+    if (!res.ok) return { ok:false, error: classifyBrainError(null, res) };
+
+    const data = await res.json().catch(() => ({}));
+    return {
+      ok: true,
+      reply: data.reply || "",
+      actions: Array.isArray(data.actions) ? data.actions : [],
+      meta: data.meta || {}
+    };
+  } catch (err) {
+    return { ok:false, error: classifyBrainError(err, null) };
+  }
+}
+
+// Back-compat: older code calls callBrain(prompt)
+async function callBrain(message) {
+  const res = await brainChat(message, "global");
+  if (!res.ok) throw new Error(res.error?.message || "Brain request failed");
+  return res.reply || "";
+}
+
+// Actions engine: execute actions, not reply
+function applyActions(actions) {
+  if (!Array.isArray(actions)) return;
+  for (const action of actions) {
+    if (!action || typeof action.type !== "string") continue;
+    const type = action.type;
+    const payload = action.payload || {};
+    const handler = ACTION_HANDLERS[type];
+    if (handler) {
+      try { handler(payload, action); } catch (e) { console.error("Action handler failed:", type, e); }
+    } else {
+      console.warn("Unknown action:", type, action);
+    }
+  }
+}
+
+const ACTION_HANDLERS = {
+  shopping_add: (p) => {
+    const item = String(p.item || "").trim();
+    const qty = Number.isFinite(p.qty) ? p.qty : 1;
+    if (!item) return;
+    if (typeof window.addShoppingItem === "function") return window.addShoppingItem(item, qty);
+    state.shoppingList = state.shoppingList || [];
+    state.shoppingList.push({ item, qty, ts: new Date().toISOString() });
+    saveState();
+  },
+  shopping_remove: (p) => {
+    const item = String(p.item || "").trim().toLowerCase();
+    if (!item) return;
+    if (typeof window.removeShoppingItem === "function") return window.removeShoppingItem(item);
+    state.shoppingList = (state.shoppingList || []).filter(x => String(x.item||"").toLowerCase() !== item);
+    saveState();
+  },
+  task_add: (p) => {
+    const title = String(p.title || "").trim();
+    if (!title) return;
+    if (typeof window.addTask === "function") return window.addTask(title);
+    state.tasks = state.tasks || [];
+    state.tasks.push({ title, done:false, ts: new Date().toISOString() });
+    saveState();
+  },
+  task_complete: (p) => {
+    const title = String(p.title || "").trim().toLowerCase();
+    if (!title) return;
+    if (typeof window.completeTask === "function") return window.completeTask(title);
+    state.tasks = state.tasks || [];
+    for (const t of state.tasks) if (String(t.title||"").toLowerCase() === title) t.done = true;
+    saveState();
+  },
+  note_add: (p) => {
+    const text = String(p.text || "").trim();
+    if (!text) return;
+    if (typeof window.addNote === "function") return window.addNote(text);
+    state.notes = state.notes || [];
+    state.notes.push({ text, ts: new Date().toISOString() });
+    saveState();
+  },
+};
 
     
     // Send a message to Brain and store it in the shared AI chat history.
@@ -5851,19 +5764,18 @@ async function aiSendMessage(msg, { statusEl } = {}) {
   const text = (msg || "").trim();
   if (!text) return;
 
-  // store user message first (so it becomes part of history)
+  // store user message first
   aiPush("user", text);
 
-  // Build Brain v1 prompt (system + small state + last 10 msgs)
-  const prompt = buildBrainV1Prompt(text);
-
-  // show thinking
-  aiPush("system", "…thinking");
+  // show connecting
+  aiPush("system", "…connecting");
   const thinkingIndex = (state.aiChat?.messages || []).length - 1;
 
   try {
     if (statusEl) statusEl.textContent = "Sending…";
-    const reply = await callBrain(prompt);
+
+    const scope = getScopeFromPage();
+    const res = await brainChat(text, scope);
 
     // remove thinking message
     if (state.aiChat?.messages && thinkingIndex >= 0) {
@@ -5871,8 +5783,18 @@ async function aiSendMessage(msg, { statusEl } = {}) {
       saveState();
     }
 
-    aiPush("assistant", reply || "(no reply)");
-    if (statusEl) statusEl.textContent = "OK";
+    if (res.ok) {
+      aiPush("assistant", res.reply || "(no reply)");
+      applyActions(res.actions);
+      if (statusEl) statusEl.textContent = "OK";
+      if (state.brain) {
+        state.brain.lastMeta = { ts: res.meta?.ts || null, scope: res.meta?.scope || scope, actions: res.actions?.length || 0 };
+        saveState();
+      }
+    } else {
+      aiPush("assistant", `Error: ${res.error?.kind || "UNKNOWN"} - ${res.error?.message || ""}`);
+      if (statusEl) statusEl.textContent = "Error";
+    }
   } catch (e) {
     if (state.aiChat?.messages && thinkingIndex >= 0) {
       state.aiChat.messages.splice(thinkingIndex, 1);
@@ -5909,61 +5831,9 @@ async function sendAI() {
       });
     }
 
-    
-    // ---- Connection Layer v1: UI helpers (safe, no key logging) ----
-    window.brainUI = {
-      save: () => {
-        try {
-          state.brain.mode = (brainModeEl?.value || "auto").trim();
-          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
-          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
-          state.brain.apiKey = (brainKeyEl?.value || "").trim();
-          saveState();
-          renderAIConfig();
-          alert("Saved.");
-        } catch (e) {
-          console.error("Brain save failed:", e);
-          alert("Save failed (see console).");
-        }
-      },
-      test: async () => {
-        try {
-          // sync UI -> state
-          state.brain.mode = (brainModeEl?.value || "auto").trim();
-          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
-          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
-          state.brain.apiKey = (brainKeyEl?.value || "").trim();
-          saveState();
-          renderAIConfig();
-
-          if (!state.brain.apiKey) {
-            if (brainStatusEl) brainStatusEl.textContent = "Missing API key.";
-            alert("Missing API key.");
-            return;
-          }
-
-          if (brainStatusEl) brainStatusEl.textContent = "Testing...";
-          const ok = await BrainClient.tryHealth();
-          if (ok.ok) {
-            if (brainStatusEl) brainStatusEl.textContent = "Connected (" + ok.mode + ").";
-            alert("Connected (" + ok.mode + ").");
-          } else {
-            if (brainStatusEl) brainStatusEl.textContent = ok.error || "Failed.";
-            alert(ok.error || "Connection failed.");
-          }
-        } catch (e) {
-          console.error("Brain test failed:", e);
-          if (brainStatusEl) brainStatusEl.textContent = "Test failed.";
-          alert("Test failed (see console).");
-        }
-      }
-    };
-
-if (brainSaveBtn) {
+    if (brainSaveBtn) {
       brainSaveBtn.addEventListener("click", () => {
-        state.brain.mode = (brainModeEl?.value || "auto").trim();
-        state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
-        state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+        state.brain.url = (brainUrlEl?.value || "").trim();
         state.brain.apiKey = (brainKeyEl?.value || "").trim();
         saveState();
         renderAIConfig();
@@ -5974,27 +5844,40 @@ if (brainSaveBtn) {
     if (brainTestBtn) {
       brainTestBtn.addEventListener("click", async () => {
         try {
-          // sync UI -> state
-          state.brain.mode = (brainModeEl?.value || "auto").trim();
-          state.brain.homeUrl = (brainHomeUrlEl?.value || "").trim();
-          state.brain.awayUrl = (brainAwayUrlEl?.value || "").trim();
+          state.brain.url = (brainUrlEl?.value || "").trim();
           state.brain.apiKey = (brainKeyEl?.value || "").trim();
           saveState();
           renderAIConfig();
 
-          if (brainStatusEl) brainStatusEl.textContent = "Testing…";
+          const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
+          const key = (state.brain?.apiKey || "").trim();
 
-          // This will do /health then /chat according to Connection Layer v1
-          const reply = await BrainClient.tryConnectAndChat("Hello! Quick test.");
-          if (brainStatusEl) brainStatusEl.textContent = "OK ✓";
-          alert("OK: " + (reply || "(no reply)"));
+          if (!base) { alert("Configure Brain URL first."); return; }
+          if (!key) { alert("Configure X-API-Key first."); return; }
+
+          if (brainStatusEl) brainStatusEl.textContent = "Testing /health…";
+          const h = await brainHealth(base, key, 4000);
+          if (!h.ok) {
+            if (brainStatusEl) brainStatusEl.textContent = `${h.kind}: ${h.message}`;
+            alert(`${h.kind}: ${h.message}`);
+            return;
+          }
+
+          if (brainStatusEl) brainStatusEl.textContent = "Health OK. Testing /chat…";
+          const r = await brainChat("ping", "global");
+          if (r.ok) {
+            if (brainStatusEl) brainStatusEl.textContent = `Connected. actions=${r.actions?.length || 0}`;
+            alert("Connected ✅");
+          } else {
+            if (brainStatusEl) brainStatusEl.textContent = `${r.error?.kind}: ${r.error?.message}`;
+            alert(`${r.error?.kind}: ${r.error?.message}`);
+          }
         } catch (e) {
-          const type = e?.type || "ERROR";
-          const msg = e?.message || String(e);
-          if (brainStatusEl) brainStatusEl.textContent = type + ": " + msg;
-          alert("Test failed (" + type + "): " + msg);
+          console.error(e);
+          if (brainStatusEl) brainStatusEl.textContent = "Error";
+          alert("Error: " + (e?.message || String(e)));
         }
-      });
+});
     }
 
     if (aiClearBtn) {
