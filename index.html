@@ -1560,31 +1560,60 @@
       
       <!-- AI -->
       <section class="page hidden" data-page="ai">
-        
-  
-<div class="ai-compose-top">
-  <div class="ai-input-block">
-    <textarea id="aiInput" placeholder="Type your message..."></textarea>
-    <div class="ai-actions-row">
-      <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
-      <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
-      <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
-    </div>
-  </div>
-</div>
+        <div class="ai-page">
 
-  </div>
-</div>
-
-
-            <div class="input-row-inline" style="align-items:flex-end;">
-              <button class="btn btn-secondary" id="brainSaveBtn">Save</button>
-              <button class="btn btn-secondary" id="brainTestBtn">Test /chat</button>
-              <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
-<div class="empty-msg" style="margin-top:6px;">Tip: If MyHub is on HTTPS (GitHub Pages), calling HTTP Brain may be blocked (Mixed Content). Test using local file / http first, or add HTTPS to Brain later.</div>
+          <!-- Composer (top) -->
+          <div class="ai-compose-top">
+            <div class="ai-input-block">
+              <textarea id="aiInput" placeholder="Type your message..."></textarea>
+              <div class="ai-actions-row">
+                <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
+                <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
+                <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
+              </div>
             </div>
+            <input id="aiFileInput" type="file" multiple style="display:none" />
           </div>
-        </details>
+
+          <!-- Connection -->
+          <details class="ai-connection">
+            <summary>Connection</summary>
+            <div class="card" style="margin-top:10px;">
+              <div class="input-row">
+                <label class="input-label" for="brainMode">Mode</label>
+                <select id="brainMode" class="input">
+                  <option value="away">away</option>
+                  <option value="home">home</option>
+                  <option value="auto">auto</option>
+                </select>
+              </div>
+
+              <div class="input-row">
+                <label class="input-label" for="brainUrl">Brain URL (AWAY / current)</label>
+                <input id="brainUrl" class="input" placeholder="http://100.x.y.z:8000" />
+              </div>
+
+              <div class="input-row">
+                <label class="input-label" for="brainKey">X-API-Key (device)</label>
+                <input id="brainKey" class="input" placeholder="vAI..." />
+              </div>
+
+              <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
+                <button type="button" class="btn btn-secondary" id="brainSaveBtn">Save</button>
+                <button type="button" class="btn btn-secondary" id="brainTestBtn">Test connection</button>
+                <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
+              </div>
+
+              <div class="empty-msg" style="margin-top:8px;">
+                Tip: If MyHub is on HTTPS (GitHub Pages), calling HTTP Brain may be blocked (Mixed Content). Test using local / http first, or add HTTPS to Brain later.
+              </div>
+            </div>
+          </details>
+
+          <!-- Messages -->
+          <div id="aiMessages" class="ai-messages"></div>
+
+        </div>
       </section>
     </main>
   </div>
@@ -1622,8 +1651,10 @@ console.log("MyHub build:", APP_BUILD);
 
       // Brain / AI (v1)
       brain: {
-        url: "",          // e.g. http://localhost:8000 or http://100.x.y.z:8000
-        apiKey: "",       // X-API-Key value
+        url: "http://100.86.234.113:8000",          // AWAY (Tailscale) temp hardcode
+                  // e.g. http://localhost:8000 or http://100.x.y.z:8000
+        apiKey: "vAIcORINTHIANS",       // DEVICE KEY (TEMP - rotate later)
+               // X-API-Key value
         useTailscale: true
       },
       aiChat: {
@@ -1672,6 +1703,11 @@ console.log("MyHub build:", APP_BUILD);
     // ---- Ensure Brain / AI fields exist (for older saved states) ----
     if (!state.brain) state.brain = structuredClone(defaultState.brain);
     if (!state.aiChat) state.aiChat = structuredClone(defaultState.aiChat);
+
+    // ---- TEMP: Hardcode Brain AWAY + API key for quick test (Option 1) ----
+    // NOTE: Rotate this key later. Do NOT ship secrets to public GitHub.
+    if (!state.brain.url) state.brain.url = "http://100.86.234.113:8000";
+    if (!state.brain.apiKey) state.brain.apiKey = "vAIcORINTHIANS";
 
 
 
