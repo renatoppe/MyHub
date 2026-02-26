@@ -1086,6 +1086,62 @@
     /* Tighten common controls a bit */
     .btn, button { border-radius: 12px; }
 
+
+
+    /* ==============================
+       Toast notifications (Action log)
+       ============================== */
+    #toastContainer{
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 99999;
+      pointer-events: none;
+    }
+    .toast{
+      pointer-events: auto;
+      background: rgba(20,20,20,0.92);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      font-size: 14px;
+      line-height: 1.25;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .toast .toast-icon{
+      width: 22px;
+      height: 22px;
+      flex: 0 0 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+    }
+    .toast .toast-text{
+      flex: 1 1 auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .toast .toast-close{
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+      cursor: pointer;
+    }
+    .toast.toast--success { background: rgba(16, 105, 62, 0.92); }
+    .toast.toast--warn    { background: rgba(142, 86, 10, 0.92); }
+    .toast.toast--error   { background: rgba(140, 24, 24, 0.92); }
+
 </style>
 </head>
 <body>
@@ -5539,6 +5595,123 @@ const brainUrlEl = document.getElementById("brainUrl");
 
     function nowTs() { return new Date().toISOString(); }
 
+    
+    // ==============================
+    // Action log toast + (optional) system notifications
+    // ==============================
+    function ensureToastContainer() {
+      let el = document.getElementById("toastContainer");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "toastContainer";
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+
+    function showToast(message, opts = {}) {
+      const type = opts.type || "success"; // success | warn | error
+      const durationMs = Number.isFinite(opts.durationMs) ? opts.durationMs : 3500;
+
+      const container = ensureToastContainer();
+      const toast = document.createElement("div");
+      toast.className = `toast toast--${type}`;
+
+      const icon = document.createElement("div");
+      icon.className = "toast-icon";
+      icon.textContent = opts.icon || "🧠";
+
+      const text = document.createElement("div");
+      text.className = "toast-text";
+      text.textContent = message;
+
+      const close = document.createElement("button");
+      close.className = "toast-close";
+      close.type = "button";
+      close.textContent = "×";
+      close.addEventListener("click", () => toast.remove());
+
+      toast.appendChild(icon);
+      toast.appendChild(text);
+      toast.appendChild(close);
+      container.appendChild(toast);
+
+      if (durationMs > 0) {
+        setTimeout(() => {
+          if (toast.isConnected) toast.remove();
+        }, durationMs);
+      }
+    }
+
+    // Optional: system-level notifications (only if permission already granted)
+    function maybeSystemNotify(title, body) {
+      try {
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") return;
+        new Notification(title, { body });
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    // If you ever want to enable system notifications, run this once in console:
+    // await window.enableSystemNotifications()
+    window.enableSystemNotifications = async function enableSystemNotifications() {
+      if (!("Notification" in window)) {
+        showToast("System notifications not supported on this browser.", { type: "warn", icon: "⚠️" });
+        return false;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        showToast("System notifications enabled ✅", { type: "success", icon: "✅" });
+        return true;
+      }
+      showToast("System notifications not enabled.", { type: "warn", icon: "⚠️" });
+      return false;
+    };
+
+    function scrollAIToBottom() {
+      try {
+        const msgs = document.getElementById("aiMessages");
+        if (!msgs) return;
+
+        // The scrollable container is usually the page wrapper (.page)
+        const page = msgs.closest(".page") || msgs.parentElement;
+
+        // Ensure we scroll the actual scroll container
+        const target = (page && (getComputedStyle(page).overflowY === "auto" || getComputedStyle(page).overflowY === "scroll"))
+          ? page
+          : msgs;
+
+        requestAnimationFrame(() => {
+          target.scrollTop = target.scrollHeight;
+          // also ensure last message is visible
+          const last = msgs.lastElementChild;
+          if (last && typeof last.scrollIntoView === "function") {
+            last.scrollIntoView({ block: "end" });
+          }
+          setTimeout(() => {
+            target.scrollTop = target.scrollHeight;
+            const last2 = msgs.lastElementChild;
+            if (last2 && typeof last2.scrollIntoView === "function") {
+              last2.scrollIntoView({ block: "end" });
+            }
+          }, 0);
+        });
+      } catch (_) {}
+    }
+
+    function logActionExecuted(actionType, summaryText) {
+      const msg = `🧠 Executed: ${actionType}${summaryText ? " (" + summaryText + ")" : ""}`;
+      // visible in AI chat
+      aiPush("system", msg);
+      // toast (always)
+      showToast(msg, { type: "success", icon: "🧠" });
+      // optional system notification if already granted
+      maybeSystemNotify("MyHub", msg);
+    }
+
+
     function aiPush(role, text) {
       state.aiChat.messages.push({ role, text, ts: nowTs() });
       // keep last 200 messages to avoid huge localStorage
@@ -5547,6 +5720,7 @@ const brainUrlEl = document.getElementById("brainUrl");
       }
       saveState();
       renderAIMessages();
+      scrollAIToBottom();
     }
 
     function renderAIMessages() {
@@ -5562,6 +5736,9 @@ const brainUrlEl = document.getElementById("brainUrl");
         wrap.appendChild(b);
         aiMessagesEl.appendChild(wrap);
       }
+
+      // 🔽 Auto-scroll to latest message
+      scrollAIToBottom();
       // auto scroll to bottom
       aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
     }
@@ -5665,7 +5842,7 @@ async function callBrain(message) {
 // ==============================
 
 // Toggle: keep false for now (only log actions)
-const APPLY_ACTIONS = false;
+const APPLY_ACTIONS = true; // set true to apply Brain actions
 
 function normalizeText(s) {
   return String(s || "").trim();
@@ -5683,13 +5860,29 @@ function findTodoByTitle(title) {
 
 // Handlers must NOT throw; keep app safe.
 const ACTION_HANDLERS = {
-  // payload: { item, qty?, listId? }
+  // payload: { item, qty?, list? }
   shopping_add: (p) => {
     const item = normalizeText(p.item);
     const qty = Number.isFinite(p.qty) ? p.qty : 1;
+    const targetListName = normalizeText(p.list || p.listName || p.shopping_list || p.shoppingList);
+
     if (!item) return;
 
-    // Use existing MyHub structure: shoppingLists -> items
+    // If Brain specified a list name, switch/create that list safely
+    if (targetListName) {
+      state.shoppingLists = state.shoppingLists || [];
+      const normName = targetListName.toLowerCase();
+
+      let listByName = state.shoppingLists.find(l => normalizeText(l.name).toLowerCase() === normName);
+      if (!listByName) {
+        listByName = { id: makeId("slist"), name: targetListName, items: [] };
+        state.shoppingLists.push(listByName);
+      }
+      // switch current list so UI reflects the correct destination
+      try { currentShoppingListId = listByName.id; } catch (_) {}
+    }
+
+    // Use existing MyHub structure: shoppingLists -> items (current list)
     const list = (typeof getCurrentShoppingList === "function")
       ? getCurrentShoppingList()
       : (state.shoppingLists?.[0] || null);
@@ -5697,12 +5890,43 @@ const ACTION_HANDLERS = {
     if (!list) return;
 
     list.items = list.items || [];
-    list.items.push({
-      id: makeId("sitem"),
-      text: qty > 1 ? `${item} x${qty}` : item,
-      checked: false,
-      note: ""
-    });
+
+    // Dedupe: if item already exists, bump qty in the displayed text
+    const normItem = item.toLowerCase();
+    const existing = list.items.find(it => normalizeText(it.text).toLowerCase() === normItem);
+
+    if (existing) {
+      // Simple, safe bump: turn into xN (keeps your current model)
+      existing.text = `${item} x${Math.max(2, qty + 1)}`;
+    } else {
+      list.items.push({
+        id: makeId("sitem"),
+        text: qty > 1 ? `${item} x${qty}` : item,
+        checked: false,
+        note: ""
+      });
+    }
+
+    saveState();
+    if (typeof renderShopping === "function") renderShopping();
+  },
+
+  // payload: { name }
+  shopping_list_create: (p) => {
+    const name = normalizeText(p.name || p.list || p.listName);
+    if (!name) return;
+
+    state.shoppingLists = state.shoppingLists || [];
+    const norm = name.toLowerCase();
+
+    let list = state.shoppingLists.find(l => normalizeText(l.name).toLowerCase() === norm);
+    if (!list) {
+      list = { id: makeId("slist"), name, items: [] };
+      state.shoppingLists.push(list);
+    }
+
+    // switch to it
+    try { currentShoppingListId = list.id; } catch (_) {}
 
     saveState();
     if (typeof renderShopping === "function") renderShopping();
@@ -5833,6 +6057,17 @@ function applyActions(actions) {
 
     try {
       handler(action.payload || {}, action);
+      // Visual confirmation (chat + toast + optional system notification)
+      try {
+        const p = action.payload || {};
+        let summary = '';
+        if (action.type === 'shopping_add') summary = `${(p.item||'').trim()}${p.qty ? ' x' + p.qty : ''}`.trim();
+        else if (action.type === 'shopping_remove') summary = `${(p.item||'').trim()}`.trim();
+        else if (action.type === 'task_add') summary = `${(p.title||'').trim()}`.trim();
+        else if (action.type === 'task_complete') summary = `${(p.title||'').trim()}`.trim();
+        else if (action.type === 'note_add') summary = ((p.text||'').trim().slice(0, 40) + (((p.text||'').trim().length>40) ? '…' : '')).trim();
+        logActionExecuted(action.type, summary);
+      } catch (_) {}
     } catch (e) {
       console.error("[AI] Action handler failed:", action.type, e, action);
     }
