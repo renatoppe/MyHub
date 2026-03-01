@@ -1159,8 +1159,8 @@
         <button class="nav-item" data-page="shopping" title="Shopping">
           <span class="nav-emoji">🛒</span><span class="nav-label">Shopping</span>
         </button>
-        <button class="nav-item" data-page="workouts" title="Workouts">
-          <span class="nav-emoji">🏋️</span><span class="nav-label">Workouts</span>
+        <button class="nav-item" data-page="fitnessHome" title="Fitness">
+          <span class="nav-emoji">🏋️</span><span class="nav-label">Fitness</span>
         </button>
         <button class="nav-item" data-page="finance" title="Finances">
           <span class="nav-emoji">💰</span><span class="nav-label">Finances</span>
@@ -1357,6 +1357,92 @@
           <div id="shoppingList" class="list"></div>
         </div>
       </section>
+
+      <!-- FITNESS HUB (Phase 1) -->
+      <section class="page hidden" data-page="fitnessHome">
+        <h2 class="section-title">Fitness Hub</h2>
+
+        <div class="card" style="max-width:520px;margin:0 auto;">
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+            <button class="btn" data-page="workouts" style="width:100%;height:54px;font-size:15px;">
+              🏋️ Exercises
+            </button>
+            <button class="btn" data-page="fitnessMeasurements" style="width:100%;height:54px;font-size:15px;">
+              📏 Measurements
+            </button>
+            <button class="btn" data-page="fitnessAnalysis" style="width:100%;height:54px;font-size:15px;">
+              🧠 Analysis
+            </button>
+          </div>
+        </div>
+      </section>
+
+      
+            <section class="page hidden" data-page="fitnessMeasurements">
+        <h2 class="section-title">Measurements</h2>
+
+        <div class="card" style="max-width:720px;margin:0 auto;">
+          <div class="card-body">
+
+            <div style="font-weight:700;margin-bottom:8px;">Daily input</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+              <input id="mWeight" placeholder="Weight (kg)" type="number" step="0.1">
+            </div>
+
+            <div style="height:14px;"></div>
+
+            <div style="font-weight:700;margin-bottom:8px;">Weekly inputs</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <input id="mWaist" placeholder="Waist (cm)" type="number" step="0.1">
+              <input id="mHips" placeholder="Hips (cm)" type="number" step="0.1">
+              <input id="mChest" placeholder="Chest (cm)" type="number" step="0.1">
+              <input id="mBicepsL" placeholder="Left Biceps (cm)" type="number" step="0.1">
+              <input id="mBicepsR" placeholder="Right Biceps (cm)" type="number" step="0.1">
+              <input id="mThighL" placeholder="Left Thigh (cm)" type="number" step="0.1">
+              <input id="mThighR" placeholder="Right Thigh (cm)" type="number" step="0.1">
+            </div>
+
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn" onclick="saveMeasurement()">💾 Save Measurements</button>
+              <button class="btn btn-secondary" data-page="fitnessHome">⬅ Back</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card" style="max-width:720px;margin:18px auto 0;">
+          <div class="card-header">
+            <div class="card-title">History</div>
+          </div>
+          <div class="card-body">
+            <div id="measurementHistory"></div>
+          </div>
+        </div>
+      </section>
+
+
+      
+            <section class="page hidden" data-page="fitnessAnalysis">
+        <h2 class="section-title">Analysis</h2>
+
+        <div class="card" style="max-width:720px;margin:0 auto;">
+          <div class="card-body">
+            <div id="fitnessAnalysisSummary" style="font-size:14px;line-height:1.45;"></div>
+
+            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button class="btn" id="fitnessAnalyzeBtn">🧠 Analyze with AI</button>
+              <button class="btn btn-secondary" data-page="fitnessHome">⬅ Back</button>
+            </div>
+
+            <div style="margin-top:10px;font-size:12px;opacity:0.7;">
+              (Phase 3 placeholder: AI analysis will be wired later)
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
 
       <!-- WORKOUTS -->
       <section class="page hidden" data-page="workouts">
@@ -1655,8 +1741,8 @@
               </div>
 
               <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
-                <button type="button" class="btn btn-secondary" id="brainSaveBtn" type="button" onclick="brainSaveClick()">Save</button>
-                <button type="button" class="btn btn-secondary" id="brainTestBtn" type="button" onclick="brainTestClick()">Test connection</button>
+                <button type="button" class="btn btn-secondary" id="brainSaveBtn" type="button">Save</button>
+                <button type="button" class="btn btn-secondary" id="brainTestBtn" type="button">Test connection</button>
                 <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
               </div>
 
@@ -1676,6 +1762,15 @@
   <script>
   const APP_BUILD = "2026-02-16 brainv1-stable-1";
 console.log("MyHub build:", APP_BUILD);
+
+// Fix: legacy inline onclick hooks (kept for backward compatibility)
+window.brainSaveClick = window.brainSaveClick || function() {
+  console.warn('[AI] brainSaveClick() was called but inline onclick is deprecated. Use the Save button handler.');
+};
+window.brainTestClick = window.brainTestClick || function() {
+  console.warn('[AI] brainTestClick() was called but inline onclick is deprecated. Use the Test button handler.');
+};
+
 // ==============================
   // MyHub v0.9.3 - script.js
    // script.js – MyHub v0.9.3
@@ -2438,7 +2533,18 @@ console.log("MyHub build:", APP_BUILD);
       });
     });
   
-    // -----------------------------
+    
+    // Generic in-page navigation for buttons/links with data-page (Fitness Hub etc.)
+    // Keeps sidebar logic intact (sidebar already has its own listeners).
+    document.addEventListener("click", (e) => {
+      const el = e.target && e.target.closest ? e.target.closest("[data-page]") : null;
+      if (!el) return;
+      if (el.classList && el.classList.contains("nav-item")) return; // sidebar already handled
+      const page = el.dataset ? el.dataset.page : null;
+      if (!page) return;
+      showPage(page);
+    });
+// -----------------------------
     // HOME – QUICK TASK
     // -----------------------------
     const homeQuickTaskInput = document.getElementById("homeQuickTaskInput");
@@ -2537,6 +2643,34 @@ console.log("MyHub build:", APP_BUILD);
       });
   
       selectRow.appendChild(newListBtn);
+
+      const delListBtn = document.createElement("button");
+      delListBtn.className = "btn btn-secondary btn-icon";
+      delListBtn.textContent = "🗑️";
+      delListBtn.title = "Remove current shopping list";
+      delListBtn.addEventListener("click", () => {
+        const list = getCurrentShoppingList();
+        if (!list || !list.id) return;
+
+        // prevent deleting the last list
+        if ((state.shoppingLists || []).length <= 1) {
+          alert("You need at least 1 shopping list.");
+          return;
+        }
+
+        const ok = confirm(`Remove shopping list "${list.name}"?`);
+        if (!ok) return;
+
+        const idx = state.shoppingLists.findIndex(l => l.id === list.id);
+        if (idx >= 0) state.shoppingLists.splice(idx, 1);
+
+        currentShoppingListId = state.shoppingLists[0]?.id || "default";
+        saveState();
+        refreshShoppingListsUI();
+        renderShopping();
+      });
+
+      selectRow.appendChild(delListBtn);
     })();
   
     function refreshTodoListsUI() {
@@ -2924,6 +3058,34 @@ console.log("MyHub build:", APP_BUILD);
       });
   
       selectRow.appendChild(newListBtn);
+
+      const delListBtn = document.createElement("button");
+      delListBtn.className = "btn btn-secondary btn-icon";
+      delListBtn.textContent = "🗑️";
+      delListBtn.title = "Remove current shopping list";
+      delListBtn.addEventListener("click", () => {
+        const list = getCurrentShoppingList();
+        if (!list || !list.id) return;
+
+        // prevent deleting the last list
+        if ((state.shoppingLists || []).length <= 1) {
+          alert("You need at least 1 shopping list.");
+          return;
+        }
+
+        const ok = confirm(`Remove shopping list "${list.name}"?`);
+        if (!ok) return;
+
+        const idx = state.shoppingLists.findIndex(l => l.id === list.id);
+        if (idx >= 0) state.shoppingLists.splice(idx, 1);
+
+        currentShoppingListId = state.shoppingLists[0]?.id || "default";
+        saveState();
+        refreshShoppingListsUI();
+        renderShopping();
+      });
+
+      selectRow.appendChild(delListBtn);
     })();
   
     function refreshShoppingListsUI() {
@@ -5806,7 +5968,7 @@ async function brainChat(userText, scopeOverride) {
   if (!base) return { ok:false, error:{kind:"NETWORK", message:"Configure Brain URL first (AI > Connection)."} };
   if (!key) return { ok:false, error:{kind:"INVALID_API_KEY", message:"Configure X-API-Key first (AI > Connection)."} };
 
-  const url = base + "/chat";
+  const url = base + "/chat2";
 
   try {
     const res = await fetchWithTimeout(url, {
@@ -5929,8 +6091,40 @@ const ACTION_HANDLERS = {
     try { currentShoppingListId = list.id; } catch (_) {}
 
     saveState();
+    if (typeof refreshShoppingListsUI === "function") refreshShoppingListsUI();
     if (typeof renderShopping === "function") renderShopping();
   },
+  // payload: { name } or { id }
+  shopping_list_remove: (p) => {
+    const id = normalizeText(p.id || p.listId);
+    const name = normalizeText(p.name || p.list || p.listName);
+    if (!id && !name) return;
+
+    state.shoppingLists = state.shoppingLists || [];
+    let idx = -1;
+
+    if (id) {
+      idx = state.shoppingLists.findIndex(l => normalizeText(l.id) === id);
+    } else {
+      const norm = name.toLowerCase();
+      idx = state.shoppingLists.findIndex(l => normalizeText(l.name).toLowerCase() === norm);
+    }
+
+    if (idx < 0) return;
+
+    const removed = state.shoppingLists.splice(idx, 1)[0];
+
+    // If current list removed, switch to first existing list (or none)
+    try {
+      if (typeof currentShoppingListId !== "undefined" && removed && currentShoppingListId === removed.id) {
+        currentShoppingListId = state.shoppingLists[0]?.id || "";
+      }
+    } catch (_) {}
+
+    saveState();
+    if (typeof renderShopping === "function") renderShopping();
+  },
+
 
   // payload: { item }
   shopping_remove: (p) => {
@@ -5948,9 +6142,9 @@ const ACTION_HANDLERS = {
     if (typeof renderShopping === "function") renderShopping();
   },
 
-  // payload: { title, priority?, dueDate?, listId? }
+  // payload: { title|text, priority?, dueDate?, listId? }
   task_add: (p) => {
-    const title = normalizeText(p.title);
+    const title = normalizeText(p.title || p.text);
     if (!title) return;
 
     state.todos = state.todos || [];
@@ -5961,7 +6155,12 @@ const ACTION_HANDLERS = {
     state.todos.push({
       id: makeId("todo"),
       title,
-      priority: normalizeText(p.priority) || "normal",
+      priority: (() => {
+        const pr = normalizeText(p.priority);
+        if (!pr) return "normal";
+        if (pr === "medium") return "normal";
+        return pr;
+      })(),
       dueDate: normalizeText(p.dueDate) || "",
       status: "open",
       listId,
@@ -5984,10 +6183,40 @@ const ACTION_HANDLERS = {
     todo.status = "done";
     saveState();
     if (typeof renderTodos === "function") renderTodos();
-  },
+},
 
-  // payload: { text }
-  note_add: (p) => {
+// payload: { id?, title? }
+task_done: (p) => {
+  // Brain v2 sends {id}; MyHub todos use string IDs, so we can only act if a title is provided.
+  const title = normalizeText(p.title);
+  if (title) {
+    const todo = findTodoByTitle(title);
+    if (!todo) return;
+    todo.status = "done";
+    saveState();
+    if (typeof renderTodos === "function") renderTodos();
+  } else {
+    console.warn("[AI] task_done received but no title to match MyHub todo:", p);
+  }
+},
+
+// payload: { key, value }
+memory_upsert: (p) => {
+  const key = normalizeText(p.key);
+  const value = p.value;
+  if (!key) return;
+  try {
+    const mem = JSON.parse(localStorage.getItem("myhub_memory") || "{}");
+    mem[key] = value;
+    localStorage.setItem("myhub_memory", JSON.stringify(mem));
+    if (typeof showToast === "function") showToast("Memory updated: " + key, "success");
+  } catch (e) {
+    console.warn("[AI] memory_upsert failed:", e);
+  }
+},
+
+// payload: { text }
+note_add: (p) => {
     const text = normalizeText(p.text);
     if (!text) return;
 
@@ -6063,9 +6292,11 @@ function applyActions(actions) {
         let summary = '';
         if (action.type === 'shopping_add') summary = `${(p.item||'').trim()}${p.qty ? ' x' + p.qty : ''}`.trim();
         else if (action.type === 'shopping_remove') summary = `${(p.item||'').trim()}`.trim();
-        else if (action.type === 'task_add') summary = `${(p.title||'').trim()}`.trim();
+        else if (action.type === 'task_add') summary = `${((p.title||p.text||'')).trim()}`.trim();
         else if (action.type === 'task_complete') summary = `${(p.title||'').trim()}`.trim();
         else if (action.type === 'note_add') summary = ((p.text||'').trim().slice(0, 40) + (((p.text||'').trim().length>40) ? '…' : '')).trim();
+        else if (action.type === 'shopping_list_create') summary = `${(p.name||p.list||p.listName||'').trim()}`.trim();
+        else if (action.type === 'shopping_list_remove') summary = `${(p.name||p.list||p.listName||p.id||p.listId||'').trim()}`.trim();
         logActionExecuted(action.type, summary);
       } catch (_) {}
     } catch (e) {
@@ -6191,7 +6422,7 @@ async function aiSendMessage(msg, { statusEl } = {}) {
         console.log("[AI] applying actions...");
         applyActions(res.actions);
       } else {
-        console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=false)");
+        console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=true)");
       }
 
       if (statusEl) statusEl.textContent = "OK";
@@ -6564,152 +6795,189 @@ aiChMessagesEl.innerHTML = "";
 
     document.addEventListener("DOMContentLoaded", setupAIChatHead);
 
-</script>
 
-  <!-- Quick AI button (acts as “voice” shortcut for now) -->
-  <button class="voice-fab" id="aiQuickBtn" title="Talk to AI">
-    <span class="voice-fab-inner">MH</span>
-  </button>
+/* ==============================
+   FITNESS MEASUREMENTS (v2)
+   Storage key: fitness_measurements
+   Schema:
+   [
+     {
+       date: ISOString,
+       weight, waist, hips, chest,
+       bicepsL, bicepsR, thighL, thighR
+     }
+   ]
+============================== */
 
-
-  <!-- AI Chat Head (opens from the H/logo). Small corner overlay for future audio. -->
-  <div id="aiChatHead" class="ai-chat-head hidden" aria-hidden="true">
-    <div class="ai-ch-headbar">
-      <div class="ai-ch-title">
-        <span class="ai-ch-dot"></span>
-        <span>AI</span>
-      </div>
-      <div class="ai-ch-actions">
-        <button class="icon-btn" id="aiChOpenFull" title="Open full AI">↗</button>
-        <button class="icon-btn" id="aiChClose" title="Close">✕</button>
-      </div>
-    </div>
-
-    <div id="aiChMessages" class="ai-ch-messages"></div>
-
-    <div class="ai-ch-compose">
-      <textarea id="aiChInput" class="ai-ch-input" placeholder="Type… (Enter = send, Shift+Enter = new line)"></textarea>
-      <button class="btn" id="aiChSend">Send</button>
-    </div>
-
-    <div class="ai-ch-footer">
-      <span id="aiChStatus" class="hint"></span>
-      <span class="hint">🎙️ audio later</span>
-    </div>
-  </div>
-
-
-<script>
-/* Minimal debug for Save/Test buttons only.
-   Goal: confirm buttons receive clicks. No other app behavior changes. */
-function brainSaveClick() {
+function getMeasurements() {
   try {
-    console.log("[BRAIN_UI] Save clicked");
-
-    var urlInput = document.getElementById("brainUrl");
-    var keyInput = document.getElementById("brainKey");
-
-    if (!urlInput || !keyInput) {
-      alert("Brain inputs not found (brainUrl/brainKey).");
-      return;
-    }
-
-    var url = (urlInput.value || "").trim();
-    var key = (keyInput.value || "").trim();
-
-    // Save to localStorage (separate from app state)
-    var cfg = { url: url, apiKey: key };
-    localStorage.setItem("myhub_brain_config", JSON.stringify(cfg));
-
-    console.log("[BRAIN_UI] Saved config:", { url: url, apiKey: key ? "[set]" : "[empty]" });
-    alert("Saved successfully.");
+    const raw = localStorage.getItem("fitness_measurements");
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
   } catch (e) {
-    console.error(e);
-    alert("Save failed: " + (e && e.message ? e.message : String(e)));
+    console.error("[FITNESS] getMeasurements error:", e);
+    return [];
   }
 }
-function brainTestClick() {
-  try {
-    console.log("[BRAIN_UI] Test connection clicked");
 
-    var raw = localStorage.getItem("myhub_brain_config");
-    if (!raw) {
-      alert("No saved Brain config found.");
-      return;
-    }
-
-    var cfg = JSON.parse(raw);
-    var base = (cfg.url || "").trim();
-    var key = (cfg.apiKey || "").trim();
-
-    if (!base || !key) {
-      alert("Brain URL or API key missing.");
-      return;
-    }
-
-    console.log("[BRAIN_UI] Using config:", {
-      url: base,
-      apiKey: key ? "[set]" : "[empty]"
-    });
-
-    alert("Testing connection... check console.");
-
-    // Step 1: Health check
-    fetch(base + "/health")
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        console.log("[BRAIN_UI] Health response:", data);
-
-        // Step 2: Chat ping
-        return fetch(base + "/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-API-Key": key
-          },
-          body: JSON.stringify({
-            message: "ping",
-            scope: "global"
-          })
-        });
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(chatData) {
-        console.log("[BRAIN_UI] Chat response:", chatData);
-        alert("Health OK + Chat OK.");
-      })
-      .catch(function(err) {
-        console.error("[BRAIN_UI] Test error:", err);
-        alert("Connection test failed. Check console.");
-      });
-
-  } catch (e) {
-    console.error(e);
-    alert("Test failed: " + (e.message || String(e)));
-  }
+function saveMeasurements(data) {
+  localStorage.setItem("fitness_measurements", JSON.stringify(data));
 }
-// Redundant listeners (in case onclick is removed later)
-document.addEventListener("DOMContentLoaded", function() {
-  // Prefill inputs from localStorage (if available)
-  try {
-    var raw = localStorage.getItem("myhub_brain_config");
-    if (raw) {
-      var cfg = JSON.parse(raw);
-      var urlInput = document.getElementById("brainUrl");
-      var keyInput = document.getElementById("brainKey");
-      if (urlInput && cfg && typeof cfg.url === "string") urlInput.value = cfg.url;
-      if (keyInput && cfg && typeof cfg.apiKey === "string") keyInput.value = cfg.apiKey;
-      console.log("[BRAIN_UI] Prefilled Brain config from localStorage.");
-    }
-  } catch (e) {
-    console.warn("[BRAIN_UI] Prefill failed:", e);
+
+function _numVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const v = String(el.value || "").trim();
+  if (!v) return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _clearMeasurementForm() {
+  [
+    "mWeight",
+    "mWaist", "mHips", "mChest",
+    "mBicepsL", "mBicepsR",
+    "mThighL", "mThighR"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+}
+
+/**
+ * saveMeasurement()
+ * - Adds a new entry at the top (newest first)
+ * - Keeps localStorage schema per spec
+ */
+function saveMeasurement() {
+  const entry = {
+    date: new Date().toISOString(),
+    weight: _numVal("mWeight"),
+    waist: _numVal("mWaist"),
+    hips: _numVal("mHips"),
+    chest: _numVal("mChest"),
+    bicepsL: _numVal("mBicepsL"),
+    bicepsR: _numVal("mBicepsR"),
+    thighL: _numVal("mThighL"),
+    thighR: _numVal("mThighR"),
+  };
+
+  // If user saved literally nothing, avoid empty spam
+  const hasAny =
+    Object.keys(entry)
+      .filter(k => k !== "date")
+      .some(k => typeof entry[k] === "number");
+
+  if (!hasAny) {
+    alert("Fill at least Weight or one weekly measurement.");
+    return;
   }
 
-  var s = document.getElementById("brainSaveBtn");
-  var t = document.getElementById("brainTestBtn");
-  if (s) s.addEventListener("click", function(){ console.log("[BRAIN_UI] Save listener fired"); });
-  if (t) t.addEventListener("click", function(){ console.log("[BRAIN_UI] Test listener fired"); });
+  const list = getMeasurements();
+  list.unshift(entry);
+  saveMeasurements(list);
+
+  _clearMeasurementForm();
+  renderMeasurementHistory();
+
+  if (typeof showToast === "function") showToast("📏 Measurements saved");
+}
+
+/**
+ * renderMeasurementHistory()
+ * Simple history list (no charts)
+ */
+function renderMeasurementHistory() {
+  const container = document.getElementById("measurementHistory");
+  if (!container) return;
+
+  const data = getMeasurements();
+  if (!data.length) {
+    container.innerHTML = "<div style='opacity:0.6;'>No entries yet.</div>";
+    return;
+  }
+
+  const fmt = (x) => (typeof x === "number" ? x.toFixed(1) : "-");
+  container.innerHTML = data.slice(0, 60).map(entry => {
+    const d = new Date(entry.date);
+    const ds = isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+    return `
+      <div style="padding:10px;border-bottom:1px solid #26293a;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+          <strong>${ds}</strong>
+          <span style="font-size:12px;opacity:0.75;">${new Date(entry.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+        </div>
+        <div style="margin-top:6px;font-size:12px;opacity:0.9;line-height:1.35;">
+          <div>Weight: <b>${fmt(entry.weight)}</b> kg</div>
+          <div style="opacity:0.85;margin-top:4px;">
+            Waist ${fmt(entry.waist)} • Hips ${fmt(entry.hips)} • Chest ${fmt(entry.chest)}<br/>
+            Biceps L ${fmt(entry.bicepsL)} • Biceps R ${fmt(entry.bicepsR)}<br/>
+            Thigh L ${fmt(entry.thighL)} • Thigh R ${fmt(entry.thighR)}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* Auto render history when opening Measurements page */
+document.addEventListener("click", function(e){
+  const t = e.target;
+  if (t && t.dataset && t.dataset.page === "fitnessMeasurements") {
+    setTimeout(() => renderMeasurementHistory(), 40);
+  }
 });
+
+
+/* ==============================
+   FITNESS ANALYSIS (v2 placeholder)
+============================== */
+
+function renderFitnessAnalysisSummary(){
+  const el = document.getElementById("fitnessAnalysisSummary");
+  if (!el) return;
+
+  const data = getMeasurements()
+    .filter(x => x && typeof x.weight === "number");
+
+  if (data.length === 0) {
+    el.innerHTML = "<div style='opacity:0.7;'>No weight entries yet. Add your first weight in Measurements.</div>";
+    return;
+  }
+
+  const latest = data[0].weight;              // newest first
+  const first = data[data.length - 1].weight; // oldest
+  const delta = latest - first;
+
+  const sign = delta > 0 ? "+" : "";
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div>Last weight: <b>${latest.toFixed(1)}</b> kg</div>
+      <div>Change since first: <b>${sign}${delta.toFixed(1)}</b> kg</div>
+    </div>
+  `;
+}
+
+function requestFitnessAnalysis(){
+  console.log("analysis requested");
+  if (typeof showToast === "function") showToast("🧠 analysis requested (placeholder)");
+}
+
+/* Wire + refresh on navigation */
+document.addEventListener("click", function(e){
+  const t = e.target;
+  if (t && t.dataset && t.dataset.page === "fitnessAnalysis") {
+    setTimeout(() => renderFitnessAnalysisSummary(), 40);
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function(){
+  const btn = document.getElementById("fitnessAnalyzeBtn");
+  if (btn) btn.addEventListener("click", requestFitnessAnalysis);
+});
+
+
 </script>
 
 </body>
