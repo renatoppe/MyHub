@@ -814,7 +814,7 @@
     .input-grid { padding: 0 !important; background: transparent !important; border: none !important; }
     .ai-compose-top{
       display:flex; gap:10px; align-items:center;
-      position: sticky; top: 0;
+      position: sticky; top: 64px;
       padding: 10px 0 10px 0;
       background: radial-gradient(circle at top, #151827 0, #050608 45%);
       z-index: 5;
@@ -1183,6 +1183,24 @@
       gap:10px;
       margin: 0 0 12px;
       flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 7;
+      padding: 0 0 10px 0;
+      background: radial-gradient(circle at top, #151827 0, #050608 45%);
+    }
+    .ai-title-row{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin:0;
+    }
+    .ai-title-row h2{
+      margin:0;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: .2px;
     }
     .brain-modal-backdrop {
       position: fixed;
@@ -1794,9 +1812,12 @@
         <div class="ai-page">
 
           <div class="ai-status-row">
-            <div id="brainLiveStatus" class="brain-status-pill is-offline">
-              <span class="brain-status-dot"></span>
-              <span id="brainLiveStatusText">🔴 Brain Offline</span>
+            <div class="ai-title-row">
+              <h2>AI</h2>
+              <div id="brainLiveStatus" class="brain-status-pill is-offline">
+                <span class="brain-status-dot"></span>
+                <span id="brainLiveStatusText">🔴 Brain Offline</span>
+              </div>
             </div>
           </div>
 
@@ -6200,7 +6221,7 @@ async function brainHealth(baseUrl, apiKey, timeoutMs = 4000) {
   }
 }
 
-async function brainChat(userText, scopeOverride) {
+async function brainChat(userText, scopeOverride, timeoutMs = 12000) {
   const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
   const key = (state.brain?.apiKey || "").trim();
   const scope = (scopeOverride || getScopeFromPage() || "global");
@@ -6215,7 +6236,7 @@ async function brainChat(userText, scopeOverride) {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": key },
       body: JSON.stringify({ message: userText, scope })
-    }, 12000);
+    }, timeoutMs);
 
     if (!res.ok) {
       setBrainStatusState(false, "🔴 Brain Offline");
@@ -6263,6 +6284,150 @@ function findTodoByTitle(title) {
   const t = normalizeText(title).toLowerCase();
   if (!t) return null;
   return (state.todos || []).find(x => normalizeText(x.title).toLowerCase() === t) || null;
+}
+
+
+function findTodoListByName(name) {
+  const n = normalizeText(name).toLowerCase();
+  if (!n) return null;
+  state.todoLists = state.todoLists || [];
+  return state.todoLists.find((l) => normalizeText(l.name).toLowerCase() === n) || null;
+}
+
+function ensureTodoListByName(name) {
+  const trimmed = normalizeText(name);
+  if (!trimmed) return null;
+  state.todoLists = state.todoLists || [];
+  let list = findTodoListByName(trimmed);
+  if (!list) {
+    list = { id: makeId("tlist"), name: trimmed };
+    state.todoLists.push(list);
+  }
+  try { currentTodoListId = list.id; } catch (_) {}
+  return list;
+}
+
+function findShoppingListByName(name) {
+  const n = normalizeText(name).toLowerCase();
+  if (!n) return null;
+  state.shoppingLists = state.shoppingLists || [];
+  return state.shoppingLists.find((l) => normalizeText(l.name).toLowerCase() === n) || null;
+}
+
+function ensureShoppingListByName(name) {
+  const trimmed = normalizeText(name);
+  if (!trimmed) return null;
+  state.shoppingLists = state.shoppingLists || [];
+  let list = findShoppingListByName(trimmed);
+  if (!list) {
+    list = { id: makeId("slist"), name: trimmed, items: [] };
+    state.shoppingLists.push(list);
+  }
+  try { currentShoppingListId = list.id; } catch (_) {}
+  return list;
+}
+
+function cleanListItemText(text) {
+  return normalizeText(text).replace(/\s*x\d+$/i, "").trim().toLowerCase();
+}
+
+function findTodoByTitleInList(title, listName) {
+  const t = normalizeText(title).toLowerCase();
+  if (!t) return null;
+  const list = listName ? findTodoListByName(listName) : null;
+  return (state.todos || []).find((x) => {
+    if (normalizeText(x.title).toLowerCase() !== t) return false;
+    if (!list) return true;
+    return normalizeText(x.listId) === normalizeText(list.id);
+  }) || null;
+}
+
+function looksLikeActionDenied(replyText) {
+  const s = normalizeText(replyText).toLowerCase();
+  if (!s) return false;
+  return /(can['’]t|cannot|unable|don['’]t have access|do not have access|can't directly access|cannot access|you can add .* using your preferred app|i can['’]?t directly)/i.test(s);
+}
+
+function parseQuotedOrBareValue(text) {
+  const quoted = String(text || "").match(/["“](.+?)["”]/);
+  if (quoted) return quoted[1].trim();
+  return String(text || "").trim();
+}
+
+function parseLocalMyHubIntent(text) {
+  const raw = normalizeText(text);
+  const lower = raw.toLowerCase();
+  if (!raw) return null;
+
+  let m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const title = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "task_add", payload: { title, listName } }],
+      reply: `Added "${title}" to your ${listName ? `"${listName}" ` : ""}to-do list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const title = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "task_remove", payload: { title, listName } }],
+      reply: `Removed "${title}" from your ${listName ? `"${listName}" ` : ""}to-do list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?(?:complete|finish|mark(?: as)? done)\s+["“]?(.+?)["”]?(?:\s+in\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?)?\??$/i);
+  if (m) {
+    const title = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "task_complete", payload: { title, listName } }],
+      reply: `Marked "${title}" as done${listName ? ` in "${listName}"` : ""}.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const item = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "shopping_add", payload: { item, listName } }],
+      reply: `Added "${item}" to your ${listName ? `"${listName}" ` : ""}shopping list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const item = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "shopping_remove", payload: { item, listName } }],
+      reply: `Removed "${item}" from your ${listName ? `"${listName}" ` : ""}shopping list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?shopping\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
+  if (m) {
+    const name = parseQuotedOrBareValue(m[1]);
+    return {
+      actions: [{ type: "shopping_list_create", payload: { name } }],
+      reply: `Created shopping list "${name}".`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
+  if (m) {
+    const name = parseQuotedOrBareValue(m[1]);
+    return {
+      actions: [{ type: "todo_list_create", payload: { name } }],
+      reply: `Created to-do list "${name}".`
+    };
+  }
+
+  return null;
 }
 
 // Handlers must NOT throw; keep app safe.
@@ -6374,16 +6539,20 @@ const ACTION_HANDLERS = {
   // payload: { item }
   shopping_remove: (p) => {
     const item = normalizeText(p.item).toLowerCase();
+    const targetListName = normalizeText(p.list || p.listName || p.shopping_list || p.shoppingList);
     if (!item) return;
 
-    const list = (typeof getCurrentShoppingList === "function")
-      ? getCurrentShoppingList()
-      : (state.shoppingLists?.[0] || null);
+    const list = targetListName
+      ? findShoppingListByName(targetListName)
+      : ((typeof getCurrentShoppingList === "function")
+        ? getCurrentShoppingList()
+        : (state.shoppingLists?.[0] || null));
 
     if (!list || !Array.isArray(list.items)) return;
 
-    list.items = list.items.filter(it => normalizeText(it.text).toLowerCase() !== item);
+    list.items = list.items.filter(it => cleanListItemText(it.text) !== item);
     saveState();
+    if (typeof refreshShoppingListsUI === "function") refreshShoppingListsUI();
     if (typeof renderShopping === "function") renderShopping();
   },
 
@@ -6393,8 +6562,11 @@ const ACTION_HANDLERS = {
     if (!title) return;
 
     state.todos = state.todos || [];
+    const explicitList = normalizeText(p.list || p.listName || p.todoList);
+    const ensuredList = explicitList ? ensureTodoListByName(explicitList) : null;
     const listId =
       normalizeText(p.listId) ||
+      normalizeText(ensuredList?.id) ||
       (typeof currentTodoListId !== "undefined" ? currentTodoListId : "default");
 
     state.todos.push({
@@ -6414,21 +6586,45 @@ const ACTION_HANDLERS = {
     });
 
     saveState();
+    if (typeof renderTodoListOptions === "function") renderTodoListOptions();
     if (typeof renderTodos === "function") renderTodos();
   },
 
   // payload: { title }
   task_complete: (p) => {
     const title = normalizeText(p.title);
+    const listName = normalizeText(p.list || p.listName || p.todoList);
     if (!title) return;
 
-    const todo = findTodoByTitle(title);
+    const todo = findTodoByTitleInList(title, listName);
     if (!todo) return;
 
     todo.status = "done";
     saveState();
     if (typeof renderTodos === "function") renderTodos();
-},
+  },
+
+  task_remove: (p) => {
+    const title = normalizeText(p.title || p.text);
+    const listName = normalizeText(p.list || p.listName || p.todoList);
+    if (!title) return;
+
+    const todo = findTodoByTitleInList(title, listName);
+    if (!todo) return;
+
+    state.todos = (state.todos || []).filter((t) => t.id !== todo.id);
+    saveState();
+    if (typeof renderTodos === "function") renderTodos();
+  },
+
+  todo_list_create: (p) => {
+    const name = normalizeText(p.name || p.list || p.listName);
+    if (!name) return;
+    ensureTodoListByName(name);
+    saveState();
+    if (typeof renderTodoListOptions === "function") renderTodoListOptions();
+    if (typeof renderTodos === "function") renderTodos();
+  },
 
 // payload: { id?, title? }
 task_done: (p) => {
@@ -6659,20 +6855,37 @@ async function aiSendMessage(msg, { statusEl } = {}) {
     if (res.ok) {
       console.log("[AI] received reply:", res);
 
-      aiPush("assistant", res.reply || "(no reply)");
-      console.log("[AI] rendered reply");
+      let replyText = res.reply || "(no reply)";
+      const brainActions = Array.isArray(res.actions) ? res.actions : [];
+      const localIntent = parseLocalMyHubIntent(text);
 
-      console.log("[AI] actions:", res.actions || []);
-      if (APPLY_ACTIONS && Array.isArray(res.actions) && res.actions.length) {
-        console.log("[AI] applying actions...");
-        applyActions(res.actions);
-      } else {
+      console.log("[AI] actions:", brainActions);
+
+      if (APPLY_ACTIONS && brainActions.length) {
+        console.log("[AI] applying Brain actions...");
+        applyActions(brainActions);
+      } else if (localIntent && APPLY_ACTIONS) {
+        console.log("[AI] applying local fallback actions...");
+        applyActions(localIntent.actions || []);
+        replyText = localIntent.reply || replyText;
+      } else if (!brainActions.length) {
         console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=true)");
       }
 
+      if (localIntent && looksLikeActionDenied(replyText)) {
+        replyText = localIntent.reply || replyText;
+      }
+
+      aiPush("assistant", replyText);
+      console.log("[AI] rendered reply");
+
       if (statusEl) statusEl.textContent = "OK";
       if (state.brain) {
-        state.brain.lastMeta = { ts: res.meta?.ts || null, scope: res.meta?.scope || scope, actions: res.actions?.length || 0 };
+        state.brain.lastMeta = {
+          ts: res.meta?.ts || null,
+          scope: res.meta?.scope || scope,
+          actions: brainActions.length || (localIntent?.actions?.length || 0)
+        };
         saveState();
       }
     } else {
@@ -7279,16 +7492,25 @@ async function runTranslator() {
 
   if (outputEl) outputEl.value = "Translating...";
 
-  const cmd = `translate ${target}: ${text}`;
-  const res = await brainChat(cmd, "global");
+  try {
+    const cmd = `translate ${target}: ${text}`;
+    let res = await brainChat(cmd, "global", 20000);
 
-  if (!res.ok) {
-    const msg = res.error?.message || "Translation failed.";
-    if (outputEl) outputEl.value = `Error: ${msg}`;
-    return;
+    if (!res.ok || !normalizeText(res.reply)) {
+      const fallbackCmd = `Translate the following text to ${target}. Reply with the translation only, no explanation: ${text}`;
+      res = await brainChat(fallbackCmd, "global", 20000);
+    }
+
+    if (!res.ok) {
+      const msg = res.error?.message || "Translation failed.";
+      if (outputEl) outputEl.value = `Error: ${msg}`;
+      return;
+    }
+
+    if (outputEl) outputEl.value = normalizeText(res.reply) || "(no translation)";
+  } catch (err) {
+    if (outputEl) outputEl.value = `Error: ${err?.message || "Translation failed."}`;
   }
-
-  if (outputEl) outputEl.value = res.reply || "(no translation)";
 }
 
 function initTranslatorPage() {
