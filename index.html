@@ -1176,18 +1176,22 @@
       background: currentColor;
       box-shadow: 0 0 12px currentColor;
     }
-    .ai-status-row {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin: 0 0 12px;
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       flex-wrap: wrap;
-      position: sticky;
-      top: 0;
-      z-index: 7;
-      padding: 0 0 10px 0;
-      background: radial-gradient(circle at top, #151827 0, #050608 45%);
+    }
+    .header-brain-status {
+      display: none;
+      flex: 0 0 auto;
+    }
+    .header-brain-status.is-visible {
+      display: inline-flex;
+    }
+    .ai-status-row {
+      display:none;
     }
     .ai-title-row{
       display:flex;
@@ -1285,12 +1289,18 @@
           <span class="nav-emoji">🧠</span><span class="nav-label">AI</span>
         </button>
       </nav>
-      <div class="version">v<span id="appVersion">0.8.0</span></div>
+      <div class="version">v<span id="appVersion">0.9.6</span></div>
     </aside>
 
     <main class="main">
       <header class="header">
-        <h1 id="pageTitle">Home</h1>
+        <div class="header-title-row">
+          <h1 id="pageTitle">Home</h1>
+          <div id="headerBrainStatus" class="brain-status-pill header-brain-status is-offline" aria-live="polite">
+            <span class="brain-status-dot"></span>
+            <span id="headerBrainStatusText">🔴 Brain Offline</span>
+          </div>
+        </div>
       </header>
 
       <!-- HOME -->
@@ -1810,16 +1820,6 @@
       <!-- AI -->
       <section class="page hidden" data-page="ai">
         <div class="ai-page">
-
-          <div class="ai-status-row">
-            <div class="ai-title-row">
-              <h2>AI</h2>
-              <div id="brainLiveStatus" class="brain-status-pill is-offline">
-                <span class="brain-status-dot"></span>
-                <span id="brainLiveStatusText">🔴 Brain Offline</span>
-              </div>
-            </div>
-          </div>
 
           <!-- Composer (top) -->
           <div class="ai-compose-top">
@@ -2685,6 +2685,9 @@ window.brainTestClick = window.brainTestClick || function() {
       if (pageTitle) {
         const item = [...navItems].find((b) => b.dataset.page === pageId);
         pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
+      }
+      if (headerBrainStatusEl) {
+        headerBrainStatusEl.classList.toggle("is-visible", pageId === "ai");
       }
   
 
@@ -5939,6 +5942,8 @@ const brainUrlEl = document.getElementById("brainUrl");
     const brainModalCloseBtn = document.getElementById("brainModalCloseBtn");
     const brainLiveStatusEl = document.getElementById("brainLiveStatus");
     const brainLiveStatusTextEl = document.getElementById("brainLiveStatusText");
+    const headerBrainStatusEl = document.getElementById("headerBrainStatus");
+    const headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
     const brainStatusEl = document.getElementById("brainStatus");
@@ -6099,11 +6104,16 @@ const brainUrlEl = document.getElementById("brainUrl");
       const status = state.brain?.lastStatus || {};
       const ok = !!status.ok;
       const text = status.text || (ok ? "🟢 Brain Connected" : "🔴 Brain Offline");
-      if (brainLiveStatusEl) {
-        brainLiveStatusEl.classList.toggle("is-online", ok);
-        brainLiveStatusEl.classList.toggle("is-offline", !ok);
-      }
+      [brainLiveStatusEl, headerBrainStatusEl].forEach((el) => {
+        if (!el) return;
+        el.classList.toggle("is-online", ok);
+        el.classList.toggle("is-offline", !ok);
+      });
       if (brainLiveStatusTextEl) brainLiveStatusTextEl.textContent = text;
+      if (headerBrainStatusTextEl) headerBrainStatusTextEl.textContent = text;
+      if (headerBrainStatusEl) {
+        headerBrainStatusEl.classList.toggle("is-visible", String(window.currentPage || "") === "ai");
+      }
     }
 
     function renderAIConfig() {
@@ -6359,7 +6369,36 @@ function parseLocalMyHubIntent(text) {
   const lower = raw.toLowerCase();
   if (!raw) return null;
 
-  let m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  let m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const item = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "shopping_add", payload: { item, listName } }],
+      reply: `Added "${item}" to your ${listName ? `"${listName}" ` : ""}shopping list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  if (m) {
+    const item = parseQuotedOrBareValue(m[1]);
+    const listName = parseQuotedOrBareValue(m[2] || "");
+    return {
+      actions: [{ type: "shopping_remove", payload: { item, listName } }],
+      reply: `Removed "${item}" from your ${listName ? `"${listName}" ` : ""}shopping list.`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?shopping\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
+  if (m) {
+    const name = parseQuotedOrBareValue(m[1]);
+    return {
+      actions: [{ type: "shopping_list_create", payload: { name } }],
+      reply: `Created shopping list "${name}".`
+    };
+  }
+
+  m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
   if (m) {
     const title = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6386,35 +6425,6 @@ function parseLocalMyHubIntent(text) {
     return {
       actions: [{ type: "task_complete", payload: { title, listName } }],
       reply: `Marked "${title}" as done${listName ? ` in "${listName}"` : ""}.`
-    };
-  }
-
-  m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
-  if (m) {
-    const item = parseQuotedOrBareValue(m[1]);
-    const listName = parseQuotedOrBareValue(m[2] || "");
-    return {
-      actions: [{ type: "shopping_add", payload: { item, listName } }],
-      reply: `Added "${item}" to your ${listName ? `"${listName}" ` : ""}shopping list.`
-    };
-  }
-
-  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
-  if (m) {
-    const item = parseQuotedOrBareValue(m[1]);
-    const listName = parseQuotedOrBareValue(m[2] || "");
-    return {
-      actions: [{ type: "shopping_remove", payload: { item, listName } }],
-      reply: `Removed "${item}" from your ${listName ? `"${listName}" ` : ""}shopping list.`
-    };
-  }
-
-  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?shopping\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
-  if (m) {
-    const name = parseQuotedOrBareValue(m[1]);
-    return {
-      actions: [{ type: "shopping_list_create", payload: { name } }],
-      reply: `Created shopping list "${name}".`
     };
   }
 
@@ -6858,16 +6868,18 @@ async function aiSendMessage(msg, { statusEl } = {}) {
       let replyText = res.reply || "(no reply)";
       const brainActions = Array.isArray(res.actions) ? res.actions : [];
       const localIntent = parseLocalMyHubIntent(text);
+      const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
+      const explicitLocalCommand = localActions.length > 0;
 
       console.log("[AI] actions:", brainActions);
 
-      if (APPLY_ACTIONS && brainActions.length) {
+      if (APPLY_ACTIONS && explicitLocalCommand) {
+        console.log("[AI] applying local intent actions...");
+        applyActions(localActions);
+        replyText = localIntent.reply || replyText;
+      } else if (APPLY_ACTIONS && brainActions.length) {
         console.log("[AI] applying Brain actions...");
         applyActions(brainActions);
-      } else if (localIntent && APPLY_ACTIONS) {
-        console.log("[AI] applying local fallback actions...");
-        applyActions(localIntent.actions || []);
-        replyText = localIntent.reply || replyText;
       } else if (!brainActions.length) {
         console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=true)");
       }
