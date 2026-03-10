@@ -1187,6 +1187,12 @@
       display: none;
       flex: 0 0 auto;
     }
+    .ai-page .brain-status-pill,
+    .ai-page .header-brain-status,
+    .brain-live-status {
+      display: none !important;
+    }
+
     .header-brain-status.is-visible {
       display: inline-flex;
     }
@@ -6267,6 +6273,8 @@ async function brainChat(userText, scopeOverride, timeoutMs = 12000) {
   }
 }
 
+window.brainChat = brainChat;
+
 // Back-compat: older code calls callBrain(prompt)
 async function callBrain(message) {
   const res = await brainChat(message, "global");
@@ -6369,7 +6377,12 @@ function parseLocalMyHubIntent(text) {
   const lower = raw.toLowerCase();
   if (!raw) return null;
 
-  let m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  const shoppingTarget = String.raw`(?:shopping|grocery)(?:\s+list)?`;
+
+  let m = lower.match(new RegExp(`^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  if (!m) {
+    m = lower.match(new RegExp(`^(?:please\s+)?add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6379,7 +6392,10 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?shopping\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  m = lower.match(new RegExp(`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  if (!m) {
+    m = lower.match(new RegExp(`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?(?:\s+from)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6389,7 +6405,7 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?shopping\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
+  m = lower.match(new RegExp(`^(?:please\s+)?create\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
   if (m) {
     const name = parseQuotedOrBareValue(m[1]);
     return {
@@ -6756,6 +6772,11 @@ function applyActions(actions) {
   }
 }
     
+function applyBrainActions(actions) {
+  return applyActions(actions);
+}
+window.applyBrainActions = applyBrainActions;
+
     // Send a message to Brain and store it in the shared AI chat history.
     // Used by BOTH: full AI page and the small corner "chat head".
         // ==========================
@@ -6840,6 +6861,8 @@ async function aiSendMessage(msg, { statusEl } = {}) {
   const text = (msg || "").trim();
   if (!text) return;
 
+  const lowerText = text.toLowerCase();
+  const hasShoppingIntent = /\b(shopping|grocery)\b/.test(lowerText);
 
   console.log("[AI] sending message:", text);
 
@@ -6870,16 +6893,17 @@ async function aiSendMessage(msg, { statusEl } = {}) {
       const localIntent = parseLocalMyHubIntent(text);
       const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
       const explicitLocalCommand = localActions.length > 0;
+      const useLocalShoppingIntent = explicitLocalCommand && hasShoppingIntent;
 
       console.log("[AI] actions:", brainActions);
 
-      if (APPLY_ACTIONS && explicitLocalCommand) {
+      if (APPLY_ACTIONS && (explicitLocalCommand || useLocalShoppingIntent)) {
         console.log("[AI] applying local intent actions...");
-        applyActions(localActions);
+        applyBrainActions(localActions);
         replyText = localIntent.reply || replyText;
       } else if (APPLY_ACTIONS && brainActions.length) {
         console.log("[AI] applying Brain actions...");
-        applyActions(brainActions);
+        applyBrainActions(brainActions);
       } else if (!brainActions.length) {
         console.log("[AI] actions NOT applied (toggle APPLY_ACTIONS=true)");
       }
