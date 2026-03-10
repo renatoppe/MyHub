@@ -1142,6 +1142,92 @@
     .toast.toast--warn    { background: rgba(142, 86, 10, 0.92); }
     .toast.toast--error   { background: rgba(140, 24, 24, 0.92); }
 
+
+
+    /* ==============================
+       Brain connection modal + status
+       ============================== */
+    .brain-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #26293a;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .brain-status-pill.is-online {
+      color: #c8e6c9;
+      border-color: rgba(76,175,80,.45);
+      background: rgba(76,175,80,.12);
+    }
+    .brain-status-pill.is-offline {
+      color: #ffcdd2;
+      border-color: rgba(244,67,54,.45);
+      background: rgba(244,67,54,.12);
+    }
+    .brain-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+    }
+    .ai-status-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin: 0 0 12px;
+      flex-wrap: wrap;
+    }
+    .brain-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.58);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 10020;
+    }
+    .brain-modal-backdrop.open { display:flex; }
+    .brain-modal {
+      width: min(560px, 100%);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #11131b 0%, #0b0d14 100%);
+      box-shadow: 0 24px 80px rgba(0,0,0,.5);
+      padding: 16px;
+    }
+    .brain-modal-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 12px;
+    }
+    .brain-modal-title {
+      margin:0;
+      font-size:16px;
+      font-weight:700;
+    }
+    .brain-modal-close {
+      width: 40px;
+      height: 40px;
+    }
+    .brain-help {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
 </style>
 </head>
 <body>
@@ -1174,11 +1260,11 @@
         <button class="nav-item" data-page="calendar" title="Calendar">
           <span class="nav-emoji">📅</span><span class="nav-label">Calendar</span>
         </button>
-        <button class="nav-item" data-page="ai" title="AI">
-          <span class="nav-emoji">🧠</span><span class="nav-label">AI</span>
-        </button>
         <button class="nav-item" data-page="translator" title="Translator">
           <span class="nav-emoji">🌐</span><span class="nav-label">Translator</span>
+        </button>
+        <button class="nav-item" data-page="ai" title="AI">
+          <span class="nav-emoji">🧠</span><span class="nav-label">AI</span>
         </button>
       </nav>
       <div class="version">v<span id="appVersion">0.8.0</span></div>
@@ -1707,13 +1793,20 @@
       <section class="page hidden" data-page="ai">
         <div class="ai-page">
 
+          <div class="ai-status-row">
+            <div id="brainLiveStatus" class="brain-status-pill is-offline">
+              <span class="brain-status-dot"></span>
+              <span id="brainLiveStatusText">🔴 Brain Offline</span>
+            </div>
+          </div>
+
           <!-- Composer (top) -->
           <div class="ai-compose-top">
             <div class="ai-input-block">
               <textarea id="aiInput" placeholder="Type your message..."></textarea>
               <div class="ai-actions-row">
                 <button type="button" class="btn btn-primary" id="aiSendBtn">Send</button>
-                <button type="button" class="btn btn-secondary" id="aiConnectionBtn" title="Open connection">🔌 Connection</button>
+                <button type="button" class="icon-btn" id="aiConnBtn" title="Connection">🔌</button>
                 <button type="button" class="icon-btn" id="aiAttachBtn" title="Attach">📎</button>
                 <button type="button" class="icon-btn" id="aiClearBtn" title="Clear">🧹</button>
               </div>
@@ -1721,46 +1814,53 @@
             <input id="aiFileInput" type="file" multiple style="display:none" />
           </div>
 
-          <!-- Connection -->
-          <details class="ai-connection" id="aiConnectionPanel">
-            <summary>Connection</summary>
-            <div class="card" style="margin-top:10px;">
-              <div class="input-row">
-                <label class="input-label" for="brainMode">Mode</label>
-                <select id="brainMode" class="input">
-                  <option value="away">away</option>
-                  <option value="home">home</option>
-                  <option value="auto">auto</option>
-                </select>
-              </div>
-
-              <div class="input-row">
-                <label class="input-label" for="brainUrl">Brain URL (AWAY / current)</label>
-                <input id="brainUrl" class="input" placeholder="http://100.x.y.z:8000" />
-              </div>
-
-              <div class="input-row">
-                <label class="input-label" for="brainKey">X-API-Key (device)</label>
-                <input id="brainKey" class="input" placeholder="vAI..." />
-              </div>
-
-              <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
-                <button type="button" class="btn btn-secondary" id="brainSaveBtn" type="button">Save</button>
-                <button type="button" class="btn btn-secondary" id="brainTestBtn" type="button">Test connection</button>
-                <div id="brainStatus" class="empty-msg" style="margin:0; align-self:center;"></div>
-              </div>
-
-              <div class="empty-msg" style="margin-top:8px;">
-                Tip: If MyHub is on HTTPS (GitHub Pages), calling HTTP Brain may be blocked (Mixed Content). Test using local / http first, or add HTTPS to Brain later.
-              </div>
-            </div>
-          </details>
-
           <!-- Messages -->
           <div id="aiMessages" class="ai-messages"></div>
 
         </div>
       </section>
+
+      <div id="brainModalBackdrop" class="brain-modal-backdrop hidden" aria-hidden="true">
+        <div class="brain-modal" role="dialog" aria-modal="true" aria-labelledby="brainModalTitle">
+          <div class="brain-modal-header">
+            <h3 id="brainModalTitle" class="brain-modal-title">Brain Connection</h3>
+            <button type="button" class="icon-btn brain-modal-close" id="brainModalCloseBtn" aria-label="Close">✕</button>
+          </div>
+
+          <div class="input-grid">
+            <div class="input-row">
+              <label class="input-label" for="brainMode">Mode</label>
+              <select id="brainMode" class="input">
+                <option value="away">away</option>
+                <option value="home">home</option>
+                <option value="auto">auto</option>
+              </select>
+            </div>
+
+            <div class="input-row">
+              <label class="input-label" for="brainUrl">Brain URL</label>
+              <input id="brainUrl" class="input" placeholder="https://brain.tailac2201.ts.net" />
+            </div>
+
+            <div class="input-row">
+              <label class="input-label" for="brainKey">X-API-Key</label>
+              <input id="brainKey" class="input" placeholder="vAI..." />
+            </div>
+
+            <div class="input-row-inline" style="align-items:flex-end; gap:10px;">
+              <button type="button" class="btn btn-secondary" id="brainSaveBtn">Save</button>
+              <button type="button" class="btn btn-secondary" id="brainTestBtn">Test connection</button>
+            </div>
+
+            <div id="brainStatus" class="empty-msg" style="margin:0;"></div>
+          </div>
+
+          <div class="brain-help">
+            Recommended default: <b>https://brain.tailac2201.ts.net</b>.
+            The AI page and Translator both use the same <code>/chat</code> connection.
+          </div>
+        </div>
+      </div>
 
       <!-- TRANSLATOR -->
       <section class="page hidden" data-page="translator">
@@ -1857,11 +1957,13 @@ window.brainTestClick = window.brainTestClick || function() {
 
       // Brain / AI (v1)
       brain: {
-        url: "https://brain.tailac2201.ts.net",          // AWAY (Tailscale Serve HTTPS)
+        url: "https://brain.tailac2201.ts.net",
                   // e.g. http://localhost:8000 or http://100.x.y.z:8000
         apiKey: "vAIcORINTHIANS",       // DEVICE KEY (TEMP - rotate later)
                // X-API-Key value
-        useTailscale: true
+        useTailscale: true,
+        mode: "auto",
+        lastStatus: { ok: false, text: "🔴 Brain Offline", checkedAt: null }
       },
       aiChat: {
         messages: []      // {role:'user'|'assistant'|'system', text, ts}
@@ -2574,6 +2676,12 @@ window.brainTestClick = window.brainTestClick || function() {
           } else if (typeof window.renderAIPage === "function") {
             window.renderAIPage();
           }
+          if (typeof refreshBrainStatus === "function") refreshBrainStatus({ updateText: false }).catch(() => {});
+        } catch (e) { console.error(e); }
+      }
+      if (pageId === "translator") {
+        try {
+          if (typeof refreshBrainStatus === "function") refreshBrainStatus({ updateText: false }).catch(() => {});
         } catch (e) { console.error(e); }
       }
       // Leaving notes canvas mode
@@ -5787,8 +5895,6 @@ function resolveSelectedFood() {
     const aiMessagesEl = document.getElementById("aiMessages");
     const aiInputEl = document.getElementById("aiInput");
     const aiSendBtn = document.getElementById("aiSendBtn");
-    const aiConnectionBtn = document.getElementById("aiConnectionBtn");
-    const aiConnectionPanel = document.getElementById("aiConnectionPanel");
     const aiAttachBtn = document.getElementById("aiAttachBtn");
     const aiFileInput = document.getElementById("aiFileInput");
     const aiClearBtn = document.getElementById("aiClearBtn");
@@ -5805,7 +5911,13 @@ function resolveSelectedFood() {
       setTimeout(autoGrow, 0);
     }
 const brainUrlEl = document.getElementById("brainUrl");
+    const brainModeEl = document.getElementById("brainMode");
     const brainKeyEl = document.getElementById("brainKey");
+    const aiConnBtn = document.getElementById("aiConnBtn");
+    const brainModalBackdrop = document.getElementById("brainModalBackdrop");
+    const brainModalCloseBtn = document.getElementById("brainModalCloseBtn");
+    const brainLiveStatusEl = document.getElementById("brainLiveStatus");
+    const brainLiveStatusTextEl = document.getElementById("brainLiveStatusText");
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
     const brainStatusEl = document.getElementById("brainStatus");
@@ -5962,7 +6074,19 @@ const brainUrlEl = document.getElementById("brainUrl");
       aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
     }
 
+    function renderBrainLiveStatus() {
+      const status = state.brain?.lastStatus || {};
+      const ok = !!status.ok;
+      const text = status.text || (ok ? "🟢 Brain Connected" : "🔴 Brain Offline");
+      if (brainLiveStatusEl) {
+        brainLiveStatusEl.classList.toggle("is-online", ok);
+        brainLiveStatusEl.classList.toggle("is-offline", !ok);
+      }
+      if (brainLiveStatusTextEl) brainLiveStatusTextEl.textContent = text;
+    }
+
     function renderAIConfig() {
+      if (brainModeEl) brainModeEl.value = state.brain?.mode || "auto";
       if (brainUrlEl) brainUrlEl.value = state.brain?.url || "";
       if (brainKeyEl) brainKeyEl.value = state.brain?.apiKey || "";
       if (brainStatusEl) {
@@ -5970,6 +6094,7 @@ const brainUrlEl = document.getElementById("brainUrl");
           ? "Configured: " + state.brain.url
           : "Not configured yet.";
       }
+      renderBrainLiveStatus();
     }
 
     function renderAIPage() {
@@ -5977,7 +6102,7 @@ const brainUrlEl = document.getElementById("brainUrl");
       renderAIMessages();
     }
 
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -5987,11 +6112,69 @@ const brainUrlEl = document.getElementById("brainUrl");
   }
 }
 
-function classifyBrainError(err, res) {
-  if (err && err.name === "AbortError") return { kind: "TIMEOUT", message: "Server unreachable (timeout)." };
-  if (res && res.status === 401) return { kind: "INVALID_API_KEY", message: "Invalid API Key (401)." };
-  if (res && !res.ok) return { kind: "HTTP_ERROR", message: `HTTP error ${res.status}.` };
-  return { kind: "NETWORK", message: "Network error / blocked request." };
+async function readErrorDetail(res) {
+  try {
+    const clone = res.clone();
+    const data = await clone.json();
+    if (typeof data?.detail === "string" && data.detail.trim()) return data.detail.trim();
+    if (typeof data?.reply === "string" && data.reply.trim()) return data.reply.trim();
+    return "";
+  } catch (_) {
+    try {
+      const txt = await res.clone().text();
+      return String(txt || "").trim().slice(0, 200);
+    } catch (_) {
+      return "";
+    }
+  }
+}
+
+async function classifyBrainError(err, res, context = "request") {
+  if (err && err.name === "AbortError") return { kind: "TIMEOUT", message: `Timeout while calling ${context}.` };
+  if (res && res.status === 401) return { kind: "INVALID_API_KEY", message: `API key rejected by ${context} (401).` };
+  if (res && !res.ok) {
+    const detail = await readErrorDetail(res);
+    return { kind: "HTTP_ERROR", message: `HTTP ${res.status} on ${context}${detail ? ` — ${detail}` : ""}.` };
+  }
+  return { kind: "NETWORK", message: `Network error while calling ${context}.` };
+}
+
+function setBrainStatusText(text) {
+  if (brainStatusEl) brainStatusEl.textContent = text;
+}
+
+function setBrainStatusState(ok, text) {
+  state.brain.lastStatus = { ok: !!ok, text, checkedAt: new Date().toISOString() };
+  saveState();
+  renderBrainLiveStatus();
+}
+
+async function refreshBrainStatus({ showNotifications = false, updateText = false } = {}) {
+  const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
+  const key = (state.brain?.apiKey || "").trim();
+
+  if (!base || !key) {
+    const txt = "🔴 Brain Offline";
+    setBrainStatusState(false, txt);
+    if (updateText) setBrainStatusText("Configure Brain URL and API key first.");
+    return { ok: false, kind: "CONFIG", message: "Missing Brain URL or API key." };
+  }
+
+  if (updateText) setBrainStatusText("Testing /health...");
+  const health = await brainHealth(base, key, 5000);
+  if (!health.ok) {
+    const txt = "🔴 Brain Offline";
+    setBrainStatusState(false, txt);
+    if (updateText) setBrainStatusText(`ERROR: ${health.message}`);
+    if (showNotifications) showToast(`ERROR: ${health.message}`, { type: "error", icon: "🔴" });
+    return health;
+  }
+
+  const txt = "🟢 Brain Connected";
+  setBrainStatusState(true, txt);
+  if (updateText) setBrainStatusText("/health OK");
+  if (showNotifications) showToast("/health OK", { type: "success", icon: "🟢", durationMs: 2200 });
+  return { ok: true, data: health.data };
 }
 
 function getScopeFromPage() {
@@ -6004,16 +6187,16 @@ function getScopeFromPage() {
   return "global";
 }
 
-async function brainHealth(baseUrl, apiKey, timeoutMs = 7000) {
+async function brainHealth(baseUrl, apiKey, timeoutMs = 4000) {
   const base = String(baseUrl || "").trim().replace(/\/+$/, "");
   const url = base + "/health";
   try {
     const res = await fetchWithTimeout(url, { method: "GET", headers: { "X-API-Key": apiKey } }, timeoutMs);
-    if (!res.ok) return { ok: false, ...classifyBrainError(null, res) };
+    if (!res.ok) return { ok: false, ...(await classifyBrainError(null, res, "/health")) };
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
   } catch (err) {
-    return { ok: false, ...classifyBrainError(err, null) };
+    return { ok: false, ...(await classifyBrainError(err, null, "/health")) };
   }
 }
 
@@ -6022,8 +6205,8 @@ async function brainChat(userText, scopeOverride) {
   const key = (state.brain?.apiKey || "").trim();
   const scope = (scopeOverride || getScopeFromPage() || "global");
 
-  if (!base) return { ok:false, error:{kind:"NETWORK", message:"Configure Brain URL first (AI > Connection)."} };
-  if (!key) return { ok:false, error:{kind:"INVALID_API_KEY", message:"Configure X-API-Key first (AI > Connection)."} };
+  if (!base) return { ok:false, error:{kind:"CONFIG", message:"Configure Brain URL first (Connection)."} };
+  if (!key) return { ok:false, error:{kind:"CONFIG", message:"Configure X-API-Key first (Connection)."} };
 
   const url = base + "/chat";
 
@@ -6034,9 +6217,13 @@ async function brainChat(userText, scopeOverride) {
       body: JSON.stringify({ message: userText, scope })
     }, 12000);
 
-    if (!res.ok) return { ok:false, error: classifyBrainError(null, res) };
+    if (!res.ok) {
+      setBrainStatusState(false, "🔴 Brain Offline");
+      return { ok:false, error: await classifyBrainError(null, res, "/chat") };
+    }
 
     const data = await res.json().catch(() => ({}));
+    setBrainStatusState(true, "🟢 Brain Connected");
     return {
       ok: true,
       reply: data.reply || "",
@@ -6044,7 +6231,8 @@ async function brainChat(userText, scopeOverride) {
       meta: data.meta || {}
     };
   } catch (err) {
-    return { ok:false, error: classifyBrainError(err, null) };
+    setBrainStatusState(false, "🔴 Brain Offline");
+    return { ok:false, error: await classifyBrainError(err, null, "/chat") };
   }
 }
 
@@ -6508,6 +6696,36 @@ async function sendAI() {
       await aiSendMessage(msg);
     }
 
+
+    function openBrainModal() {
+      if (!brainModalBackdrop) return;
+      brainModalBackdrop.classList.remove("hidden");
+      brainModalBackdrop.classList.add("open");
+      brainModalBackdrop.setAttribute("aria-hidden", "false");
+      renderAIConfig();
+      setTimeout(() => brainUrlEl?.focus(), 30);
+    }
+
+    function closeBrainModal() {
+      if (!brainModalBackdrop) return;
+      brainModalBackdrop.classList.add("hidden");
+      brainModalBackdrop.classList.remove("open");
+      brainModalBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    if (aiConnBtn) aiConnBtn.addEventListener("click", openBrainModal);
+    if (brainModalCloseBtn) brainModalCloseBtn.addEventListener("click", closeBrainModal);
+    if (brainModalBackdrop) {
+      brainModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === brainModalBackdrop) closeBrainModal();
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && brainModalBackdrop && brainModalBackdrop.classList.contains("open")) {
+        closeBrainModal();
+      }
+    });
+
     if (aiSendBtn) aiSendBtn.addEventListener("click", sendAI);
     if (aiInputEl) aiInputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -6527,84 +6745,60 @@ async function sendAI() {
       });
     }
 
-    function openAIConnectionPanel() {
-      if (aiConnectionPanel) aiConnectionPanel.open = true;
-      const summary = aiConnectionPanel ? aiConnectionPanel.querySelector("summary") : null;
-      if (summary) summary.blur();
-      window.requestAnimationFrame(() => {
-        if (brainUrlEl) brainUrlEl.focus();
-      });
-    }
-
-    if (aiConnectionBtn) {
-      aiConnectionBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openAIConnectionPanel();
-      });
-    }
-
-    [brainUrlEl, brainKeyEl, brainModeEl].forEach((el) => {
-      if (!el) return;
-      el.addEventListener("focus", () => {
-        if (aiConnectionPanel) aiConnectionPanel.open = true;
-      });
-      el.addEventListener("mousedown", () => {
-        if (aiConnectionPanel) aiConnectionPanel.open = true;
-      });
-      el.addEventListener("click", () => {
-        if (aiConnectionPanel) aiConnectionPanel.open = true;
-      });
-    });
-
     if (brainSaveBtn) {
-      brainSaveBtn.addEventListener("click", () => {
-        state.brain.url = (brainUrlEl?.value || "").trim();
+      brainSaveBtn.addEventListener("click", async () => {
+        state.brain.mode = (brainModeEl?.value || "auto").trim();
+        state.brain.url = (brainUrlEl?.value || "").trim() || "https://brain.tailac2201.ts.net";
         state.brain.apiKey = (brainKeyEl?.value || "").trim();
         saveState();
         renderAIConfig();
-        alert("Saved.");
+        showToast("Brain settings saved.", { type: "success", icon: "💾" });
+        await refreshBrainStatus({ updateText: true });
       });
     }
 
     if (brainTestBtn) {
       brainTestBtn.addEventListener("click", async () => {
         try {
-          state.brain.url = (brainUrlEl?.value || "").trim();
+          state.brain.mode = (brainModeEl?.value || "auto").trim();
+          state.brain.url = (brainUrlEl?.value || "").trim() || "https://brain.tailac2201.ts.net";
           state.brain.apiKey = (brainKeyEl?.value || "").trim();
           saveState();
           renderAIConfig();
 
-          const base = (state.brain?.url || "").trim().replace(/\/+$/, "");
-          const key = (state.brain?.apiKey || "").trim();
+          showToast("Connecting to Brain...", { type: "warn", icon: "🔌", durationMs: 1800 });
+          setBrainStatusText("Connecting to Brain...");
 
-          if (!base) { alert("Configure Brain URL first."); return; }
-          if (!key) { alert("Configure X-API-Key first."); return; }
+          const h = await refreshBrainStatus({ showNotifications: true, updateText: true });
+          if (!h.ok) return;
 
-          if (brainStatusEl) brainStatusEl.textContent = "Testing /health…";
-          const h = await brainHealth(base, key, 4000);
-          if (!h.ok) {
-            if (brainStatusEl) brainStatusEl.textContent = `${h.kind}: ${h.message}`;
-            alert(`${h.kind}: ${h.message}`);
-            return;
-          }
-
-          if (brainStatusEl) brainStatusEl.textContent = "Health OK. Testing /chat…";
+          showToast("Testing /chat...", { type: "warn", icon: "💬", durationMs: 1800 });
+          setBrainStatusText("Testing /chat...");
           const r = await brainChat("ping", "global");
           if (r.ok) {
-            if (brainStatusEl) brainStatusEl.textContent = `Connected. actions=${r.actions?.length || 0}`;
-            alert("Connected ✅");
+            setBrainStatusText("Brain connection OK");
+            setBrainStatusState(true, "🟢 Brain Connected");
+            showToast("Brain connection OK", { type: "success", icon: "🟢" });
           } else {
-            if (brainStatusEl) brainStatusEl.textContent = `${r.error?.kind}: ${r.error?.message}`;
-            alert(`${r.error?.kind}: ${r.error?.message}`);
+            setBrainStatusText(`ERROR: ${r.error?.message || "Unknown error."}`);
+            setBrainStatusState(false, "🔴 Brain Offline");
+            showToast(`ERROR: ${r.error?.message || "Unknown error."}`, { type: "error", icon: "🔴", durationMs: 5000 });
           }
         } catch (e) {
           console.error(e);
-          if (brainStatusEl) brainStatusEl.textContent = "Error";
-          alert("Error: " + (e?.message || String(e)));
+          const msg = e?.message || String(e);
+          setBrainStatusText(`ERROR: ${msg}`);
+          setBrainStatusState(false, "🔴 Brain Offline");
+          showToast(`ERROR: ${msg}`, { type: "error", icon: "🔴", durationMs: 5000 });
         }
-});
+      });
     }
+
+    const brainStatusPoll = window.setInterval(() => {
+      refreshBrainStatus({ updateText: false }).catch(() => {});
+    }, 15000);
+    void brainStatusPoll;
+    refreshBrainStatus({ updateText: false }).catch(() => {});
 
     if (aiClearBtn) {
       aiClearBtn.addEventListener("click", () => {
