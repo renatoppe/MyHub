@@ -633,7 +633,7 @@
       background: #000;
       overflow: hidden;
       position: relative;
-      height: 260px; /* fits on mobile; canvas will auto-resize */
+      height: 520px; /* doubled height for easier drawing on mobile; canvas auto-resizes */
     }
     
     #notesCanvas {
@@ -814,7 +814,7 @@
     .input-grid { padding: 0 !important; background: transparent !important; border: none !important; }
     .ai-compose-top{
       display:flex; gap:10px; align-items:center;
-      position: sticky; top: 64px;
+      position: sticky; top: 56px;
       padding: 10px 0 10px 0;
       background: radial-gradient(circle at top, #151827 0, #050608 45%);
       z-index: 5;
@@ -839,7 +839,8 @@
       box-shadow: 0 0 0 1px rgba(0, 188, 212, 0.4);
     }
     .ai-messages{
-      padding-top: 6px;
+      padding-top: 14px;
+      padding-bottom: 28px;
       min-height: calc(100vh - 220px);
     }
     .ai-conn{ margin-top: 10px; }
@@ -1954,8 +1955,8 @@ window.brainTestClick = window.brainTestClick || function() {
 };
 
 // ==============================
-  // MyHub v0.9.3 - script.js
-   // script.js – MyHub v0.9.3
+  // MyHub v0.9.7 - script.js
+   // script.js – MyHub v0.9.7
   
   document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------
@@ -2701,6 +2702,11 @@ window.brainTestClick = window.brainTestClick || function() {
       // Hook: when opening AI page, refresh UI
       if (pageId === "ai") {
         try {
+          const aiChatHead = document.getElementById("aiChatHead");
+          if (aiChatHead) {
+            aiChatHead.classList.add("hidden");
+            aiChatHead.setAttribute("aria-hidden", "true");
+          }
           if (typeof renderAIPage === "function") {
             renderAIPage();
           } else if (typeof window.renderAIPage === "function") {
@@ -6297,6 +6303,8 @@ function normalizeText(s) {
 function nowISO() {
   return new Date().toISOString();
 }
+
+window.normalizeText = normalizeText;
 
 function findTodoByTitle(title) {
   const t = normalizeText(title).toLowerCase();
