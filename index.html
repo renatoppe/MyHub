@@ -6392,11 +6392,16 @@ function parseLocalMyHubIntent(text) {
   const lower = raw.toLowerCase();
   if (!raw) return null;
 
+  const politePrefix = String.raw`(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?`;
   const shoppingTarget = String.raw`(?:shopping|grocery)(?:\s+list)?`;
+  const todoTarget = String.raw`(?:to\s*do|todo|task)(?:\s+list)?`;
 
-  let m = lower.match(new RegExp(String.raw`^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  let m = lower.match(new RegExp(String.raw`^${politePrefix}add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   if (!m) {
-    m = lower.match(new RegExp(String.raw`^(?:please\s+)?add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+    m = lower.match(new RegExp(String.raw`^${politePrefix}add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  }
+  if (!m) {
+    m = lower.match(new RegExp(String.raw`^${politePrefix}put\s+["“]?(.+?)["”]?\s+(?:on|in)\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
@@ -6407,9 +6412,9 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(new RegExp(String.raw`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  m = lower.match(new RegExp(String.raw`^${politePrefix}(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   if (!m) {
-    m = lower.match(new RegExp(String.raw`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?(?:\s+from)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+    m = lower.match(new RegExp(String.raw`^${politePrefix}(?:remove|delete)\s+["“]?(.+?)["”]?(?:\s+from)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
@@ -6420,7 +6425,10 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(new RegExp(String.raw`^(?:please\s+)?create\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  m = lower.match(new RegExp(String.raw`^${politePrefix}create\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  if (!m) {
+    m = lower.match(new RegExp(String.raw`^${politePrefix}make\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  }
   if (m) {
     const name = parseQuotedOrBareValue(m[1]);
     return {
@@ -6429,7 +6437,13 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  m = lower.match(new RegExp(String.raw`^${politePrefix}add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${todoTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  if (!m) {
+    m = lower.match(new RegExp(String.raw`^${politePrefix}add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${todoTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  }
+  if (!m) {
+    m = lower.match(new RegExp(String.raw`^${politePrefix}put\s+["“]?(.+?)["”]?\s+(?:on|in)\s+(?:my\s+)?${todoTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  }
   if (m) {
     const title = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6439,7 +6453,7 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?\??$/i);
+  m = lower.match(new RegExp(String.raw`^${politePrefix}(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${todoTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   if (m) {
     const title = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6449,7 +6463,7 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?(?:complete|finish|mark(?: as)? done)\s+["“]?(.+?)["”]?(?:\s+in\s+(?:my\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named\s+["“]?(.+?)["”]?)?)?\??$/i);
+  m = lower.match(new RegExp(String.raw`^${politePrefix}(?:complete|finish|mark(?:\s+as)?\s+done)\s+["“]?(.+?)["”]?(?:\s+in\s+(?:my\s+)?${todoTarget}(?:\s+named\s+["“]?(.+?)["”]?)?)?\??$`, "i"));
   if (m) {
     const title = parseQuotedOrBareValue(m[1]);
     const listName = parseQuotedOrBareValue(m[2] || "");
@@ -6459,7 +6473,10 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(/^(?:please\s+)?create\s+(?:a\s+new\s+)?(?:to\s*do|todo|task)\s+list(?:\s+named)?\s+["“]?(.+?)["”]?\??$/i);
+  m = lower.match(new RegExp(String.raw`^${politePrefix}create\s+(?:a\s+new\s+)?${todoTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  if (!m) {
+    m = lower.match(new RegExp(String.raw`^${politePrefix}make\s+(?:a\s+new\s+)?${todoTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  }
   if (m) {
     const name = parseQuotedOrBareValue(m[1]);
     return {
