@@ -4548,19 +4548,25 @@ window.brainTestClick = window.brainTestClick || function() {
       let expanded = false;
       let boardBg = "#050608"; // default black-ish board
 
+      let canvasCssWidth = 0;
+      let canvasCssHeight = 0;
+
       function fillBoardBackground() {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
         ctx.fillStyle = boardBg;
-        ctx.fillRect(0, 0, notesCanvas.width, notesCanvas.height);
+        ctx.fillRect(0, 0, canvasCssWidth, canvasCssHeight);
         ctx.restore();
       }
 
       function resizeCanvas() {
         const rect = notesCanvasWrapper.getBoundingClientRect();
-        notesCanvas.width = Math.floor(rect.width);
-        const maxHeight = Math.min(420, window.innerHeight - 220);
-        notesCanvas.height = expanded ? Math.min(420, maxHeight) : Math.min(260, maxHeight);
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        canvasCssWidth = Math.max(1, Math.floor(rect.width));
+        canvasCssHeight = Math.max(1, Math.floor(rect.height));
+        notesCanvas.width = Math.floor(canvasCssWidth * dpr);
+        notesCanvas.height = Math.floor(canvasCssHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         fillBoardBackground();
       }
 
@@ -4572,10 +4578,11 @@ window.brainTestClick = window.brainTestClick || function() {
 
       function getPosFromEvent(e) {
         const rect = notesCanvas.getBoundingClientRect();
-        if (e.touches && e.touches[0]) {
-          return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-        }
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const source = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+        return {
+          x: source.clientX - rect.left,
+          y: source.clientY - rect.top
+        };
       }
 
       function startDraw(x, y) {
@@ -6387,9 +6394,9 @@ function parseLocalMyHubIntent(text) {
 
   const shoppingTarget = String.raw`(?:shopping|grocery)(?:\s+list)?`;
 
-  let m = lower.match(new RegExp(`^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  let m = lower.match(new RegExp(String.raw`^(?:please\s+)?add\s+["“]?(.+?)["”]?\s+to\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   if (!m) {
-    m = lower.match(new RegExp(`^(?:please\s+)?add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+    m = lower.match(new RegExp(String.raw`^(?:please\s+)?add\s+["“]?(.+?)["”]?(?:\s+to)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
@@ -6400,9 +6407,9 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(new RegExp(`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+  m = lower.match(new RegExp(String.raw`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?\s+from\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   if (!m) {
-    m = lower.match(new RegExp(`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?(?:\s+from)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
+    m = lower.match(new RegExp(String.raw`^(?:please\s+)?(?:remove|delete)\s+["“]?(.+?)["”]?(?:\s+from)?\s+(?:my\s+)?${shoppingTarget}(?:\s+named\s+["“]?(.+?)["”]?)?\??$`, "i"));
   }
   if (m) {
     const item = parseQuotedOrBareValue(m[1]);
@@ -6413,7 +6420,7 @@ function parseLocalMyHubIntent(text) {
     };
   }
 
-  m = lower.match(new RegExp(`^(?:please\s+)?create\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
+  m = lower.match(new RegExp(String.raw`^(?:please\s+)?create\s+(?:a\s+new\s+)?${shoppingTarget}(?:\s+named)?\s+["“]?(.+?)["”]?\??$`, "i"));
   if (m) {
     const name = parseQuotedOrBareValue(m[1]);
     return {
