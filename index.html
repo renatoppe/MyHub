@@ -611,7 +611,7 @@
     
     #notesTextArea {
       width: 100%;
-      min-height: 200px;
+      min-height: 400px;
       border-radius: 10px;
       border: 1px solid #26293a;
       background: #101320;
@@ -1296,7 +1296,7 @@
           <span class="nav-emoji">🧠</span><span class="nav-label">AI</span>
         </button>
       </nav>
-      <div class="version">v<span id="appVersion">0.9.6</span></div>
+      <div class="version">v<span id="appVersion">0.9.11</span></div>
     </aside>
 
     <main class="main">
@@ -1921,17 +1921,22 @@
 
             <div class="input-row-inline" style="align-items:flex-end;">
               <button id="translatorRunBtn" class="btn">🌐 Translate</button>
+              <button id="translatorSpeakBtn" class="btn btn-secondary">🔊 Speak</button>
               <button id="translatorClearBtn" class="btn btn-secondary">🧹 Clear</button>
             </div>
           </div>
 
-          <div class="chip-row">
-            <button class="chip translator-quick" data-text="Where is the MTR station?">Where is the MTR station?</button>
-            <button class="chip translator-quick" data-text="I am allergic to peanuts.">I am allergic to peanuts.</button>
-            <button class="chip translator-quick" data-text="No spicy, please.">No spicy, please.</button>
-            <button class="chip translator-quick" data-text="How much is this?">How much is this?</button>
-            <button class="chip translator-quick" data-text="I need a hospital.">I need a hospital.</button>
-            <button class="chip translator-quick" data-text="Can you help me?">Can you help me?</button>
+          <div class="input-row-inline" style="align-items:center; justify-content:space-between; margin-top:12px;">
+            <div style="font-size:12px; opacity:.8;">Quick phrases</div>
+            <button id="translatorEditPhrasesBtn" class="btn btn-secondary">✏️ Edit phrases</button>
+          </div>
+          <div class="chip-row" id="translatorQuickRow">
+            <button class="chip translator-quick" data-index="0" data-text="Where is the MTR station?">Where is the MTR station?</button>
+            <button class="chip translator-quick" data-index="1" data-text="I am allergic to peanuts.">I am allergic to peanuts.</button>
+            <button class="chip translator-quick" data-index="2" data-text="No spicy, please.">No spicy, please.</button>
+            <button class="chip translator-quick" data-index="3" data-text="How much is this?">How much is this?</button>
+            <button class="chip translator-quick" data-index="4" data-text="I need a hospital.">I need a hospital.</button>
+            <button class="chip translator-quick" data-index="5" data-text="Can you help me?">Can you help me?</button>
           </div>
 
           <div class="input-row" style="margin-top:12px;">
@@ -1943,7 +1948,7 @@
     </main>
   </div>
   <script>
-  const APP_BUILD = "2026-02-16 brainv1-stable-1";
+  const APP_BUILD = "v0.9.11";
 console.log("MyHub build:", APP_BUILD);
 
 // Fix: legacy inline onclick hooks (kept for backward compatibility)
@@ -2557,10 +2562,20 @@ window.brainTestClick = window.brainTestClick || function() {
     if (!state.shoppingLists || state.shoppingLists.length === 0) {
       state.shoppingLists = structuredClone(defaultState.shoppingLists);
     }
+    if (!Array.isArray(state.translatorQuickPhrases) || state.translatorQuickPhrases.length === 0) {
+      state.translatorQuickPhrases = structuredClone(defaultState.translatorQuickPhrases || [
+        "Where is the MTR station?",
+        "I am allergic to peanuts.",
+        "No spicy, please.",
+        "How much is this?",
+        "I need a hospital.",
+        "Can you help me?"
+      ]);
+    }
   
     // Bump version label
     const appVersionSpan = document.getElementById("appVersion");
-    if (appVersionSpan) appVersionSpan.textContent = "0.9.3";
+    if (appVersionSpan) appVersionSpan.textContent = "0.9.11";
   
     // -----------------------------
     // BASIC ELEMENTS & EXTRA STYLES
@@ -6895,11 +6910,25 @@ async function aiSendMessage(msg, { statusEl } = {}) {
 
   const lowerText = text.toLowerCase();
   const hasShoppingIntent = /\b(shopping|grocery)\b/.test(lowerText);
+  const localIntent = parseLocalMyHubIntent(text);
+  const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
+  const explicitLocalCommand = localActions.length > 0;
 
   console.log("[AI] sending message:", text);
 
   // store user message first
   aiPush("user", text);
+
+  if (APPLY_ACTIONS && explicitLocalCommand) {
+    try {
+      applyBrainActions(localActions);
+      aiPush("assistant", localIntent.reply || "Done.");
+      if (statusEl) statusEl.textContent = "Local OK";
+      return;
+    } catch (e) {
+      console.error("[AI] local action apply failed:", e);
+    }
+  }
 
   // show connecting
   aiPush("system", "…connecting");
@@ -6922,9 +6951,6 @@ async function aiSendMessage(msg, { statusEl } = {}) {
 
       let replyText = res.reply || "(no reply)";
       const brainActions = Array.isArray(res.actions) ? res.actions : [];
-      const localIntent = parseLocalMyHubIntent(text);
-      const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
-      const explicitLocalCommand = localActions.length > 0;
       const useLocalShoppingIntent = explicitLocalCommand && hasShoppingIntent;
 
       console.log("[AI] actions:", brainActions);
@@ -7581,22 +7607,66 @@ async function runTranslator() {
   }
 }
 
+function renderTranslatorQuickPhrases() {
+  const row = document.getElementById("translatorQuickRow");
+  const inputEl = document.getElementById("translatorInput");
+  if (!row) return;
+  const phrases = Array.isArray(state.translatorQuickPhrases) && state.translatorQuickPhrases.length
+    ? state.translatorQuickPhrases
+    : (defaultState.translatorQuickPhrases || []);
+
+  row.innerHTML = "";
+  phrases.forEach((phrase, index) => {
+    const btn = document.createElement("button");
+    btn.className = "chip translator-quick";
+    btn.type = "button";
+    btn.dataset.index = String(index);
+    btn.dataset.text = phrase;
+    btn.textContent = phrase;
+    btn.addEventListener("click", () => {
+      if (inputEl) inputEl.value = phrase || "";
+    });
+    row.appendChild(btn);
+  });
+}
+
+function editTranslatorQuickPhrases() {
+  const current = (Array.isArray(state.translatorQuickPhrases) ? state.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
+  const updated = prompt("Edit quick phrases, one per line:", current);
+  if (updated == null) return;
+  const phrases = updated.split(/\r?\n/).map(s => normalizeText(s)).filter(Boolean).slice(0, 12);
+  if (!phrases.length) return;
+  state.translatorQuickPhrases = phrases;
+  saveState();
+  renderTranslatorQuickPhrases();
+}
+
 function initTranslatorPage() {
   const runBtn = document.getElementById("translatorRunBtn");
+  const speakBtn = document.getElementById("translatorSpeakBtn");
   const clearBtn = document.getElementById("translatorClearBtn");
   const swapBtn = document.getElementById("translatorSwapBtn");
+  const editBtn = document.getElementById("translatorEditPhrasesBtn");
   const inputEl = document.getElementById("translatorInput");
   const outputEl = document.getElementById("translatorOutput");
   const targetEl = document.getElementById("translatorTarget");
+
+  renderTranslatorQuickPhrases();
 
   if (runBtn && !runBtn.dataset.bound) {
     runBtn.dataset.bound = "1";
     runBtn.addEventListener("click", () => { runTranslator().catch(console.error); });
   }
 
+  if (speakBtn && !speakBtn.dataset.bound) {
+    speakBtn.dataset.bound = "1";
+    speakBtn.addEventListener("click", speakTranslatorOutput);
+  }
+
   if (clearBtn && !clearBtn.dataset.bound) {
     clearBtn.dataset.bound = "1";
     clearBtn.addEventListener("click", () => {
+      stopTranslatorSpeech();
       if (inputEl) inputEl.value = "";
       if (outputEl) outputEl.value = "";
     });
@@ -7605,6 +7675,7 @@ function initTranslatorPage() {
   if (swapBtn && !swapBtn.dataset.bound) {
     swapBtn.dataset.bound = "1";
     swapBtn.addEventListener("click", () => {
+      stopTranslatorSpeech();
       if (!inputEl || !outputEl || !targetEl) return;
       const tmp = inputEl.value;
       inputEl.value = outputEl.value;
@@ -7613,6 +7684,11 @@ function initTranslatorPage() {
       const idx = cycle.indexOf(targetEl.value);
       targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
     });
+  }
+
+  if (editBtn && !editBtn.dataset.bound) {
+    editBtn.dataset.bound = "1";
+    editBtn.addEventListener("click", editTranslatorQuickPhrases);
   }
 
   if (inputEl && !inputEl.dataset.bound) {
@@ -7624,14 +7700,6 @@ function initTranslatorPage() {
       }
     });
   }
-
-  document.querySelectorAll(".translator-quick").forEach((btn) => {
-    if (btn.dataset.bound) return;
-    btn.dataset.bound = "1";
-    btn.addEventListener("click", () => {
-      if (inputEl) inputEl.value = btn.dataset.text || "";
-    });
-  });
 }
 
 document.addEventListener("DOMContentLoaded", initTranslatorPage);
