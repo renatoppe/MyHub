@@ -611,7 +611,7 @@
     
     #notesTextArea {
       width: 100%;
-      min-height: 400px;
+      min-height: 800px;
       border-radius: 10px;
       border: 1px solid #26293a;
       background: #101320;
@@ -2732,6 +2732,7 @@ window.brainTestClick = window.brainTestClick || function() {
       }
       if (pageId === "translator") {
         try {
+          if (typeof initTranslatorPage === "function") initTranslatorPage();
           if (typeof refreshBrainStatus === "function") refreshBrainStatus({ updateText: false }).catch(() => {});
         } catch (e) { console.error(e); }
       }
@@ -6663,6 +6664,8 @@ const ACTION_HANDLERS = {
     if (typeof renderTodos === "function") renderTodos();
   },
 
+  todo_add: (p) => ACTION_HANDLERS.task_add(p),
+
   // payload: { title }
   task_complete: (p) => {
     const title = normalizeText(p.title);
@@ -6677,6 +6680,8 @@ const ACTION_HANDLERS = {
     if (typeof renderTodos === "function") renderTodos();
   },
 
+  todo_complete: (p) => ACTION_HANDLERS.task_complete(p),
+
   task_remove: (p) => {
     const title = normalizeText(p.title || p.text);
     const listName = normalizeText(p.list || p.listName || p.todoList);
@@ -6689,6 +6694,8 @@ const ACTION_HANDLERS = {
     saveState();
     if (typeof renderTodos === "function") renderTodos();
   },
+
+  todo_remove: (p) => ACTION_HANDLERS.task_remove(p),
 
   todo_list_create: (p) => {
     const name = normalizeText(p.name || p.list || p.listName);
@@ -6904,13 +6911,80 @@ Language rules:
 
 
     
+function buildDirectLocalIntent(text) {
+  const raw = normalizeText(text);
+  if (!raw) return null;
+
+  const patterns = [
+    {
+      type: "shopping_add",
+      reply: (v) => `Added "${v.item}" to your ${v.listName ? `"${v.listName}" ` : ""}shopping list.`,
+      regexes: [
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?add\s+["“']?(.+?)["”']?\s+to\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?put\s+["“']?(.+?)["”']?\s+(?:on|in)\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
+      ],
+      map: (m) => ({ item: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
+    },
+    {
+      type: "shopping_remove",
+      reply: (v) => `Removed "${v.item}" from your ${v.listName ? `"${v.listName}" ` : ""}shopping list.`,
+      regexes: [
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:remove|delete)\s+["“']?(.+?)["”']?\s+from\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
+      ],
+      map: (m) => ({ item: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
+    },
+    {
+      type: "task_add",
+      reply: (v) => `Added "${v.title}" to your ${v.listName ? `"${v.listName}" ` : ""}to-do list.`,
+      regexes: [
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?add\s+["“']?(.+?)["”']?\s+to\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?put\s+["“']?(.+?)["”']?\s+(?:on|in)\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
+        /^(?:remember\s+to|remind\s+me\s+to)\s+(.+?)\??$/i
+      ],
+      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
+    },
+    {
+      type: "task_remove",
+      reply: (v) => `Removed "${v.title}" from your ${v.listName ? `"${v.listName}" ` : ""}to-do list.`,
+      regexes: [
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:remove|delete)\s+["“']?(.+?)["”']?\s+from\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
+      ],
+      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
+    },
+    {
+      type: "task_complete",
+      reply: (v) => `Marked "${v.title}" as done${v.listName ? ` in "${v.listName}"` : ""}.`,
+      regexes: [
+        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:complete|finish|mark(?:\s+as)?\s+done)\s+["“']?(.+?)["”']?(?:\s+in\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?)?\??$/i
+      ],
+      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
+    }
+  ];
+
+  for (const spec of patterns) {
+    for (const rx of spec.regexes) {
+      const match = raw.match(rx);
+      if (!match) continue;
+      const payload = spec.map(match);
+      const primary = payload.item || payload.title || payload.name || "";
+      if (!normalizeText(primary)) continue;
+      return {
+        actions: [{ type: spec.type, payload }],
+        reply: spec.reply(payload)
+      };
+    }
+  }
+
+  return null;
+}
+
 async function aiSendMessage(msg, { statusEl } = {}) {
   const text = (msg || "").trim();
   if (!text) return;
 
   const lowerText = text.toLowerCase();
   const hasShoppingIntent = /\b(shopping|grocery)\b/.test(lowerText);
-  const localIntent = parseLocalMyHubIntent(text);
+  const localIntent = buildDirectLocalIntent(text) || parseLocalMyHubIntent(text);
   const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
   const explicitLocalCommand = localActions.length > 0;
 
@@ -7703,6 +7777,11 @@ function initTranslatorPage() {
 }
 
 document.addEventListener("DOMContentLoaded", initTranslatorPage);
+if (document.readyState !== "loading") {
+  setTimeout(() => {
+    try { initTranslatorPage(); } catch (_) {}
+  }, 0);
+}
 
 </script>
 
