@@ -1945,13 +1945,14 @@
           </div>
           <div class="input-row" style="margin-top:10px;">
             <button id="translatorSpeakOutputBtn" type="button" class="btn btn-secondary">🔊 Read translation</button>
+            <div id="translatorSpeechStatus" style="margin-top:8px;font-size:12px;color:#666;"></div>
           </div>
         </div>
       </section>
     </main>
   </div>
   <script>
-  const APP_BUILD = "v0.9.20";
+  const APP_BUILD = "v0.9.21";
 console.log("MyHub build:", APP_BUILD);
 
 // Fix: legacy inline onclick hooks (kept for backward compatibility)
@@ -7634,32 +7635,99 @@ function stopTranslatorSpeech() {
   }
 }
 
+function getTranslatorBestVoice(desiredLang) {
+  try {
+    const synth = window.speechSynthesis;
+    const voices = synth && synth.getVoices ? synth.getVoices() : [];
+    if (!voices || !voices.length) return null;
+
+    const exact = voices.find(v => (v.lang || "").toLowerCase() === desiredLang.toLowerCase());
+    if (exact) return exact;
+
+    const base = desiredLang.split("-")[0].toLowerCase();
+    const partial = voices.find(v => (v.lang || "").toLowerCase().startsWith(base));
+    if (partial) return partial;
+
+    return voices[0] || null;
+  } catch (err) {
+    console.warn("Translator voice lookup failed:", err);
+    return null;
+  }
+}
+
 function speakTranslatorOutput() {
   const outputEl = document.getElementById("translatorOutput");
+  const statusEl = document.getElementById("translatorSpeechStatus");
   const text = normalizeText(outputEl?.value || outputEl?.textContent || "");
-  if (!text) return;
-
-  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-    alert("Voice playback is not supported in this browser.");
+  if (!text) {
+    if (statusEl) statusEl.textContent = "Nothing to read.";
     return;
   }
 
-  stopTranslatorSpeech();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  const desiredLang = getTranslatorSpeechLang();
-  utterance.lang = desiredLang;
-
-  try {
-    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const match = voices.find(v => (v.lang || "").toLowerCase() === desiredLang.toLowerCase())
-      || voices.find(v => (v.lang || "").toLowerCase().startsWith(desiredLang.split("-")[0].toLowerCase()));
-    if (match) utterance.voice = match;
-  } catch (err) {
-    console.warn("Translator voice selection fallback:", err);
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    if (statusEl) statusEl.textContent = "Voice playback is not supported in this browser.";
+    else alert("Voice playback is not supported in this browser.");
+    return;
   }
 
-  window.speechSynthesis.speak(utterance);
+  const desiredLang = getTranslatorSpeechLang();
+  const synth = window.speechSynthesis;
+
+  const speakNow = () => {
+    try {
+      stopTranslatorSpeech();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = desiredLang;
+      utterance.volume = 1;
+      utterance.rate = 1;
+      utterance.pitch = 1;
+
+      const voice = getTranslatorBestVoice(desiredLang);
+      if (voice) utterance.voice = voice;
+
+      utterance.onstart = () => {
+        if (statusEl) statusEl.textContent = `Reading aloud (${utterance.lang})...`;
+      };
+      utterance.onend = () => {
+        if (statusEl) statusEl.textContent = "";
+      };
+      utterance.onerror = (event) => {
+        console.warn("Translator speech error:", event);
+        if (statusEl) statusEl.textContent = "Voice playback failed in this browser/device.";
+      };
+
+      synth.speak(utterance);
+
+      setTimeout(() => {
+        if (!synth.speaking && statusEl && !statusEl.textContent) {
+          statusEl.textContent = "If you hear no sound, check browser/tab volume and Windows sound output.";
+        }
+      }, 350);
+    } catch (err) {
+      console.warn("Translator speech failed:", err);
+      if (statusEl) statusEl.textContent = "Voice playback failed.";
+    }
+  };
+
+  const voices = synth.getVoices ? synth.getVoices() : [];
+  if (voices && voices.length) {
+    speakNow();
+  } else {
+    if (statusEl) statusEl.textContent = "Loading voice...";
+    let done = false;
+    const delayedSpeak = () => {
+      if (done) return;
+      done = true;
+      speakNow();
+    };
+    if ('onvoiceschanged' in synth) {
+      synth.onvoiceschanged = () => {
+        delayedSpeak();
+        synth.onvoiceschanged = null;
+      };
+    }
+    setTimeout(delayedSpeak, 250);
+  }
 }
 
 window.stopTranslatorSpeech = stopTranslatorSpeech;
