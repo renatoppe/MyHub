@@ -1910,7 +1910,7 @@
                 </select>
               </div>
               <div class="input-row" style="align-self:flex-end;">
-                <button id="translatorSwapBtn" type="button" class="btn btn-secondary">⇄ Swap</button>
+                <button id="translatorSwapBtn" type="button" class="btn btn-secondary" onclick="swapTranslatorFields(); return false;">⇄ Swap</button>
               </div>
             </div>
 
@@ -1920,15 +1920,15 @@
             </div>
 
             <div class="input-row-inline" style="align-items:flex-end;">
-              <button id="translatorRunBtn" type="button" class="btn">🌐 Translate</button>
-              <button id="translatorSpeakBtn" type="button" class="btn btn-secondary">🔊 Speak</button>
-              <button id="translatorClearBtn" type="button" class="btn btn-secondary">🧹 Clear</button>
+              <button id="translatorRunBtn" type="button" class="btn" onclick="runTranslator(); return false;">🌐 Translate</button>
+              <button id="translatorSpeakBtn" type="button" class="btn btn-secondary" onclick="speakTranslatorOutput(); return false;">🔊 Speak</button>
+              <button id="translatorClearBtn" type="button" class="btn btn-secondary" onclick="clearTranslatorFields(); return false;">🧹 Clear</button>
             </div>
           </div>
 
           <div class="input-row-inline" style="align-items:center; justify-content:space-between; margin-top:12px;">
             <div style="font-size:12px; opacity:.8;">Quick phrases</div>
-            <button id="translatorEditPhrasesBtn" type="button" class="btn btn-secondary">✏️ Edit phrases</button>
+            <button id="translatorEditPhrasesBtn" type="button" class="btn btn-secondary" onclick="editTranslatorQuickPhrases(); return false;">✏️ Edit phrases</button>
           </div>
           <div class="chip-row" id="translatorQuickRow">
             <button class="chip translator-quick" data-index="0" data-text="Where is the MTR station?">Where is the MTR station?</button>
@@ -7639,6 +7639,53 @@ document.addEventListener("DOMContentLoaded", function(){
   if (btn) btn.addEventListener("click", requestFitnessAnalysis);
 });
 
+let translatorSpeechUtterance = null;
+
+function stopTranslatorSpeech() {
+  try {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  } catch (_) {}
+  translatorSpeechUtterance = null;
+}
+
+function getTranslatorSpeechLang() {
+  const target = getTranslatorCommandTarget();
+  const map = {
+    "english": "en-US",
+    "thai": "th-TH",
+    "portuguese": "pt-BR",
+    "zh": "zh-CN",
+    "zh-tw": "zh-TW"
+  };
+  return map[target] || "en-US";
+}
+
+function speakTranslatorOutput() {
+  const outputEl = document.getElementById("translatorOutput");
+  const text = normalizeText(outputEl?.value || "");
+  if (!text) return;
+
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    if (typeof showToast === "function") showToast("Speech is not supported on this browser.");
+    return;
+  }
+
+  stopTranslatorSpeech();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = getTranslatorSpeechLang();
+  translatorSpeechUtterance = utterance;
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === "function") showToast("Could not start speech.");
+  }
+}
+
+window.stopTranslatorSpeech = stopTranslatorSpeech;
+window.speakTranslatorOutput = speakTranslatorOutput;
+
+
 
 
 
@@ -7650,7 +7697,7 @@ function getTranslatorCommandTarget() {
 async function runTranslator() {
   const inputEl = document.getElementById("translatorInput");
   const outputEl = document.getElementById("translatorOutput");
-  const text = (inputEl?.value || "").trim();
+  const text = normalizeText(inputEl?.value || "");
   const target = getTranslatorCommandTarget();
 
   if (!text) {
@@ -7664,19 +7711,20 @@ async function runTranslator() {
     const cmd = `translate ${target}: ${text}`;
     let res = await brainChat(cmd, "global", 20000);
 
-    if (!res.ok || !normalizeText(res.reply)) {
+    if (!res?.ok || !normalizeText(res.reply)) {
       const fallbackCmd = `Translate the following text to ${target}. Reply with the translation only, no explanation: ${text}`;
       res = await brainChat(fallbackCmd, "global", 20000);
     }
 
-    if (!res.ok) {
-      const msg = res.error?.message || "Translation failed.";
+    if (!res?.ok) {
+      const msg = res?.error?.message || "Translation failed.";
       if (outputEl) outputEl.value = `Error: ${msg}`;
       return;
     }
 
     if (outputEl) outputEl.value = normalizeText(res.reply) || "(no translation)";
   } catch (err) {
+    console.error(err);
     if (outputEl) outputEl.value = `Error: ${err?.message || "Translation failed."}`;
   }
 }
@@ -7685,6 +7733,7 @@ function renderTranslatorQuickPhrases() {
   const row = document.getElementById("translatorQuickRow");
   const inputEl = document.getElementById("translatorInput");
   if (!row) return;
+
   const phrases = Array.isArray(state.translatorQuickPhrases) && state.translatorQuickPhrases.length
     ? state.translatorQuickPhrases
     : (defaultState.translatorQuickPhrases || []);
@@ -7697,22 +7746,74 @@ function renderTranslatorQuickPhrases() {
     btn.dataset.index = String(index);
     btn.dataset.text = phrase;
     btn.textContent = phrase;
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       if (inputEl) inputEl.value = phrase || "";
-    });
+    };
     row.appendChild(btn);
   });
 }
 
 function editTranslatorQuickPhrases() {
-  const current = (Array.isArray(state.translatorQuickPhrases) ? state.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
-  const updated = prompt("Edit quick phrases, one per line:", current);
+  const current = (
+    Array.isArray(state.translatorQuickPhrases)
+      ? state.translatorQuickPhrases
+      : (defaultState.translatorQuickPhrases || [])
+  ).join("\n");
+
+  const updated = window.prompt("Edit quick phrases, one per line:", current);
   if (updated == null) return;
-  const phrases = updated.split(/\r?\n/).map(s => normalizeText(s)).filter(Boolean).slice(0, 12);
+
+  const phrases = String(updated)
+    .split(/\r?\n/)
+    .map(s => normalizeText(s))
+    .filter(Boolean)
+    .slice(0, 12);
+
   if (!phrases.length) return;
+
   state.translatorQuickPhrases = phrases;
   saveState();
   renderTranslatorQuickPhrases();
+}
+
+function clearTranslatorFields() {
+  const inputEl = document.getElementById("translatorInput");
+  const outputEl = document.getElementById("translatorOutput");
+  stopTranslatorSpeech();
+  if (inputEl) inputEl.value = "";
+  if (outputEl) outputEl.value = "";
+}
+
+function swapTranslatorFields() {
+  const inputEl = document.getElementById("translatorInput");
+  const outputEl = document.getElementById("translatorOutput");
+  const targetEl = document.getElementById("translatorTarget");
+  stopTranslatorSpeech();
+  if (!inputEl || !outputEl || !targetEl) return;
+
+  const tmp = inputEl.value;
+  inputEl.value = outputEl.value;
+  outputEl.value = tmp;
+
+  const cycle = ["thai", "zh-tw", "zh", "english", "portuguese"];
+  const idx = cycle.indexOf(targetEl.value);
+  targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
+}
+
+function bindTranslatorButton(el, handler) {
+  if (!el) return;
+  el.type = "button";
+  el.onclick = null;
+  el.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handler();
+  });
+  el.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handler();
+  }, { passive: false });
 }
 
 function initTranslatorPage() {
@@ -7723,78 +7824,31 @@ function initTranslatorPage() {
   const swapBtn = document.getElementById("translatorSwapBtn");
   const editBtn = document.getElementById("translatorEditPhrasesBtn");
   const inputEl = document.getElementById("translatorInput");
-  const outputEl = document.getElementById("translatorOutput");
-  const targetEl = document.getElementById("translatorTarget");
+
+  if (!page) return;
 
   renderTranslatorQuickPhrases();
 
-  if (page && !page.dataset.bound) {
-    page.dataset.bound = "1";
+  bindTranslatorButton(runBtn, () => { runTranslator().catch(console.error); });
+  bindTranslatorButton(speakBtn, () => { speakTranslatorOutput(); });
+  bindTranslatorButton(clearBtn, () => { clearTranslatorFields(); });
+  bindTranslatorButton(swapBtn, () => { swapTranslatorFields(); });
+  bindTranslatorButton(editBtn, () => { editTranslatorQuickPhrases(); });
+
+  if (!page.dataset.quickBound) {
+    page.dataset.quickBound = "1";
     page.addEventListener("click", (e) => {
-      const btn = e.target.closest('button');
+      const btn = e.target?.closest?.(".translator-quick");
       if (!btn) return;
-      if (btn.id === 'translatorRunBtn') {
-        e.preventDefault();
-        runTranslator().catch(console.error);
-        return;
-      }
-      if (btn.id === 'translatorSpeakBtn') {
-        e.preventDefault();
-        speakTranslatorOutput();
-        return;
-      }
-      if (btn.id === 'translatorClearBtn') {
-        e.preventDefault();
-        stopTranslatorSpeech();
-        if (inputEl) inputEl.value = '';
-        if (outputEl) outputEl.value = '';
-        return;
-      }
-      if (btn.id === 'translatorSwapBtn') {
-        e.preventDefault();
-        stopTranslatorSpeech();
-        if (!inputEl || !outputEl || !targetEl) return;
-        const tmp = inputEl.value;
-        inputEl.value = outputEl.value;
-        outputEl.value = tmp;
-        const cycle = ['thai', 'zh-tw', 'zh', 'english', 'portuguese'];
-        const idx = cycle.indexOf(targetEl.value);
-        targetEl.value = idx === -1 ? 'english' : cycle[(idx + 1) % cycle.length];
-        return;
-      }
-      if (btn.id === 'translatorEditPhrasesBtn') {
-        e.preventDefault();
-        editTranslatorQuickPhrases();
-        return;
-      }
-      if (btn.classList.contains('translator-quick')) {
-        e.preventDefault();
-        if (inputEl) inputEl.value = btn.dataset.text || btn.textContent || '';
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      const inputEl2 = document.getElementById("translatorInput");
+      if (inputEl2) inputEl2.value = btn.dataset.text || btn.textContent || "";
     });
   }
 
-  if (runBtn) runBtn.onclick = () => { runTranslator().catch(console.error); };
-  if (speakBtn) speakBtn.onclick = () => { speakTranslatorOutput(); };
-  if (clearBtn) clearBtn.onclick = () => {
-    stopTranslatorSpeech();
-    if (inputEl) inputEl.value = '';
-    if (outputEl) outputEl.value = '';
-  };
-  if (swapBtn) swapBtn.onclick = () => {
-    stopTranslatorSpeech();
-    if (!inputEl || !outputEl || !targetEl) return;
-    const tmp = inputEl.value;
-    inputEl.value = outputEl.value;
-    outputEl.value = tmp;
-    const cycle = ['thai', 'zh-tw', 'zh', 'english', 'portuguese'];
-    const idx = cycle.indexOf(targetEl.value);
-    targetEl.value = idx === -1 ? 'english' : cycle[(idx + 1) % cycle.length];
-  };
-  if (editBtn) editBtn.onclick = () => { editTranslatorQuickPhrases(); };
-
-  if (inputEl && !inputEl.dataset.bound) {
-    inputEl.dataset.bound = "1";
+  if (inputEl && !inputEl.dataset.boundTranslatorEnter) {
+    inputEl.dataset.boundTranslatorEnter = "1";
     inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -7804,10 +7858,19 @@ function initTranslatorPage() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", initTranslatorPage);
+window.runTranslator = runTranslator;
+window.renderTranslatorQuickPhrases = renderTranslatorQuickPhrases;
+window.editTranslatorQuickPhrases = editTranslatorQuickPhrases;
+window.clearTranslatorFields = clearTranslatorFields;
+window.swapTranslatorFields = swapTranslatorFields;
+window.initTranslatorPage = initTranslatorPage;
+
+document.addEventListener("DOMContentLoaded", () => {
+  try { initTranslatorPage(); } catch (err) { console.error(err); }
+});
 if (document.readyState !== "loading") {
   setTimeout(() => {
-    try { initTranslatorPage(); } catch (_) {}
+    try { initTranslatorPage(); } catch (err) { console.error(err); }
   }, 0);
 }
 
