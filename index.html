@@ -1943,12 +1943,15 @@
             <label for="translatorOutput">Output</label>
             <textarea id="translatorOutput" readonly placeholder="Translation will appear here..."></textarea>
           </div>
+          <div class="input-row" style="margin-top:10px;">
+            <button id="translatorSpeakOutputBtn" type="button" class="btn btn-secondary">🔊 Read translation</button>
+          </div>
         </div>
       </section>
     </main>
   </div>
   <script>
-  const APP_BUILD = "v0.9.17";
+  const APP_BUILD = "v0.9.20";
 console.log("MyHub build:", APP_BUILD);
 
 // Fix: legacy inline onclick hooks (kept for backward compatibility)
@@ -2039,6 +2042,7 @@ window.brainTestClick = window.brainTestClick || function() {
     }
   
     let state = loadState();
+    window.state = state;
 
 
     // ---- Ensure Brain / AI fields exist (for older saved states) ----
@@ -2667,6 +2671,8 @@ window.brainTestClick = window.brainTestClick || function() {
     // -----------------------------
     // NAVIGATION
     // -----------------------------
+    var headerBrainStatusEl = document.getElementById("headerBrainStatus");
+    var headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
     if (navToggle) {
       navToggle.addEventListener("click", () => {
         if (sidebar.classList.contains("expanded")) {
@@ -2708,8 +2714,9 @@ window.brainTestClick = window.brainTestClick || function() {
         const item = [...navItems].find((b) => b.dataset.page === pageId);
         pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
       }
-      if (headerBrainStatusEl) {
-        headerBrainStatusEl.classList.toggle("is-visible", pageId === "ai");
+      const headerStatusElSafe = headerBrainStatusEl || document.getElementById("headerBrainStatus");
+      if (headerStatusElSafe) {
+        headerStatusElSafe.classList.toggle("is-visible", pageId === "ai");
       }
   
 
@@ -2733,7 +2740,6 @@ window.brainTestClick = window.brainTestClick || function() {
       if (pageId === "translator") {
         try {
           if (typeof refreshBrainStatus === "function") refreshBrainStatus({ updateText: false }).catch(() => {});
-          if (typeof initTranslatorPage === "function") initTranslatorPage();
         } catch (e) { console.error(e); }
       }
       // Leaving notes canvas mode
@@ -5977,8 +5983,8 @@ const brainUrlEl = document.getElementById("brainUrl");
     const brainModalCloseBtn = document.getElementById("brainModalCloseBtn");
     const brainLiveStatusEl = document.getElementById("brainLiveStatus");
     const brainLiveStatusTextEl = document.getElementById("brainLiveStatusText");
-    const headerBrainStatusEl = document.getElementById("headerBrainStatus");
-    const headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
+    headerBrainStatusEl = document.getElementById("headerBrainStatus");
+    headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
     const brainStatusEl = document.getElementById("brainStatus");
@@ -7609,13 +7615,12 @@ async function runTranslator() {
 }
 
 
-function getSpeechLangFromTranslatorTarget() {
+function getTranslatorSpeechLang() {
   const target = String(document.getElementById("translatorTarget")?.value || "english").toLowerCase();
-  if (target === "thai" || target === "th") return "th-TH";
+  if (target === "thai") return "th-TH";
   if (target === "zh-tw") return "zh-TW";
   if (target === "zh") return "zh-CN";
-  if (target === "portuguese" || target === "pt" || target === "pt-br") return "pt-BR";
-  if (target === "spanish" || target === "es") return "es-ES";
+  if (target === "portuguese") return "pt-BR";
   return "en-US";
 }
 
@@ -7625,7 +7630,7 @@ function stopTranslatorSpeech() {
       window.speechSynthesis.cancel();
     }
   } catch (err) {
-    console.warn("Translator speech cancel failed:", err);
+    console.warn("Translator speech stop failed:", err);
   }
 }
 
@@ -7634,38 +7639,39 @@ function speakTranslatorOutput() {
   const text = normalizeText(outputEl?.value || outputEl?.textContent || "");
   if (!text) return;
 
-  if (!("speechSynthesis" in window)) {
-    alert("Speech is not supported in this browser.");
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    alert("Voice playback is not supported in this browser.");
     return;
   }
 
+  stopTranslatorSpeech();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const desiredLang = getTranslatorSpeechLang();
+  utterance.lang = desiredLang;
+
   try {
-    stopTranslatorSpeech();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = getSpeechLangFromTranslatorTarget();
-    utter.rate = 1;
-    utter.pitch = 1;
-
     const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    if (voices && voices.length) {
-      const lang = utter.lang.toLowerCase();
-      const matchingVoice = voices.find(v => String(v.lang || "").toLowerCase().startsWith(lang.toLowerCase()))
-        || voices.find(v => String(v.lang || "").toLowerCase().startsWith(lang.split("-")[0]));
-      if (matchingVoice) utter.voice = matchingVoice;
-    }
-
-    window.speechSynthesis.speak(utter);
+    const match = voices.find(v => (v.lang || "").toLowerCase() === desiredLang.toLowerCase())
+      || voices.find(v => (v.lang || "").toLowerCase().startsWith(desiredLang.split("-")[0].toLowerCase()));
+    if (match) utterance.voice = match;
   } catch (err) {
-    console.error("Translator speech failed:", err);
+    console.warn("Translator voice selection fallback:", err);
   }
+
+  window.speechSynthesis.speak(utterance);
 }
+
+window.stopTranslatorSpeech = stopTranslatorSpeech;
+window.speakTranslatorOutput = speakTranslatorOutput;
 
 function renderTranslatorQuickPhrases() {
   const row = document.getElementById("translatorQuickRow");
   const inputEl = document.getElementById("translatorInput");
+  const appState = window.state || state || {};
   if (!row) return;
-  const phrases = Array.isArray(state.translatorQuickPhrases) && state.translatorQuickPhrases.length
-    ? state.translatorQuickPhrases
+  const phrases = Array.isArray(appState.translatorQuickPhrases) && appState.translatorQuickPhrases.length
+    ? appState.translatorQuickPhrases
     : (defaultState.translatorQuickPhrases || []);
 
   row.innerHTML = "";
@@ -7676,27 +7682,43 @@ function renderTranslatorQuickPhrases() {
     btn.dataset.index = String(index);
     btn.dataset.text = phrase;
     btn.textContent = phrase;
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       if (inputEl) inputEl.value = phrase || "";
-    });
+    };
     row.appendChild(btn);
   });
 }
 
 function editTranslatorQuickPhrases() {
-  const current = (Array.isArray(state.translatorQuickPhrases) ? state.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
+  const appState = window.state || state || {};
+  const current = (Array.isArray(appState.translatorQuickPhrases) ? appState.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
   const updated = prompt("Edit quick phrases, one per line:", current);
   if (updated == null) return;
   const phrases = updated.split(/\r?\n/).map(s => normalizeText(s)).filter(Boolean).slice(0, 12);
   if (!phrases.length) return;
-  state.translatorQuickPhrases = phrases;
+  appState.translatorQuickPhrases = phrases;
+  window.state = appState;
+  try { state = appState; } catch (e) {}
   saveState();
   renderTranslatorQuickPhrases();
+}
+
+function bindTranslatorButton(el, handler) {
+  if (!el || el.dataset.bound === "1") return;
+  el.dataset.bound = "1";
+  el.type = "button";
+  el.onclick = handler;
+  el.addEventListener("click", handler);
+  el.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    handler(e);
+  }, { passive: false });
 }
 
 function initTranslatorPage() {
   const runBtn = document.getElementById("translatorRunBtn");
   const speakBtn = document.getElementById("translatorSpeakBtn");
+  const speakOutputBtn = document.getElementById("translatorSpeakOutputBtn");
   const clearBtn = document.getElementById("translatorClearBtn");
   const swapBtn = document.getElementById("translatorSwapBtn");
   const editBtn = document.getElementById("translatorEditPhrasesBtn");
@@ -7706,43 +7728,24 @@ function initTranslatorPage() {
 
   renderTranslatorQuickPhrases();
 
-  if (runBtn && !runBtn.dataset.bound) {
-    runBtn.dataset.bound = "1";
-    runBtn.addEventListener("click", () => { runTranslator().catch(console.error); });
-  }
-
-  if (speakBtn && !speakBtn.dataset.bound) {
-    speakBtn.dataset.bound = "1";
-    speakBtn.addEventListener("click", speakTranslatorOutput);
-  }
-
-  if (clearBtn && !clearBtn.dataset.bound) {
-    clearBtn.dataset.bound = "1";
-    clearBtn.addEventListener("click", () => {
-      stopTranslatorSpeech();
-      if (inputEl) inputEl.value = "";
-      if (outputEl) outputEl.value = "";
-    });
-  }
-
-  if (swapBtn && !swapBtn.dataset.bound) {
-    swapBtn.dataset.bound = "1";
-    swapBtn.addEventListener("click", () => {
-      stopTranslatorSpeech();
-      if (!inputEl || !outputEl || !targetEl) return;
-      const tmp = inputEl.value;
-      inputEl.value = outputEl.value;
-      outputEl.value = tmp;
-      const cycle = ["thai", "zh-tw", "zh", "english", "portuguese"];
-      const idx = cycle.indexOf(targetEl.value);
-      targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
-    });
-  }
-
-  if (editBtn && !editBtn.dataset.bound) {
-    editBtn.dataset.bound = "1";
-    editBtn.addEventListener("click", editTranslatorQuickPhrases);
-  }
+  bindTranslatorButton(runBtn, () => { runTranslator().catch(console.error); });
+  bindTranslatorButton(speakBtn, () => { speakTranslatorOutput(); });
+  bindTranslatorButton(clearBtn, () => {
+    stopTranslatorSpeech();
+    if (inputEl) inputEl.value = "";
+    if (outputEl) outputEl.value = "";
+  });
+  bindTranslatorButton(swapBtn, () => {
+    stopTranslatorSpeech();
+    if (!inputEl || !outputEl || !targetEl) return;
+    const tmp = inputEl.value;
+    inputEl.value = outputEl.value;
+    outputEl.value = tmp;
+    const cycle = ["thai", "zh-tw", "zh", "english", "portuguese"];
+    const idx = cycle.indexOf(targetEl.value);
+    targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
+  });
+  bindTranslatorButton(editBtn, () => { editTranslatorQuickPhrases(); });
 
   if (inputEl && !inputEl.dataset.bound) {
     inputEl.dataset.bound = "1";
@@ -7756,20 +7759,13 @@ function initTranslatorPage() {
 }
 
 window.runTranslator = runTranslator;
+window.renderTranslatorQuickPhrases = renderTranslatorQuickPhrases;
+window.editTranslatorQuickPhrases = editTranslatorQuickPhrases;
 window.initTranslatorPage = initTranslatorPage;
-window.speakTranslatorOutput = speakTranslatorOutput;
-window.stopTranslatorSpeech = stopTranslatorSpeech;
 
 document.addEventListener("DOMContentLoaded", () => {
   initTranslatorPage();
-  try {
-    if ("speechSynthesis" in window && window.speechSynthesis.getVoices) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => {};
-    }
-  } catch (err) {
-    console.warn("Speech voices preload failed:", err);
-  }
+  setTimeout(initTranslatorPage, 200);
 });
 
 </script>
