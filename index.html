@@ -611,7 +611,7 @@
     
     #notesTextArea {
       width: 100%;
-      min-height: 800px;
+      min-height: 400px;
       border-radius: 10px;
       border: 1px solid #26293a;
       background: #101320;
@@ -1910,7 +1910,7 @@
                 </select>
               </div>
               <div class="input-row" style="align-self:flex-end;">
-                <button id="translatorSwapBtn" type="button" class="btn btn-secondary" onclick="swapTranslatorFields(); return false;">⇄ Swap</button>
+                <button id="translatorSwapBtn" class="btn btn-secondary">⇄ Swap</button>
               </div>
             </div>
 
@@ -1920,15 +1920,15 @@
             </div>
 
             <div class="input-row-inline" style="align-items:flex-end;">
-              <button id="translatorRunBtn" type="button" class="btn" onclick="runTranslator(); return false;">🌐 Translate</button>
-              <button id="translatorSpeakBtn" type="button" class="btn btn-secondary" onclick="speakTranslatorOutput(); return false;">🔊 Speak</button>
-              <button id="translatorClearBtn" type="button" class="btn btn-secondary" onclick="clearTranslatorFields(); return false;">🧹 Clear</button>
+              <button id="translatorRunBtn" class="btn">🌐 Translate</button>
+              <button id="translatorSpeakBtn" class="btn btn-secondary">🔊 Speak</button>
+              <button id="translatorClearBtn" class="btn btn-secondary">🧹 Clear</button>
             </div>
           </div>
 
           <div class="input-row-inline" style="align-items:center; justify-content:space-between; margin-top:12px;">
             <div style="font-size:12px; opacity:.8;">Quick phrases</div>
-            <button id="translatorEditPhrasesBtn" type="button" class="btn btn-secondary" onclick="editTranslatorQuickPhrases(); return false;">✏️ Edit phrases</button>
+            <button id="translatorEditPhrasesBtn" class="btn btn-secondary">✏️ Edit phrases</button>
           </div>
           <div class="chip-row" id="translatorQuickRow">
             <button class="chip translator-quick" data-index="0" data-text="Where is the MTR station?">Where is the MTR station?</button>
@@ -2039,6 +2039,7 @@ window.brainTestClick = window.brainTestClick || function() {
     }
   
     let state = loadState();
+    window.state = state;
 
 
     // ---- Ensure Brain / AI fields exist (for older saved states) ----
@@ -2667,6 +2668,8 @@ window.brainTestClick = window.brainTestClick || function() {
     // -----------------------------
     // NAVIGATION
     // -----------------------------
+    var headerBrainStatusEl = document.getElementById("headerBrainStatus");
+    var headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
     if (navToggle) {
       navToggle.addEventListener("click", () => {
         if (sidebar.classList.contains("expanded")) {
@@ -2708,8 +2711,9 @@ window.brainTestClick = window.brainTestClick || function() {
         const item = [...navItems].find((b) => b.dataset.page === pageId);
         pageTitle.textContent = item ? item.title || "MyHub" : "MyHub";
       }
-      if (headerBrainStatusEl) {
-        headerBrainStatusEl.classList.toggle("is-visible", pageId === "ai");
+      const headerStatusElSafe = headerBrainStatusEl || document.getElementById("headerBrainStatus");
+      if (headerStatusElSafe) {
+        headerStatusElSafe.classList.toggle("is-visible", pageId === "ai");
       }
   
 
@@ -2732,7 +2736,6 @@ window.brainTestClick = window.brainTestClick || function() {
       }
       if (pageId === "translator") {
         try {
-          if (typeof initTranslatorPage === "function") initTranslatorPage();
           if (typeof refreshBrainStatus === "function") refreshBrainStatus({ updateText: false }).catch(() => {});
         } catch (e) { console.error(e); }
       }
@@ -5977,8 +5980,8 @@ const brainUrlEl = document.getElementById("brainUrl");
     const brainModalCloseBtn = document.getElementById("brainModalCloseBtn");
     const brainLiveStatusEl = document.getElementById("brainLiveStatus");
     const brainLiveStatusTextEl = document.getElementById("brainLiveStatusText");
-    const headerBrainStatusEl = document.getElementById("headerBrainStatus");
-    const headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
+    headerBrainStatusEl = document.getElementById("headerBrainStatus");
+    headerBrainStatusTextEl = document.getElementById("headerBrainStatusText");
     const brainSaveBtn = document.getElementById("brainSaveBtn");
     const brainTestBtn = document.getElementById("brainTestBtn");
     const brainStatusEl = document.getElementById("brainStatus");
@@ -6664,8 +6667,6 @@ const ACTION_HANDLERS = {
     if (typeof renderTodos === "function") renderTodos();
   },
 
-  todo_add: (p) => ACTION_HANDLERS.task_add(p),
-
   // payload: { title }
   task_complete: (p) => {
     const title = normalizeText(p.title);
@@ -6680,8 +6681,6 @@ const ACTION_HANDLERS = {
     if (typeof renderTodos === "function") renderTodos();
   },
 
-  todo_complete: (p) => ACTION_HANDLERS.task_complete(p),
-
   task_remove: (p) => {
     const title = normalizeText(p.title || p.text);
     const listName = normalizeText(p.list || p.listName || p.todoList);
@@ -6694,8 +6693,6 @@ const ACTION_HANDLERS = {
     saveState();
     if (typeof renderTodos === "function") renderTodos();
   },
-
-  todo_remove: (p) => ACTION_HANDLERS.task_remove(p),
 
   todo_list_create: (p) => {
     const name = normalizeText(p.name || p.list || p.listName);
@@ -6911,80 +6908,13 @@ Language rules:
 
 
     
-function buildDirectLocalIntent(text) {
-  const raw = normalizeText(text);
-  if (!raw) return null;
-
-  const patterns = [
-    {
-      type: "shopping_add",
-      reply: (v) => `Added "${v.item}" to your ${v.listName ? `"${v.listName}" ` : ""}shopping list.`,
-      regexes: [
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?add\s+["“']?(.+?)["”']?\s+to\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?put\s+["“']?(.+?)["”']?\s+(?:on|in)\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
-      ],
-      map: (m) => ({ item: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
-    },
-    {
-      type: "shopping_remove",
-      reply: (v) => `Removed "${v.item}" from your ${v.listName ? `"${v.listName}" ` : ""}shopping list.`,
-      regexes: [
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:remove|delete)\s+["“']?(.+?)["”']?\s+from\s+(?:my\s+)?(?:shopping|grocery)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
-      ],
-      map: (m) => ({ item: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
-    },
-    {
-      type: "task_add",
-      reply: (v) => `Added "${v.title}" to your ${v.listName ? `"${v.listName}" ` : ""}to-do list.`,
-      regexes: [
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?add\s+["“']?(.+?)["”']?\s+to\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?put\s+["“']?(.+?)["”']?\s+(?:on|in)\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i,
-        /^(?:remember\s+to|remind\s+me\s+to)\s+(.+?)\??$/i
-      ],
-      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
-    },
-    {
-      type: "task_remove",
-      reply: (v) => `Removed "${v.title}" from your ${v.listName ? `"${v.listName}" ` : ""}to-do list.`,
-      regexes: [
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:remove|delete)\s+["“']?(.+?)["”']?\s+from\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?\??$/i
-      ],
-      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
-    },
-    {
-      type: "task_complete",
-      reply: (v) => `Marked "${v.title}" as done${v.listName ? ` in "${v.listName}"` : ""}.`,
-      regexes: [
-        /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:complete|finish|mark(?:\s+as)?\s+done)\s+["“']?(.+?)["”']?(?:\s+in\s+(?:my\s+)?(?:to\s*-?\s*do|todo|tasks?)(?:\s+list)?(?:\s+named\s+["“']?(.+?)["”']?)?)?\??$/i
-      ],
-      map: (m) => ({ title: parseQuotedOrBareValue(m[1]), listName: parseQuotedOrBareValue(m[2] || "") })
-    }
-  ];
-
-  for (const spec of patterns) {
-    for (const rx of spec.regexes) {
-      const match = raw.match(rx);
-      if (!match) continue;
-      const payload = spec.map(match);
-      const primary = payload.item || payload.title || payload.name || "";
-      if (!normalizeText(primary)) continue;
-      return {
-        actions: [{ type: spec.type, payload }],
-        reply: spec.reply(payload)
-      };
-    }
-  }
-
-  return null;
-}
-
 async function aiSendMessage(msg, { statusEl } = {}) {
   const text = (msg || "").trim();
   if (!text) return;
 
   const lowerText = text.toLowerCase();
   const hasShoppingIntent = /\b(shopping|grocery)\b/.test(lowerText);
-  const localIntent = buildDirectLocalIntent(text) || parseLocalMyHubIntent(text);
+  const localIntent = parseLocalMyHubIntent(text);
   const localActions = Array.isArray(localIntent?.actions) ? localIntent.actions : [];
   const explicitLocalCommand = localActions.length > 0;
 
@@ -7639,53 +7569,6 @@ document.addEventListener("DOMContentLoaded", function(){
   if (btn) btn.addEventListener("click", requestFitnessAnalysis);
 });
 
-let translatorSpeechUtterance = null;
-
-function stopTranslatorSpeech() {
-  try {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-  } catch (_) {}
-  translatorSpeechUtterance = null;
-}
-
-function getTranslatorSpeechLang() {
-  const target = getTranslatorCommandTarget();
-  const map = {
-    "english": "en-US",
-    "thai": "th-TH",
-    "portuguese": "pt-BR",
-    "zh": "zh-CN",
-    "zh-tw": "zh-TW"
-  };
-  return map[target] || "en-US";
-}
-
-function speakTranslatorOutput() {
-  const outputEl = document.getElementById("translatorOutput");
-  const text = normalizeText(outputEl?.value || "");
-  if (!text) return;
-
-  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-    if (typeof showToast === "function") showToast("Speech is not supported on this browser.");
-    return;
-  }
-
-  stopTranslatorSpeech();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = getTranslatorSpeechLang();
-  translatorSpeechUtterance = utterance;
-  try {
-    window.speechSynthesis.speak(utterance);
-  } catch (err) {
-    console.error(err);
-    if (typeof showToast === "function") showToast("Could not start speech.");
-  }
-}
-
-window.stopTranslatorSpeech = stopTranslatorSpeech;
-window.speakTranslatorOutput = speakTranslatorOutput;
-
-
 
 
 
@@ -7697,7 +7580,7 @@ function getTranslatorCommandTarget() {
 async function runTranslator() {
   const inputEl = document.getElementById("translatorInput");
   const outputEl = document.getElementById("translatorOutput");
-  const text = normalizeText(inputEl?.value || "");
+  const text = (inputEl?.value || "").trim();
   const target = getTranslatorCommandTarget();
 
   if (!text) {
@@ -7711,20 +7594,19 @@ async function runTranslator() {
     const cmd = `translate ${target}: ${text}`;
     let res = await brainChat(cmd, "global", 20000);
 
-    if (!res?.ok || !normalizeText(res.reply)) {
+    if (!res.ok || !normalizeText(res.reply)) {
       const fallbackCmd = `Translate the following text to ${target}. Reply with the translation only, no explanation: ${text}`;
       res = await brainChat(fallbackCmd, "global", 20000);
     }
 
-    if (!res?.ok) {
-      const msg = res?.error?.message || "Translation failed.";
+    if (!res.ok) {
+      const msg = res.error?.message || "Translation failed.";
       if (outputEl) outputEl.value = `Error: ${msg}`;
       return;
     }
 
     if (outputEl) outputEl.value = normalizeText(res.reply) || "(no translation)";
   } catch (err) {
-    console.error(err);
     if (outputEl) outputEl.value = `Error: ${err?.message || "Translation failed."}`;
   }
 }
@@ -7732,10 +7614,10 @@ async function runTranslator() {
 function renderTranslatorQuickPhrases() {
   const row = document.getElementById("translatorQuickRow");
   const inputEl = document.getElementById("translatorInput");
+  const appState = window.state || state || {};
   if (!row) return;
-
-  const phrases = Array.isArray(state.translatorQuickPhrases) && state.translatorQuickPhrases.length
-    ? state.translatorQuickPhrases
+  const phrases = Array.isArray(appState.translatorQuickPhrases) && appState.translatorQuickPhrases.length
+    ? appState.translatorQuickPhrases
     : (defaultState.translatorQuickPhrases || []);
 
   row.innerHTML = "";
@@ -7754,101 +7636,64 @@ function renderTranslatorQuickPhrases() {
 }
 
 function editTranslatorQuickPhrases() {
-  const current = (
-    Array.isArray(state.translatorQuickPhrases)
-      ? state.translatorQuickPhrases
-      : (defaultState.translatorQuickPhrases || [])
-  ).join("\n");
-
-  const updated = window.prompt("Edit quick phrases, one per line:", current);
+  const appState = window.state || state || {};
+  const current = (Array.isArray(appState.translatorQuickPhrases) ? appState.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
+  const updated = prompt("Edit quick phrases, one per line:", current);
   if (updated == null) return;
-
-  const phrases = String(updated)
-    .split(/\r?\n/)
-    .map(s => normalizeText(s))
-    .filter(Boolean)
-    .slice(0, 12);
-
+  const phrases = updated.split(/\r?\n/).map(s => normalizeText(s)).filter(Boolean).slice(0, 12);
   if (!phrases.length) return;
-
-  state.translatorQuickPhrases = phrases;
+  appState.translatorQuickPhrases = phrases;
+  window.state = appState;
+  try { state = appState; } catch (e) {}
   saveState();
   renderTranslatorQuickPhrases();
 }
 
-function clearTranslatorFields() {
-  const inputEl = document.getElementById("translatorInput");
-  const outputEl = document.getElementById("translatorOutput");
-  stopTranslatorSpeech();
-  if (inputEl) inputEl.value = "";
-  if (outputEl) outputEl.value = "";
-}
-
-function swapTranslatorFields() {
-  const inputEl = document.getElementById("translatorInput");
-  const outputEl = document.getElementById("translatorOutput");
-  const targetEl = document.getElementById("translatorTarget");
-  stopTranslatorSpeech();
-  if (!inputEl || !outputEl || !targetEl) return;
-
-  const tmp = inputEl.value;
-  inputEl.value = outputEl.value;
-  outputEl.value = tmp;
-
-  const cycle = ["thai", "zh-tw", "zh", "english", "portuguese"];
-  const idx = cycle.indexOf(targetEl.value);
-  targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
-}
-
 function bindTranslatorButton(el, handler) {
-  if (!el) return;
+  if (!el || el.dataset.bound === "1") return;
+  el.dataset.bound = "1";
   el.type = "button";
-  el.onclick = null;
-  el.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handler();
-  });
+  el.onclick = handler;
+  el.addEventListener("click", handler);
   el.addEventListener("touchend", (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    handler();
+    handler(e);
   }, { passive: false });
 }
 
 function initTranslatorPage() {
-  const page = document.querySelector('[data-page="translator"]');
   const runBtn = document.getElementById("translatorRunBtn");
   const speakBtn = document.getElementById("translatorSpeakBtn");
   const clearBtn = document.getElementById("translatorClearBtn");
   const swapBtn = document.getElementById("translatorSwapBtn");
   const editBtn = document.getElementById("translatorEditPhrasesBtn");
   const inputEl = document.getElementById("translatorInput");
-
-  if (!page) return;
+  const outputEl = document.getElementById("translatorOutput");
+  const targetEl = document.getElementById("translatorTarget");
 
   renderTranslatorQuickPhrases();
 
   bindTranslatorButton(runBtn, () => { runTranslator().catch(console.error); });
   bindTranslatorButton(speakBtn, () => { speakTranslatorOutput(); });
-  bindTranslatorButton(clearBtn, () => { clearTranslatorFields(); });
-  bindTranslatorButton(swapBtn, () => { swapTranslatorFields(); });
+  bindTranslatorButton(clearBtn, () => {
+    stopTranslatorSpeech();
+    if (inputEl) inputEl.value = "";
+    if (outputEl) outputEl.value = "";
+  });
+  bindTranslatorButton(swapBtn, () => {
+    stopTranslatorSpeech();
+    if (!inputEl || !outputEl || !targetEl) return;
+    const tmp = inputEl.value;
+    inputEl.value = outputEl.value;
+    outputEl.value = tmp;
+    const cycle = ["thai", "zh-tw", "zh", "english", "portuguese"];
+    const idx = cycle.indexOf(targetEl.value);
+    targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
+  });
   bindTranslatorButton(editBtn, () => { editTranslatorQuickPhrases(); });
 
-  if (!page.dataset.quickBound) {
-    page.dataset.quickBound = "1";
-    page.addEventListener("click", (e) => {
-      const btn = e.target?.closest?.(".translator-quick");
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const inputEl2 = document.getElementById("translatorInput");
-      if (inputEl2) inputEl2.value = btn.dataset.text || btn.textContent || "";
-    });
-  }
-
-  if (inputEl && !inputEl.dataset.boundTranslatorEnter) {
-    inputEl.dataset.boundTranslatorEnter = "1";
+  if (inputEl && !inputEl.dataset.bound) {
+    inputEl.dataset.bound = "1";
     inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -7861,18 +7706,12 @@ function initTranslatorPage() {
 window.runTranslator = runTranslator;
 window.renderTranslatorQuickPhrases = renderTranslatorQuickPhrases;
 window.editTranslatorQuickPhrases = editTranslatorQuickPhrases;
-window.clearTranslatorFields = clearTranslatorFields;
-window.swapTranslatorFields = swapTranslatorFields;
 window.initTranslatorPage = initTranslatorPage;
 
 document.addEventListener("DOMContentLoaded", () => {
-  try { initTranslatorPage(); } catch (err) { console.error(err); }
+  initTranslatorPage();
+  setTimeout(initTranslatorPage, 200);
 });
-if (document.readyState !== "loading") {
-  setTimeout(() => {
-    try { initTranslatorPage(); } catch (err) { console.error(err); }
-  }, 0);
-}
 
 </script>
 
