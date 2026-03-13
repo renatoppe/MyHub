@@ -7817,14 +7817,18 @@ function saveTranslatorQuickPhrasesFromModal() {
   const appState = window.state || state || {};
   const editor = document.getElementById("translatorPhraseEditor");
   if (!editor) return;
-  const phrases = textarea.value.split(/\r?\n/).filter(p => p.trim());
+  const phrases = editor.value.split(/\r?\n/).map(p=>p.trim()).filter(p=>p.length>0);
   if (!phrases.length) {
     resetTranslatorQuickPhrasesEditor();
     return;
   }
   appState.translatorQuickPhrases = phrases;
   window.state = appState;
-  saveState();
+  if (typeof saveState === "function") {
+    saveState();
+  } else {
+    localStorage.setItem("myhub_state", JSON.stringify(window.state || state || {}));
+  }
   renderTranslatorQuickPhrases();
   closeTranslatorPhraseModal();
 }
