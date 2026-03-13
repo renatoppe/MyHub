@@ -1944,15 +1944,37 @@
             <textarea id="translatorOutput" readonly placeholder="Translation will appear here..."></textarea>
           </div>
           <div class="input-row" style="margin-top:10px;">
-            <button id="translatorSpeakOutputBtn" type="button" class="btn btn-secondary">🔊 Read translation</button>
             <div id="translatorSpeechStatus" style="margin-top:8px;font-size:12px;color:#666;"></div>
+          </div>
+
+          <div id="translatorPhraseModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+            <div style="width:min(720px, 100%); background:#fff; color:#111; border-radius:16px; padding:18px; box-shadow:0 16px 40px rgba(0,0,0,.25);">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+                <div>
+                  <div style="font-size:18px; font-weight:700;">Edit quick phrases</div>
+                  <div style="font-size:12px; opacity:.75; margin-top:4px;">One phrase per line. Keep them short and useful for travel.</div>
+                </div>
+                <button id="translatorPhraseModalCloseTop" type="button" class="btn btn-secondary">✖</button>
+              </div>
+              <textarea id="translatorPhraseEditor" style="width:100%; min-height:320px; resize:vertical; border-radius:12px; padding:12px; border:1px solid #ccc;">Where is the MTR station?
+I am allergic to peanuts.
+No spicy, please.
+How much is this?
+I need a hospital.
+Can you help me?</textarea>
+              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
+                <button id="translatorPhraseResetBtn" type="button" class="btn btn-secondary">Reset model</button>
+                <button id="translatorPhraseModalCancel" type="button" class="btn btn-secondary">Cancel</button>
+                <button id="translatorPhraseSaveBtn" type="button" class="btn btn-primary">Save phrases</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
     </main>
   </div>
   <script>
-  const APP_BUILD = "v0.9.21";
+  const APP_BUILD = "v0.9.22";
 console.log("MyHub build:", APP_BUILD);
 
 // Fix: legacy inline onclick hooks (kept for backward compatibility)
@@ -7757,18 +7779,58 @@ function renderTranslatorQuickPhrases() {
   });
 }
 
-function editTranslatorQuickPhrases() {
+function getTranslatorPhraseDefaults() {
+  return [
+    "Where is the MTR station?",
+    "I am allergic to peanuts.",
+    "No spicy, please.",
+    "How much is this?",
+    "I need a hospital.",
+    "Can you help me?"
+  ];
+}
+
+function openTranslatorPhraseModal() {
   const appState = window.state || state || {};
-  const current = (Array.isArray(appState.translatorQuickPhrases) ? appState.translatorQuickPhrases : (defaultState.translatorQuickPhrases || [])).join("\n");
-  const updated = prompt("Edit quick phrases, one per line:", current);
-  if (updated == null) return;
-  const phrases = updated.split(/\r?\n/).map(s => normalizeText(s)).filter(Boolean).slice(0, 12);
-  if (!phrases.length) return;
+  const modal = document.getElementById("translatorPhraseModal");
+  const editor = document.getElementById("translatorPhraseEditor");
+  if (!modal || !editor) return;
+  const phrases = Array.isArray(appState.translatorQuickPhrases) && appState.translatorQuickPhrases.length
+    ? appState.translatorQuickPhrases
+    : getTranslatorPhraseDefaults();
+  editor.value = phrases.join("\n");
+  modal.style.display = "flex";
+  setTimeout(() => editor.focus(), 30);
+}
+
+function closeTranslatorPhraseModal() {
+  const modal = document.getElementById("translatorPhraseModal");
+  if (modal) modal.style.display = "none";
+}
+
+function resetTranslatorQuickPhrasesEditor() {
+  const editor = document.getElementById("translatorPhraseEditor");
+  if (editor) editor.value = getTranslatorPhraseDefaults().join("\n");
+}
+
+function saveTranslatorQuickPhrasesFromModal() {
+  const appState = window.state || state || {};
+  const editor = document.getElementById("translatorPhraseEditor");
+  if (!editor) return;
+  const phrases = textarea.value.split(/\r?\n/).filter(p => p.trim());
+  if (!phrases.length) {
+    resetTranslatorQuickPhrasesEditor();
+    return;
+  }
   appState.translatorQuickPhrases = phrases;
   window.state = appState;
-  try { state = appState; } catch (e) {}
   saveState();
   renderTranslatorQuickPhrases();
+  closeTranslatorPhraseModal();
+}
+
+function editTranslatorQuickPhrases() {
+  openTranslatorPhraseModal();
 }
 
 function bindTranslatorButton(el, handler) {
@@ -7786,7 +7848,6 @@ function bindTranslatorButton(el, handler) {
 function initTranslatorPage() {
   const runBtn = document.getElementById("translatorRunBtn");
   const speakBtn = document.getElementById("translatorSpeakBtn");
-  const speakOutputBtn = document.getElementById("translatorSpeakOutputBtn");
   const clearBtn = document.getElementById("translatorClearBtn");
   const swapBtn = document.getElementById("translatorSwapBtn");
   const editBtn = document.getElementById("translatorEditPhrasesBtn");
@@ -7814,6 +7875,18 @@ function initTranslatorPage() {
     targetEl.value = idx === -1 ? "english" : cycle[(idx + 1) % cycle.length];
   });
   bindTranslatorButton(editBtn, () => { editTranslatorQuickPhrases(); });
+  bindTranslatorButton(document.getElementById("translatorPhraseSaveBtn"), () => { saveTranslatorQuickPhrasesFromModal(); });
+  bindTranslatorButton(document.getElementById("translatorPhraseModalCancel"), () => { closeTranslatorPhraseModal(); });
+  bindTranslatorButton(document.getElementById("translatorPhraseModalCloseTop"), () => { closeTranslatorPhraseModal(); });
+  bindTranslatorButton(document.getElementById("translatorPhraseResetBtn"), () => { resetTranslatorQuickPhrasesEditor(); });
+
+  const phraseModal = document.getElementById("translatorPhraseModal");
+  if (phraseModal && !phraseModal.dataset.bound) {
+    phraseModal.dataset.bound = "1";
+    phraseModal.addEventListener("click", (e) => {
+      if (e.target === phraseModal) closeTranslatorPhraseModal();
+    });
+  }
 
   if (inputEl && !inputEl.dataset.bound) {
     inputEl.dataset.bound = "1";
@@ -7828,6 +7901,9 @@ function initTranslatorPage() {
 
 window.runTranslator = runTranslator;
 window.renderTranslatorQuickPhrases = renderTranslatorQuickPhrases;
+window.openTranslatorPhraseModal = openTranslatorPhraseModal;
+window.closeTranslatorPhraseModal = closeTranslatorPhraseModal;
+window.saveTranslatorQuickPhrasesFromModal = saveTranslatorQuickPhrasesFromModal;
 window.editTranslatorQuickPhrases = editTranslatorQuickPhrases;
 window.initTranslatorPage = initTranslatorPage;
 
